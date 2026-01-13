@@ -213,20 +213,52 @@ jobs:
         with:
           path: artifacts
 
-      - name: Collect wheels
+      - name: Create releases per package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Collect wheels and group by package
           mkdir -p wheels
           find artifacts -name "*.whl" -exec cp {} wheels/ \;
+
           echo "Collected wheels:"
           ls -la wheels/
 
-      - name: Create/Update release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: CUDA Wheels
-          files: wheels/*.whl
-          make_latest: true
+          # Extract unique package names from wheel filenames
+          # Wheel format: <package>-<version>+<suffix>-<python>-...
+          cd wheels
+          for whl in *.whl; do
+            if [ -f "$whl" ]; then
+              # Extract package name (everything before first -)
+              pkg=$(echo "$whl" | sed 's/-.*//')
+              echo "Found package: $pkg"
+              mkdir -p "../releases/$pkg"
+              cp "$whl" "../releases/$pkg/"
+            fi
+          done
+          cd ..
+
+          # Create a release for each package
+          for pkg_dir in releases/*/; do
+            pkg=$(basename "$pkg_dir")
+            echo "Creating release for: $pkg"
+
+            # Get version from first wheel filename
+            version=$(ls "$pkg_dir"/*.whl | head -1 | sed "s/.*${pkg}-//" | sed 's/+.*//')
+
+            gh release create "${pkg}-latest" \
+              --title "${pkg} CUDA Wheels" \
+              --notes "Pre-built ${pkg} wheels with CUDA support.
+
+**Install:**
+\`\`\`bash
+pip install ${pkg} --extra-index-url https://pozzettiandrea.github.io/cuda-wheels
+\`\`\`" \
+              --latest=false \
+              "$pkg_dir"/*.whl \
+              2>/dev/null || \
+            gh release upload "${pkg}-latest" "$pkg_dir"/*.whl --clobber
+          done
 
   update-index:
     needs: release
