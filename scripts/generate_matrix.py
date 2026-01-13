@@ -18,25 +18,33 @@ def generate_matrix(package_filter: str) -> list:
             continue
 
         build = pkg["build_matrix"]
-        for cuda in build["cuda_versions"]:
-            for pytorch in build["pytorch_versions"]:
-                for python_ver in build["python_versions"]:
-                    for platform in build["platforms"]:
-                        matrix.append({
-                            "package": pkg["name"],
-                            "version": pkg["version"],
-                            "source_repo": pkg["source_repo"],
-                            "source_tag": pkg.get("source_tag", ""),
-                            "cuda": cuda,
-                            "cuda_short": cuda.replace(".", ""),
-                            "cuda_apt": cuda.replace(".", "-"),  # "12.4" -> "12-4" for apt packages
-                            "pytorch": pytorch,
-                            "python": python_ver,
-                            "platform": platform,
-                            "arch_list": pkg.get("arch_list", "7.5;8.0;8.6;8.9;9.0"),
-                            "extra_deps": pkg.get("extra_deps", ""),
-                            "pre_build_script": pkg.get("pre_build_script", ""),
-                        })
+
+        # Support both old format (cuda_versions × pytorch_versions) and new format (combinations)
+        if "combinations" in build:
+            combos = [(c["cuda"], c["pytorch"]) for c in build["combinations"]]
+        else:
+            combos = [(cuda, pytorch)
+                      for cuda in build["cuda_versions"]
+                      for pytorch in build["pytorch_versions"]]
+
+        for cuda, pytorch in combos:
+            for python_ver in build["python_versions"]:
+                for platform in build["platforms"]:
+                    matrix.append({
+                        "package": pkg["name"],
+                        "version": pkg["version"],
+                        "source_repo": pkg["source_repo"],
+                        "source_tag": pkg.get("source_tag", ""),
+                        "cuda": cuda,
+                        "cuda_short": cuda.replace(".", ""),
+                        "cuda_apt": cuda.replace(".", "-"),
+                        "pytorch": pytorch,
+                        "python": python_ver,
+                        "platform": platform,
+                        "arch_list": pkg.get("arch_list", "7.5;8.0;8.6;8.9;9.0"),
+                        "extra_deps": pkg.get("extra_deps", ""),
+                        "pre_build_script": pkg.get("pre_build_script", ""),
+                    })
 
     return matrix
 
