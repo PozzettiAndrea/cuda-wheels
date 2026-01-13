@@ -16,11 +16,11 @@ build_matrix:
     - cuda: "12.4"
       pytorch: "2.4.0"
       python_versions: ["3.12"]  # Test with single Python version first
-      arch_list: "9.0"  # SageAttention 2.x requires Hopper (sm_90+) - uses WGMMA
+      arch_list: "8.0 8.6 8.9 9.0"  # Space-separated like Comfy-Org
     - cuda: "12.8"
       pytorch: "2.8.0"
       python_versions: ["3.12"]  # Test with single Python version first
-      arch_list: "9.0"  # SageAttention 2.x requires Hopper (sm_90+) - uses WGMMA
+      arch_list: "8.0 8.6 8.9 9.0"  # Space-separated like Comfy-Org
   platforms: ["linux"]  # Linux only for test
 
 # Default arch_list (can be overridden per-combination)
