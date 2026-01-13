@@ -4,6 +4,7 @@ version: "1.5.3"
 source_tag: v1.5.3
 
 clone_recursive: true  # Needs submodules
+free_disk_space: true  # PyTorch 2.8.0 + CUDA 12.8 needs space
 
 build_matrix:
   combinations:
