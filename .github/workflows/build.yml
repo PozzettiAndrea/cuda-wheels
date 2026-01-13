@@ -49,6 +49,12 @@ jobs:
       contents: read
 
     steps:
+      - name: Free disk space
+        run: |
+          rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          apt-get clean 2>/dev/null || true
+          df -h
+
       - uses: actions/checkout@v4
 
       - name: Compute wheel filename
@@ -214,10 +220,10 @@ jobs:
 
       - name: Build wheel
         if: steps.check.outputs.exists != 'true'
-        shell: cmd
+        shell: powershell
         run: |
           cd source
-          set TORCH_CUDA_ARCH_LIST=${{ matrix.arch_list }}
+          $env:TORCH_CUDA_ARCH_LIST = "${{ matrix.arch_list }}"
           python setup.py bdist_wheel
 
       - name: Rename wheel with CUDA+PyTorch suffix
