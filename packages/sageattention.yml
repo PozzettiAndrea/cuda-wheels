@@ -7,6 +7,10 @@ source_tag: v2.2.0
 # Only needed for very large packages - 14GB free is usually enough
 free_disk_space: false
 
+# Optional: parallel compilation jobs (default: 1)
+# SageAttention builds multiple extensions in parallel, so keep this low
+max_jobs: 1
+
 build_matrix:
   combinations:
     - cuda: "12.4"

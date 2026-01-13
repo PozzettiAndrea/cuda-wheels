@@ -113,6 +113,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: linux
+          max-jobs: ${{ matrix.max_jobs }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -185,6 +186,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: windows
+          max-jobs: ${{ matrix.max_jobs }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

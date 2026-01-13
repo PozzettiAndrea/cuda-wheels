@@ -29,6 +29,10 @@ inputs:
   platform:
     description: 'Platform (linux or windows)'
     required: true
+  max-jobs:
+    description: 'Max parallel compilation jobs'
+    required: false
+    default: '1'
 
 outputs:
   wheel-path:
@@ -61,7 +65,7 @@ runs:
         cd source
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
-        export MAX_JOBS=1
+        export MAX_JOBS=${{ inputs.max-jobs }}
         python setup.py bdist_wheel
 
     - name: Build wheel (Windows)
@@ -70,7 +74,7 @@ runs:
       run: |
         cd source
         $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
-        $env:MAX_JOBS = "1"
+        $env:MAX_JOBS = "${{ inputs.max-jobs }}"
         python setup.py bdist_wheel
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)

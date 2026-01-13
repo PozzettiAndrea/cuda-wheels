@@ -51,6 +51,7 @@ def generate_matrix(package_filter: str) -> list:
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
                         "free_disk_space": pkg.get("free_disk_space", False),
+                        "max_jobs": pkg.get("max_jobs", 1),
                     })
 
     return matrix
