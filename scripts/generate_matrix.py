@@ -16,8 +16,12 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     - 9.0: Hopper (H100)
 
     Blackwell architectures (conditionally added):
-    - 10.0: B200 (requires PyTorch 2.8+ and CUDA 12.4+)
-    - 12.0: RTX 50xx (requires PyTorch 2.8+ and CUDA 12.8+)
+    - 10.0: B200 (requires PyTorch 2.6+ and CUDA 12.6+)
+    - 12.0: RTX 50xx (requires PyTorch 2.6+ and CUDA 12.8+)
+
+    Note: PyTorch version determines Blackwell support:
+    - 2.4.x, 2.5.x: No Blackwell support
+    - 2.6.x+: Blackwell support (sm_100, sm_120)
     """
     # Base architectures up to Hopper
     archs = ["7.0", "7.5", "8.0", "8.6", "8.9", "9.0"]
@@ -26,12 +30,12 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     cuda_major, cuda_minor = map(int, cuda_version.split(".")[:2])
     pytorch_major, pytorch_minor = map(int, pytorch_version.split(".")[:2])
 
-    # Blackwell support requires PyTorch 2.8+
-    pytorch_supports_blackwell = (pytorch_major, pytorch_minor) >= (2, 8)
+    # Blackwell support requires PyTorch 2.6+
+    pytorch_supports_blackwell = (pytorch_major, pytorch_minor) >= (2, 6)
 
     if pytorch_supports_blackwell:
-        # sm_100 (B200) - needs CUDA 12.4+
-        if (cuda_major, cuda_minor) >= (12, 4):
+        # sm_100 (B200) - needs CUDA 12.6+
+        if (cuda_major, cuda_minor) >= (12, 6):
             archs.append("10.0")
 
         # sm_120 (RTX 50xx) - needs CUDA 12.8+
@@ -90,6 +94,8 @@ def generate_matrix(package_filter: str) -> list:
                         "free_disk_space": pkg.get("free_disk_space", False),
                         "max_jobs": pkg.get("max_jobs", 1),
                         "clone_recursive": pkg.get("clone_recursive", False),
+                        "patch_script": pkg.get("patch_script", ""),
+                        "build_subdir": pkg.get("build_subdir", ""),
                     })
 
     return matrix

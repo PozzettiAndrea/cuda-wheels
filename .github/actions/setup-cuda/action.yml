@@ -79,13 +79,17 @@ runs:
       shell: powershell
       run: |
         $cudaVersion = "${{ inputs.cuda-version }}"
-        if ($cudaVersion -eq "12.4") {
-          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.4.1/network_installers/cuda_12.4.1_windows_network.exe"
-        } elseif ($cudaVersion -eq "12.8") {
-          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe"
-        } else {
-          throw "Unsupported CUDA version: $cudaVersion"
+        # Map CUDA version to installer URL (using network installers)
+        $installerUrls = @{
+          "12.4" = "https://developer.download.nvidia.com/compute/cuda/12.4.1/network_installers/cuda_12.4.1_windows_network.exe"
+          "12.6" = "https://developer.download.nvidia.com/compute/cuda/12.6.3/network_installers/cuda_12.6.3_windows_network.exe"
+          "12.8" = "https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe"
+          "13.0" = "https://developer.download.nvidia.com/compute/cuda/13.0.1/network_installers/cuda_13.0.1_windows_network.exe"
         }
+        if (-not $installerUrls.ContainsKey($cudaVersion)) {
+          throw "Unsupported CUDA version: $cudaVersion. Supported: $($installerUrls.Keys -join ', ')"
+        }
+        $installerUrl = $installerUrls[$cudaVersion]
         Write-Host "Downloading CUDA from $installerUrl"
         Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
         Write-Host "Installing CUDA toolkit..."

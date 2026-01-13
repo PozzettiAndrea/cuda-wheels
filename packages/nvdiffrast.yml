@@ -7,14 +7,36 @@ free_disk_space: true
 
 build_matrix:
   combinations:
+    # Original combos
     - cuda: "12.4"
       pytorch: "2.4.0"
       python_versions: ["3.10", "3.11", "3.12"]
-      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0"  # No 10.0/12.0 - PyTorch 2.4 doesn't support Blackwell
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0"
     - cuda: "12.8"
       pytorch: "2.8.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0 12.0"  # Includes Blackwell
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0 12.0"
+    # Extended combos (sam3-speedup style)
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0"
+    - cuda: "12.6"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0"
+    - cuda: "12.6"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0"
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0 12.0"
+    - cuda: "13.0"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "6.1 7.0 7.5 8.0 8.6 8.9 9.0 10.0 12.0"
   platforms: ["linux", "windows"]
 
 extra_deps: "numpy"

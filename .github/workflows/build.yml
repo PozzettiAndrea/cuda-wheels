@@ -12,6 +12,12 @@ on:
           - sageattention
           - gsplat
           - nvdiffrast
+          - torch_generic_nms
+          - cc_torch
+          - flexgemm
+          - cumesh
+          - ovoxel
+          - nvdiffrec_render
 
 env:
   UPSTREAM_INDEX: "https://pozzettiandrea.github.io/cuda-wheels"
@@ -117,6 +123,8 @@ jobs:
           platform: linux
           max-jobs: ${{ matrix.max_jobs }}
           clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -191,6 +199,8 @@ jobs:
           platform: windows
           max-jobs: ${{ matrix.max_jobs }}
           clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

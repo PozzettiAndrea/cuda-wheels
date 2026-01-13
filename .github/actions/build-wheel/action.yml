@@ -37,6 +37,14 @@ inputs:
     description: 'Clone with --recursive for submodules'
     required: false
     default: 'false'
+  patch-script:
+    description: 'Path to patch script (Python file) to run before building'
+    required: false
+    default: ''
+  build-subdir:
+    description: 'Subdirectory to build from (for monorepos)'
+    required: false
+    default: ''
 
 outputs:
   wheel-path:
@@ -59,6 +67,13 @@ runs:
           git checkout ${{ inputs.source-tag }}
         fi
 
+    - name: Apply patch script
+      if: inputs.patch-script != ''
+      shell: bash
+      run: |
+        cd source
+        python $GITHUB_WORKSPACE/${{ inputs.patch-script }}
+
     - name: Pre-build script
       if: inputs.pre-build-script != ''
       shell: bash
@@ -70,7 +85,11 @@ runs:
       if: inputs.platform == 'linux'
       shell: bash
       run: |
-        cd source
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        cd $BUILD_DIR
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
         export MAX_JOBS=${{ inputs.max-jobs }}
@@ -82,7 +101,11 @@ runs:
       if: inputs.platform == 'windows'
       shell: powershell
       run: |
-        cd source
+        $buildDir = "source"
+        if ("${{ inputs.build-subdir }}" -ne "") {
+          $buildDir = "source/${{ inputs.build-subdir }}"
+        }
+        cd $buildDir
         $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
         $env:MAX_JOBS = "${{ inputs.max-jobs }}"
         pip wheel . --no-build-isolation --no-deps -v -w dist
@@ -92,13 +115,17 @@ runs:
       id: rename-linux
       shell: bash
       run: |
-        cd source/dist
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        cd $BUILD_DIR/dist
         CUDA_SHORT="${{ inputs.cuda-short }}"
         TORCH_MM=$(echo "${{ inputs.pytorch-version }}" | cut -d. -f1,2 | tr -d '.')
         for f in *.whl; do
           newname=$(echo "$f" | sed "s/-cp/+cu${CUDA_SHORT}torch${TORCH_MM}-cp/")
           mv "$f" "$newname"
-          echo "wheel-path=source/dist/$newname" >> $GITHUB_OUTPUT
+          echo "wheel-path=$BUILD_DIR/dist/$newname" >> $GITHUB_OUTPUT
         done
         mkdir -p $GITHUB_WORKSPACE/dist
         cp *.whl $GITHUB_WORKSPACE/dist/
@@ -108,13 +135,17 @@ runs:
       id: rename-windows
       shell: powershell
       run: |
-        cd source\dist
+        $buildDir = "source"
+        if ("${{ inputs.build-subdir }}" -ne "") {
+          $buildDir = "source/${{ inputs.build-subdir }}"
+        }
+        cd "$buildDir\dist"
         $cudaShort = "${{ inputs.cuda-short }}"
         $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join ''
         Get-ChildItem *.whl | ForEach-Object {
           $newName = $_.Name -replace '-cp', "+cu${cudaShort}torch${torchMM}-cp"
           Rename-Item $_.FullName $newName
-          echo "wheel-path=source/dist/$newName" >> $env:GITHUB_OUTPUT
+          echo "wheel-path=$buildDir/dist/$newName" >> $env:GITHUB_OUTPUT
         }
         New-Item -ItemType Directory -Force -Path $env:GITHUB_WORKSPACE\dist | Out-Null
         Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
