@@ -29,6 +29,7 @@ def generate_matrix(package_filter: str) -> list:
                             "source_tag": pkg.get("source_tag", ""),
                             "cuda": cuda,
                             "cuda_short": cuda.replace(".", ""),
+                            "cuda_apt": cuda.replace(".", "-"),  # "12.4" -> "12-4" for apt packages
                             "pytorch": pytorch,
                             "python": python_ver,
                             "platform": platform,
