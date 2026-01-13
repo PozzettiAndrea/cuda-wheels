@@ -179,7 +179,7 @@ jobs:
           cd source
           export TORCH_CUDA_ARCH_LIST="${{ matrix.arch_list }}"
           export CUDA_HOME=/usr/local/cuda-${{ matrix.cuda }}
-          export MAX_JOBS=4  # Limit parallel jobs to prevent OOM
+          export MAX_JOBS=2  # Match runner's 2 cores, prevent OOM
           python setup.py bdist_wheel
 
       - name: Rename wheel with CUDA+PyTorch suffix
@@ -323,7 +323,7 @@ jobs:
         run: |
           cd source
           $env:TORCH_CUDA_ARCH_LIST = "${{ matrix.arch_list }}"
-          $env:MAX_JOBS = "4"  # Limit parallel jobs to prevent OOM
+          $env:MAX_JOBS = "2"  # Match runner's 2 cores, prevent OOM
           python setup.py bdist_wheel
 
       - name: Rename wheel with CUDA+PyTorch suffix
