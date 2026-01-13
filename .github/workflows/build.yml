@@ -256,14 +256,10 @@ jobs:
             # Get version from first wheel filename
             version=$(ls "$pkg_dir"/*.whl | head -1 | sed "s/.*${pkg}-//" | sed 's/+.*//')
 
+            NOTES="Pre-built ${pkg} wheels with CUDA support."$'\n\n'"**Install:**"$'\n'"\`\`\`bash"$'\n'"pip install ${pkg} --extra-index-url https://pozzettiandrea.github.io/cuda-wheels"$'\n'"\`\`\`"
             gh release create "${pkg}-latest" \
               --title "${pkg} CUDA Wheels" \
-              --notes "Pre-built ${pkg} wheels with CUDA support.
-
-**Install:**
-\`\`\`bash
-pip install ${pkg} --extra-index-url https://pozzettiandrea.github.io/cuda-wheels
-\`\`\`" \
+              --notes "$NOTES" \
               --latest=false \
               "$pkg_dir"/*.whl \
               2>/dev/null || \
