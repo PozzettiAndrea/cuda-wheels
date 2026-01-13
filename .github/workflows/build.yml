@@ -114,7 +114,6 @@ jobs:
           pytorch-version: ${{ matrix.pytorch }}
           platform: linux
           max-jobs: ${{ matrix.max_jobs }}
-          python-short: ${{ matrix.python_short }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -188,7 +187,6 @@ jobs:
           pytorch-version: ${{ matrix.pytorch }}
           platform: windows
           max-jobs: ${{ matrix.max_jobs }}
-          python-short: ${{ matrix.python_short }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

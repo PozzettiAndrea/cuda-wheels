@@ -21,19 +21,20 @@ def generate_matrix(package_filter: str) -> list:
 
         # Support both old format (cuda_versions × pytorch_versions) and new format (combinations)
         if "combinations" in build:
-            # New format: combinations with optional per-combination python_versions
+            # New format: combinations with optional per-combination python_versions and arch_list
             combos = []
             for c in build["combinations"]:
                 python_vers = c.get("python_versions", build.get("python_versions", []))
-                combos.append((c["cuda"], c["pytorch"], python_vers))
+                combo_arch_list = c.get("arch_list")  # Per-combination arch_list
+                combos.append((c["cuda"], c["pytorch"], python_vers, combo_arch_list))
         else:
             # Old format: cartesian product
             python_vers = build["python_versions"]
-            combos = [(cuda, pytorch, python_vers)
+            combos = [(cuda, pytorch, python_vers, None)
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
 
-        for cuda, pytorch, python_versions in combos:
+        for cuda, pytorch, python_versions, combo_arch_list in combos:
             for python_ver in python_versions:
                 for platform in build["platforms"]:
                     matrix.append({
@@ -48,7 +49,7 @@ def generate_matrix(package_filter: str) -> list:
                         "python": python_ver,
                         "python_short": python_ver.replace(".", ""),
                         "platform": platform,
-                        "arch_list": pkg.get("arch_list", "7.5;8.0;8.6;8.9;9.0"),
+                        "arch_list": combo_arch_list or pkg.get("arch_list", "7.5;8.0;8.6;8.9;9.0"),
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
                         "free_disk_space": pkg.get("free_disk_space", False),
