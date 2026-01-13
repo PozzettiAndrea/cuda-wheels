@@ -50,8 +50,12 @@ jobs:
     steps:
       - name: Free disk space
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo apt-get clean
+          sudo rm -rf /usr/share/dotnet &
+          sudo rm -rf /usr/local/lib/android &
+          sudo rm -rf /opt/ghc &
+          sudo rm -rf /opt/hostedtoolcache/CodeQL &
+          sudo apt-get clean &
+          wait
           df -h
 
       - uses: actions/checkout@v4
@@ -88,8 +92,8 @@ jobs:
         id: cuda-cache
         uses: actions/cache/restore@v4
         with:
-          path: /usr/local/cuda-${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-linux
+          path: .cuda-cache/cuda-${{ matrix.cuda }}
+          key: cuda-${{ matrix.cuda }}-linux-v2
 
       - name: Install CUDA toolkit
         if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
@@ -104,13 +108,21 @@ jobs:
             libcusparse-dev-${{ matrix.cuda_apt }} \
             libcurand-dev-${{ matrix.cuda_apt }} \
             libcusolver-dev-${{ matrix.cuda_apt }}
+          # Copy to cacheable workspace location
+          mkdir -p .cuda-cache
+          cp -r /usr/local/cuda-${{ matrix.cuda }} .cuda-cache/
 
       - name: Save CUDA cache
         if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: /usr/local/cuda-${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-linux
+          path: .cuda-cache/cuda-${{ matrix.cuda }}
+          key: cuda-${{ matrix.cuda }}-linux-v2
+
+      - name: Restore CUDA from cache
+        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit == 'true'
+        run: |
+          sudo cp -r .cuda-cache/cuda-${{ matrix.cuda }} /usr/local/
 
       - name: Set CUDA environment
         if: steps.check.outputs.exists != 'true'
