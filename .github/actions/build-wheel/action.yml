@@ -1,5 +1,5 @@
 name: 'Build Wheel'
-description: 'Clone source, apply patches, build wheel, rename with CUDA+PyTorch suffix'
+description: 'Clone source, apply patches, build wheel with cibuildwheel, rename with CUDA+PyTorch suffix'
 
 inputs:
   source-repo:
@@ -33,6 +33,9 @@ inputs:
     description: 'Max parallel compilation jobs'
     required: false
     default: '1'
+  python-short:
+    description: 'Python version without dots (e.g., 311 for 3.11)'
+    required: true
 
 outputs:
   wheel-path:
@@ -61,21 +64,32 @@ runs:
     - name: Build wheel (Linux)
       if: inputs.platform == 'linux'
       shell: bash
+      env:
+        CIBW_BUILD: "cp${{ inputs.python-short }}-manylinux_x86_64"
+        CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
+        CIBW_ENVIRONMENT: >-
+          TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
+          MAX_JOBS=${{ inputs.max-jobs }}
+          CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
+        CIBW_BEFORE_BUILD: "pip install torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}"
       run: |
+        pip install cibuildwheel
         cd source
-        export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
-        export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
-        export MAX_JOBS=${{ inputs.max-jobs }}
-        pip wheel . --no-build-isolation --no-deps -w dist
+        cibuildwheel --platform linux --output-dir dist
 
     - name: Build wheel (Windows)
       if: inputs.platform == 'windows'
-      shell: powershell
+      shell: bash
+      env:
+        CIBW_BUILD: "cp${{ inputs.python-short }}-win_amd64"
+        CIBW_ENVIRONMENT: >-
+          TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
+          MAX_JOBS=${{ inputs.max-jobs }}
+        CIBW_BEFORE_BUILD: "pip install torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}"
       run: |
+        pip install cibuildwheel
         cd source
-        $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
-        $env:MAX_JOBS = "${{ inputs.max-jobs }}"
-        pip wheel . --no-build-isolation --no-deps -w dist
+        cibuildwheel --platform windows --output-dir dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       if: inputs.platform == 'linux'
