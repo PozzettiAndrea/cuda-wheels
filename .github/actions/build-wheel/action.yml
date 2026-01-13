@@ -66,7 +66,7 @@ runs:
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
         export MAX_JOBS=${{ inputs.max-jobs }}
-        python setup.py bdist_wheel
+        pip wheel . --no-build-isolation --no-deps -w dist
 
     - name: Build wheel (Windows)
       if: inputs.platform == 'windows'
@@ -75,7 +75,7 @@ runs:
         cd source
         $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
         $env:MAX_JOBS = "${{ inputs.max-jobs }}"
-        python setup.py bdist_wheel
+        pip wheel . --no-build-isolation --no-deps -w dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       if: inputs.platform == 'linux'
