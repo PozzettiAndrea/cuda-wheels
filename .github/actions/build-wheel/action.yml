@@ -66,6 +66,8 @@ runs:
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
         export MAX_JOBS=${{ inputs.max-jobs }}
+        # Add CUDA stubs to library path for linking (libcuda.so)
+        export LIBRARY_PATH=/usr/local/cuda-${{ inputs.cuda-version }}/lib64/stubs:${LIBRARY_PATH:-}
         pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Build wheel (Windows)
