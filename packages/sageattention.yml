@@ -22,6 +22,6 @@ build_matrix:
   platforms: ["linux", "windows"]
 
 # Optional build settings
-arch_list: "7.5;8.0;8.6;8.9;9.0"
+arch_list: "7.0;7.5;8.0;8.6;8.9;9.0;10.0;12.0"
 extra_deps: ""
 pre_build_script: ""
