@@ -4,8 +4,8 @@ version: "2.2.0"
 source_tag: v2.2.0
 
 # Optional: free disk space before build (default: false)
-# Only needed for very large packages - 14GB free is usually enough
-free_disk_space: false
+# Needed because PyTorch 2.8.0 uv cache is 3.3GB + CUDA toolkit
+free_disk_space: true
 
 # Optional: parallel compilation jobs (default: 1)
 # SageAttention builds multiple extensions in parallel, so keep this low
