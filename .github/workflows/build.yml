@@ -1,0 +1,287 @@
+name: Build Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to build (or "all")'
+        required: true
+        type: choice
+        options:
+          - all
+          - sageattention
+
+env:
+  # Hardcoded to the upstream repo - forks inherit this and check here first
+  UPSTREAM_INDEX: "https://pozzettiandrea.github.io/cuda-wheels"
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate build matrix
+        id: generate
+        run: |
+          python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json
+          echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+
+  build-linux:
+    needs: generate-matrix
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/pozzettiandrea/cuda-wheel-actions/linux:cu${{ matrix.cuda_short }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix).include }}
+        exclude:
+          - platform: windows
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        run: |
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+
+          WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
+          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "Will check for: $WHEEL"
+
+      - name: Check upstream index
+        id: check
+        run: |
+          URL="${{ env.UPSTREAM_INDEX }}/${{ matrix.package }}/${{ steps.meta.outputs.wheel_filename }}"
+          echo "Checking: $URL"
+
+          mkdir -p dist
+          if curl -sfI "$URL" 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel exists upstream, downloading: ${{ steps.meta.outputs.wheel_filename }}"
+            curl -L -o "dist/${{ steps.meta.outputs.wheel_filename }}" "$URL"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel not found upstream, will build: ${{ steps.meta.outputs.wheel_filename }}"
+          fi
+
+      - name: Setup Python ${{ matrix.python }}
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          python${{ matrix.python }} -m venv /opt/venv
+          echo "/opt/venv/bin" >> $GITHUB_PATH
+
+      - name: Install PyTorch and build tools
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          /opt/venv/bin/pip install uv
+          /opt/venv/bin/uv pip install torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
+          /opt/venv/bin/uv pip install wheel setuptools ninja numpy triton packaging ${{ matrix.extra_deps }}
+
+      - name: Clone source
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          git clone https://github.com/${{ matrix.source_repo }}.git source
+          cd source
+          if [ -n "${{ matrix.source_tag }}" ]; then
+            git checkout ${{ matrix.source_tag }}
+          fi
+
+      - name: Pre-build script
+        if: steps.check.outputs.exists != 'true' && matrix.pre_build_script != ''
+        run: |
+          cd source
+          ${{ matrix.pre_build_script }}
+
+      - name: Build wheel
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          cd source
+          export TORCH_CUDA_ARCH_LIST="${{ matrix.arch_list }}"
+          /opt/venv/bin/python setup.py bdist_wheel
+
+      - name: Rename wheel with CUDA+PyTorch suffix
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          cd source/dist
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_MM=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          for f in *.whl; do
+            newname=$(echo "$f" | sed "s/-cp/+cu${CUDA_SHORT}torch${TORCH_MM}-cp/")
+            mv "$f" "$newname"
+          done
+          cp *.whl $GITHUB_WORKSPACE/dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}
+          path: dist/*.whl
+
+  build-windows:
+    needs: generate-matrix
+    runs-on: windows-2022
+    container:
+      image: ghcr.io/pozzettiandrea/cuda-wheel-actions/windows:cu${{ matrix.cuda_short }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix).include }}
+        exclude:
+          - platform: linux
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        shell: bash
+        run: |
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+
+          WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
+          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+
+      - name: Check upstream index
+        id: check
+        shell: bash
+        run: |
+          URL="${{ env.UPSTREAM_INDEX }}/${{ matrix.package }}/${{ steps.meta.outputs.wheel_filename }}"
+          mkdir -p dist
+          if curl -sfI "$URL" 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            curl -L -o "dist/${{ steps.meta.outputs.wheel_filename }}" "$URL"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python ${{ matrix.python }}
+        if: steps.check.outputs.exists != 'true'
+        shell: powershell
+        run: |
+          $pythonPath = "C:\Python${{ matrix.python }}".Replace('.', '')
+          $pythonPath = $pythonPath.Substring(0, 11)
+          & "$pythonPath\python.exe" -m venv C:\venv
+          echo "C:\venv\Scripts" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install PyTorch and build tools
+        if: steps.check.outputs.exists != 'true'
+        shell: powershell
+        run: |
+          C:\venv\Scripts\pip.exe install uv
+          C:\venv\Scripts\uv.exe pip install torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
+          C:\venv\Scripts\uv.exe pip install wheel setuptools ninja numpy packaging ${{ matrix.extra_deps }}
+
+      - name: Clone source
+        if: steps.check.outputs.exists != 'true'
+        shell: bash
+        run: |
+          git clone https://github.com/${{ matrix.source_repo }}.git source
+          cd source
+          if [ -n "${{ matrix.source_tag }}" ]; then
+            git checkout ${{ matrix.source_tag }}
+          fi
+
+      - name: Build wheel
+        if: steps.check.outputs.exists != 'true'
+        shell: cmd
+        run: |
+          cd source
+          set TORCH_CUDA_ARCH_LIST=${{ matrix.arch_list }}
+          C:\venv\Scripts\python.exe setup.py bdist_wheel
+
+      - name: Rename wheel with CUDA+PyTorch suffix
+        if: steps.check.outputs.exists != 'true'
+        shell: powershell
+        run: |
+          cd source\dist
+          $cudaShort = "${{ matrix.cuda_short }}"
+          $torchMM = "${{ matrix.pytorch }}".Split('.')[0..1] -join ''
+          Get-ChildItem *.whl | ForEach-Object {
+            $newName = $_.Name -replace '-cp', "+cu${cudaShort}torch${torchMM}-cp"
+            Rename-Item $_.FullName $newName
+          }
+          Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}
+          path: dist/*.whl
+
+  release:
+    needs: [build-linux, build-windows]
+    if: always() && (needs.build-linux.result == 'success' || needs.build-windows.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect wheels
+        run: |
+          mkdir -p wheels
+          find artifacts -name "*.whl" -exec cp {} wheels/ \;
+          echo "Collected wheels:"
+          ls -la wheels/
+
+      - name: Create/Update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: CUDA Wheels
+          files: wheels/*.whl
+          make_latest: true
+
+  update-index:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate PEP 503 index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/generate_index.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          force_orphan: true
