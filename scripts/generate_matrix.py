@@ -48,13 +48,20 @@ def main():
 
     matrix = generate_matrix(args.package)
 
-    output = {"include": matrix}
+    # Split by platform
+    linux_jobs = [j for j in matrix if j["platform"] == "linux"]
+    windows_jobs = [j for j in matrix if j["platform"] == "windows"]
+
+    output = {
+        "linux": {"include": linux_jobs},
+        "windows": {"include": windows_jobs},
+    }
 
     with open(args.output, "w") as f:
         # No indent - GitHub Actions needs single-line JSON for GITHUB_OUTPUT
         json.dump(output, f, separators=(',', ':'))
 
-    print(f"Generated {len(matrix)} build jobs")
+    print(f"Generated {len(matrix)} build jobs ({len(linux_jobs)} Linux, {len(windows_jobs)} Windows)")
 
     # Also print to stdout for debugging
     for job in matrix:

@@ -44,10 +44,7 @@ jobs:
       image: ghcr.io/pozzettiandrea/cuda-wheel-actions/linux:cu${{ matrix.cuda_short }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJson(needs.generate-matrix.outputs.matrix).include }}
-        exclude:
-          - platform: windows
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux }}
     permissions:
       contents: read
 
@@ -141,10 +138,7 @@ jobs:
       image: ghcr.io/pozzettiandrea/cuda-wheel-actions/windows:cu${{ matrix.cuda_short }}
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJson(needs.generate-matrix.outputs.matrix).include }}
-        exclude:
-          - platform: linux
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows }}
     permissions:
       contents: read
 
