@@ -33,6 +33,10 @@ inputs:
     description: 'Max parallel compilation jobs'
     required: false
     default: '1'
+  clone-recursive:
+    description: 'Clone with --recursive for submodules'
+    required: false
+    default: 'false'
 
 outputs:
   wheel-path:
@@ -45,7 +49,11 @@ runs:
     - name: Clone source
       shell: bash
       run: |
-        git clone https://github.com/${{ inputs.source-repo }}.git source
+        RECURSIVE_FLAG=""
+        if [ "${{ inputs.clone-recursive }}" == "true" ]; then
+          RECURSIVE_FLAG="--recursive"
+        fi
+        git clone $RECURSIVE_FLAG https://github.com/${{ inputs.source-repo }}.git source
         cd source
         if [ -n "${{ inputs.source-tag }}" ]; then
           git checkout ${{ inputs.source-tag }}

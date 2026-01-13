@@ -1,0 +1,18 @@
+name: gsplat
+source_repo: nerfstudio-project/gsplat
+version: "1.5.3"
+source_tag: v1.5.3
+
+clone_recursive: true  # Needs submodules
+
+build_matrix:
+  combinations:
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+      arch_list: "7.0 7.5 8.0 8.6 8.9 9.0 10.0"
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "7.0 7.5 8.0 8.6 8.9 9.0 10.0 12.0"
+  platforms: ["linux", "windows"]
