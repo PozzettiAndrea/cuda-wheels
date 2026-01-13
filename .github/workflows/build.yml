@@ -38,6 +38,7 @@ jobs:
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
   build-linux:
+    name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
     needs: generate-matrix
     runs-on: ubuntu-22.04
     strategy:
@@ -152,9 +153,9 @@ jobs:
           path: dist/*.whl
 
   build-windows:
+    name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
     needs: generate-matrix
     runs-on: windows-2022
-    # No container - Windows GitHub runners don't support containers for jobs
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows }}
