@@ -51,7 +51,8 @@ def main():
     output = {"include": matrix}
 
     with open(args.output, "w") as f:
-        json.dump(output, f, indent=2)
+        # No indent - GitHub Actions needs single-line JSON for GITHUB_OUTPUT
+        json.dump(output, f, separators=(',', ':'))
 
     print(f"Generated {len(matrix)} build jobs")
 
