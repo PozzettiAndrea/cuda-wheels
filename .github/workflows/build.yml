@@ -83,10 +83,10 @@ jobs:
             echo "::notice::Wheel not found upstream, will build: ${{ steps.meta.outputs.wheel_filename }}"
           fi
 
-      - name: Cache CUDA toolkit
+      - name: Restore CUDA cache
         if: steps.check.outputs.exists != 'true'
         id: cuda-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: /usr/local/cuda-${{ matrix.cuda }}
           key: cuda-${{ matrix.cuda }}-linux
@@ -105,6 +105,13 @@ jobs:
             libcurand-dev-${{ matrix.cuda_apt }} \
             libcusolver-dev-${{ matrix.cuda_apt }}
 
+      - name: Save CUDA cache
+        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /usr/local/cuda-${{ matrix.cuda }}
+          key: cuda-${{ matrix.cuda }}-linux
+
       - name: Set CUDA environment
         if: steps.check.outputs.exists != 'true'
         run: |
@@ -117,9 +124,10 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Cache uv
+      - name: Restore uv cache
         if: steps.check.outputs.exists != 'true'
-        uses: actions/cache@v4
+        id: uv-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/uv
           key: uv-linux-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
@@ -130,6 +138,13 @@ jobs:
           pip install uv
           uv pip install --system torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
           uv pip install --system wheel setuptools ninja numpy triton packaging ${{ matrix.extra_deps }}
+
+      - name: Save uv cache
+        if: steps.check.outputs.exists != 'true' && steps.uv-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-linux-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
 
       - name: Clone source
         if: steps.check.outputs.exists != 'true'
@@ -215,10 +230,10 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Cache CUDA toolkit
+      - name: Restore CUDA cache
         if: steps.check.outputs.exists != 'true'
         id: cuda-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda }}
           key: cuda-${{ matrix.cuda }}-windows
@@ -242,6 +257,13 @@ jobs:
           Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "thrust_$cudaVersion" -Wait -NoNewWindow
           Write-Host "CUDA installed successfully"
 
+      - name: Save CUDA cache
+        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda }}
+          key: cuda-${{ matrix.cuda }}-windows
+
       - name: Set CUDA environment
         if: steps.check.outputs.exists != 'true'
         shell: powershell
@@ -250,9 +272,10 @@ jobs:
           echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Cache uv
+      - name: Restore uv cache
         if: steps.check.outputs.exists != 'true'
-        uses: actions/cache@v4
+        id: uv-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~\AppData\Local\uv\cache
           key: uv-windows-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
@@ -263,6 +286,13 @@ jobs:
           pip install uv
           uv pip install --system torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
           uv pip install --system wheel setuptools ninja numpy packaging ${{ matrix.extra_deps }}
+
+      - name: Save uv cache
+        if: steps.check.outputs.exists != 'true' && steps.uv-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~\AppData\Local\uv\cache
+          key: uv-windows-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
 
       - name: Clone source
         if: steps.check.outputs.exists != 'true'
