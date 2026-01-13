@@ -21,14 +21,20 @@ def generate_matrix(package_filter: str) -> list:
 
         # Support both old format (cuda_versions × pytorch_versions) and new format (combinations)
         if "combinations" in build:
-            combos = [(c["cuda"], c["pytorch"]) for c in build["combinations"]]
+            # New format: combinations with optional per-combination python_versions
+            combos = []
+            for c in build["combinations"]:
+                python_vers = c.get("python_versions", build.get("python_versions", []))
+                combos.append((c["cuda"], c["pytorch"], python_vers))
         else:
-            combos = [(cuda, pytorch)
+            # Old format: cartesian product
+            python_vers = build["python_versions"]
+            combos = [(cuda, pytorch, python_vers)
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
 
-        for cuda, pytorch in combos:
-            for python_ver in build["python_versions"]:
+        for cuda, pytorch, python_versions in combos:
+            for python_ver in python_versions:
                 for platform in build["platforms"]:
                     matrix.append({
                         "package": pkg["name"],

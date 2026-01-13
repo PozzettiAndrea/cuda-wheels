@@ -7,9 +7,10 @@ build_matrix:
   combinations:
     - cuda: "12.4"
       pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]  # PyTorch 2.4 doesn't support 3.13
     - cuda: "12.8"
       pytorch: "2.8.0"
-  python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
   platforms: ["linux", "windows"]
 
 # Optional build settings
