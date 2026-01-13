@@ -1,0 +1,116 @@
+name: 'Build Wheel'
+description: 'Clone source, apply patches, build wheel, rename with CUDA+PyTorch suffix'
+
+inputs:
+  source-repo:
+    description: 'Source repository (e.g., thu-ml/SageAttention)'
+    required: true
+  source-tag:
+    description: 'Git tag or branch to checkout'
+    required: false
+    default: ''
+  pre-build-script:
+    description: 'Script to run before building (patches, etc.)'
+    required: false
+    default: ''
+  arch-list:
+    description: 'CUDA architectures to build for'
+    required: false
+    default: '7.5;8.0;8.6;8.9;9.0'
+  cuda-version:
+    description: 'Full CUDA version (e.g., 12.4)'
+    required: true
+  cuda-short:
+    description: 'Short CUDA version (e.g., 124)'
+    required: true
+  pytorch-version:
+    description: 'PyTorch version (e.g., 2.4.0)'
+    required: true
+  platform:
+    description: 'Platform (linux or windows)'
+    required: true
+
+outputs:
+  wheel-path:
+    description: 'Path to the built wheel'
+    value: ${{ steps.rename.outputs.wheel-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone source
+      shell: bash
+      run: |
+        git clone https://github.com/${{ inputs.source-repo }}.git source
+        cd source
+        if [ -n "${{ inputs.source-tag }}" ]; then
+          git checkout ${{ inputs.source-tag }}
+        fi
+
+    - name: Pre-build script
+      if: inputs.pre-build-script != ''
+      shell: bash
+      run: |
+        cd source
+        ${{ inputs.pre-build-script }}
+
+    - name: Build wheel (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        cd source
+        export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
+        export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
+        export MAX_JOBS=2
+        python setup.py bdist_wheel
+
+    - name: Build wheel (Windows)
+      if: inputs.platform == 'windows'
+      shell: powershell
+      run: |
+        cd source
+        $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
+        $env:MAX_JOBS = "2"
+        python setup.py bdist_wheel
+
+    - name: Rename wheel with CUDA+PyTorch suffix (Linux)
+      if: inputs.platform == 'linux'
+      id: rename-linux
+      shell: bash
+      run: |
+        cd source/dist
+        CUDA_SHORT="${{ inputs.cuda-short }}"
+        TORCH_MM=$(echo "${{ inputs.pytorch-version }}" | cut -d. -f1,2 | tr -d '.')
+        for f in *.whl; do
+          newname=$(echo "$f" | sed "s/-cp/+cu${CUDA_SHORT}torch${TORCH_MM}-cp/")
+          mv "$f" "$newname"
+          echo "wheel-path=source/dist/$newname" >> $GITHUB_OUTPUT
+        done
+        mkdir -p $GITHUB_WORKSPACE/dist
+        cp *.whl $GITHUB_WORKSPACE/dist/
+
+    - name: Rename wheel with CUDA+PyTorch suffix (Windows)
+      if: inputs.platform == 'windows'
+      id: rename-windows
+      shell: powershell
+      run: |
+        cd source\dist
+        $cudaShort = "${{ inputs.cuda-short }}"
+        $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join ''
+        Get-ChildItem *.whl | ForEach-Object {
+          $newName = $_.Name -replace '-cp', "+cu${cudaShort}torch${torchMM}-cp"
+          Rename-Item $_.FullName $newName
+          echo "wheel-path=source/dist/$newName" >> $env:GITHUB_OUTPUT
+        }
+        New-Item -ItemType Directory -Force -Path $env:GITHUB_WORKSPACE\dist | Out-Null
+        Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
+
+    - name: Set wheel-path output
+      id: rename
+      shell: bash
+      run: |
+        if [ "${{ inputs.platform }}" == "linux" ]; then
+          echo "wheel-path=${{ steps.rename-linux.outputs.wheel-path }}" >> $GITHUB_OUTPUT
+        else
+          echo "wheel-path=${{ steps.rename-windows.outputs.wheel-path }}" >> $GITHUB_OUTPUT
+        fi

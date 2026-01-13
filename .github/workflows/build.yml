@@ -12,7 +12,6 @@ on:
           - sageattention
 
 env:
-  # Hardcoded to the upstream repo - forks inherit this and check here first
   UPSTREAM_INDEX: "https://pozzettiandrea.github.io/cuda-wheels"
 
 jobs:
@@ -66,17 +65,14 @@ jobs:
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-
           WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
-          echo "Will check for: $WHEEL"
 
       - name: Check upstream index
         id: check
         run: |
           URL="${{ env.UPSTREAM_INDEX }}/${{ matrix.package }}/${{ steps.meta.outputs.wheel_filename }}"
           echo "Checking: $URL"
-
           mkdir -p dist
           if curl -sfI "$URL" 2>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -87,112 +83,35 @@ jobs:
             echo "::notice::Wheel not found upstream, will build: ${{ steps.meta.outputs.wheel_filename }}"
           fi
 
-      - name: Restore CUDA cache
+      - name: Setup CUDA
         if: steps.check.outputs.exists != 'true'
-        id: cuda-cache
-        uses: actions/cache/restore@v4
+        uses: ./.github/actions/setup-cuda
         with:
-          path: .cuda-cache/cuda-${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-linux-v2
+          cuda-version: ${{ matrix.cuda }}
+          platform: linux
 
-      - name: Install CUDA toolkit
-        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
-        run: |
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-          sudo dpkg -i cuda-keyring_1.1-1_all.deb
-          sudo apt-get update
-          sudo apt-get install -y \
-            cuda-nvcc-${{ matrix.cuda_apt }} \
-            cuda-cudart-dev-${{ matrix.cuda_apt }} \
-            libcublas-dev-${{ matrix.cuda_apt }} \
-            libcusparse-dev-${{ matrix.cuda_apt }} \
-            libcurand-dev-${{ matrix.cuda_apt }} \
-            libcusolver-dev-${{ matrix.cuda_apt }}
-          # Copy to cacheable workspace location
-          mkdir -p .cuda-cache
-          cp -r /usr/local/cuda-${{ matrix.cuda }} .cuda-cache/
-
-      - name: Save CUDA cache
-        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: .cuda-cache/cuda-${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-linux-v2
-
-      - name: Restore CUDA from cache
-        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit == 'true'
-        run: |
-          sudo cp -r .cuda-cache/cuda-${{ matrix.cuda }} /usr/local/
-
-      - name: Set CUDA environment
+      - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
-        run: |
-          echo "/usr/local/cuda-${{ matrix.cuda }}/bin" >> $GITHUB_PATH
-          echo "CUDA_HOME=/usr/local/cuda-${{ matrix.cuda }}" >> $GITHUB_ENV
-
-      - name: Setup Python ${{ matrix.python }}
-        if: steps.check.outputs.exists != 'true'
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-build-env
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Restore uv cache
-        if: steps.check.outputs.exists != 'true'
-        id: uv-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/uv
-          key: uv-linux-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
-
-      - name: Install PyTorch and build tools
-        if: steps.check.outputs.exists != 'true'
-        run: |
-          pip install uv
-          uv pip install --system torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
-          uv pip install --system wheel setuptools ninja numpy triton packaging ${{ matrix.extra_deps }}
-
-      - name: Save uv cache
-        if: steps.check.outputs.exists != 'true' && steps.uv-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.cache/uv
-          key: uv-linux-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
-
-      - name: Clone source
-        if: steps.check.outputs.exists != 'true'
-        run: |
-          git clone https://github.com/${{ matrix.source_repo }}.git source
-          cd source
-          if [ -n "${{ matrix.source_tag }}" ]; then
-            git checkout ${{ matrix.source_tag }}
-          fi
-
-      - name: Pre-build script
-        if: steps.check.outputs.exists != 'true' && matrix.pre_build_script != ''
-        run: |
-          cd source
-          ${{ matrix.pre_build_script }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: linux
+          extra-deps: ${{ matrix.extra_deps }}
 
       - name: Build wheel
         if: steps.check.outputs.exists != 'true'
-        run: |
-          cd source
-          export TORCH_CUDA_ARCH_LIST="${{ matrix.arch_list }}"
-          export CUDA_HOME=/usr/local/cuda-${{ matrix.cuda }}
-          export MAX_JOBS=2  # Match runner's 2 cores, prevent OOM
-          python setup.py bdist_wheel
-
-      - name: Rename wheel with CUDA+PyTorch suffix
-        if: steps.check.outputs.exists != 'true'
-        run: |
-          cd source/dist
-          CUDA_SHORT="${{ matrix.cuda_short }}"
-          TORCH_MM=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
-          for f in *.whl; do
-            newname=$(echo "$f" | sed "s/-cp/+cu${CUDA_SHORT}torch${TORCH_MM}-cp/")
-            mv "$f" "$newname"
-          done
-          cp *.whl $GITHUB_WORKSPACE/dist/
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: linux
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -220,7 +139,6 @@ jobs:
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-
           WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
 
@@ -237,107 +155,35 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Setup Python ${{ matrix.python }}
+      - name: Setup CUDA
         if: steps.check.outputs.exists != 'true'
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: windows
+
+      - name: Setup build environment
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-build-env
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Restore CUDA cache
-        if: steps.check.outputs.exists != 'true'
-        id: cuda-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-windows
-
-      - name: Download and install CUDA toolkit
-        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
-        shell: powershell
-        run: |
-          $cudaVersion = "${{ matrix.cuda }}"
-          # Use network installer - smaller download, installs only what we need
-          if ($cudaVersion -eq "12.4") {
-            $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.4.1/network_installers/cuda_12.4.1_windows_network.exe"
-          } elseif ($cudaVersion -eq "12.8") {
-            $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe"
-          } else {
-            throw "Unsupported CUDA version: $cudaVersion"
-          }
-          Write-Host "Downloading CUDA from $installerUrl"
-          Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
-          Write-Host "Installing CUDA toolkit..."
-          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "thrust_$cudaVersion" -Wait -NoNewWindow
-          Write-Host "CUDA installed successfully"
-
-      - name: Save CUDA cache
-        if: steps.check.outputs.exists != 'true' && steps.cuda-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda }}
-          key: cuda-${{ matrix.cuda }}-windows
-
-      - name: Set CUDA environment
-        if: steps.check.outputs.exists != 'true'
-        shell: powershell
-        run: |
-          $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ matrix.cuda }}"
-          echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Restore uv cache
-        if: steps.check.outputs.exists != 'true'
-        id: uv-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~\AppData\Local\uv\cache
-          key: uv-windows-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
-
-      - name: Install PyTorch and build tools
-        if: steps.check.outputs.exists != 'true'
-        run: |
-          pip install uv
-          uv pip install --system torch==${{ matrix.pytorch }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cuda_short }}
-          uv pip install --system wheel setuptools ninja numpy packaging ${{ matrix.extra_deps }}
-
-      - name: Save uv cache
-        if: steps.check.outputs.exists != 'true' && steps.uv-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~\AppData\Local\uv\cache
-          key: uv-windows-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
-
-      - name: Clone source
-        if: steps.check.outputs.exists != 'true'
-        shell: bash
-        run: |
-          git clone https://github.com/${{ matrix.source_repo }}.git source
-          cd source
-          if [ -n "${{ matrix.source_tag }}" ]; then
-            git checkout ${{ matrix.source_tag }}
-          fi
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: windows
+          extra-deps: ${{ matrix.extra_deps }}
 
       - name: Build wheel
         if: steps.check.outputs.exists != 'true'
-        shell: powershell
-        run: |
-          cd source
-          $env:TORCH_CUDA_ARCH_LIST = "${{ matrix.arch_list }}"
-          $env:MAX_JOBS = "2"  # Match runner's 2 cores, prevent OOM
-          python setup.py bdist_wheel
-
-      - name: Rename wheel with CUDA+PyTorch suffix
-        if: steps.check.outputs.exists != 'true'
-        shell: powershell
-        run: |
-          cd source\dist
-          $cudaShort = "${{ matrix.cuda_short }}"
-          $torchMM = "${{ matrix.pytorch }}".Split('.')[0..1] -join ''
-          Get-ChildItem *.whl | ForEach-Object {
-            $newName = $_.Name -replace '-cp', "+cu${cudaShort}torch${torchMM}-cp"
-            Rename-Item $_.FullName $newName
-          }
-          Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: windows
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

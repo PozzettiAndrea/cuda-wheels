@@ -1,0 +1,119 @@
+name: 'Setup CUDA'
+description: 'Install and cache CUDA toolkit for Linux or Windows'
+
+inputs:
+  cuda-version:
+    description: 'CUDA version (e.g., 12.4)'
+    required: true
+  platform:
+    description: 'Platform (linux or windows)'
+    required: true
+
+outputs:
+  cache-hit:
+    description: 'Whether CUDA was restored from cache'
+    value: ${{ steps.cuda-cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ============== LINUX ==============
+    - name: Restore CUDA cache (Linux)
+      if: inputs.platform == 'linux'
+      id: cuda-cache-linux
+      uses: actions/cache/restore@v4
+      with:
+        path: .cuda-cache/cuda-${{ inputs.cuda-version }}
+        key: cuda-${{ inputs.cuda-version }}-linux-v2
+
+    - name: Install CUDA toolkit (Linux)
+      if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        CUDA_APT=$(echo "${{ inputs.cuda-version }}" | tr '.' '-')
+        wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
+        sudo apt-get update
+        sudo apt-get install -y \
+          cuda-nvcc-${CUDA_APT} \
+          cuda-cudart-dev-${CUDA_APT} \
+          libcublas-dev-${CUDA_APT} \
+          libcusparse-dev-${CUDA_APT} \
+          libcurand-dev-${CUDA_APT} \
+          libcusolver-dev-${CUDA_APT}
+        # Copy to cacheable workspace location
+        mkdir -p .cuda-cache
+        cp -r /usr/local/cuda-${{ inputs.cuda-version }} .cuda-cache/
+
+    - name: Save CUDA cache (Linux)
+      if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .cuda-cache/cuda-${{ inputs.cuda-version }}
+        key: cuda-${{ inputs.cuda-version }}-linux-v2
+
+    - name: Restore CUDA from cache (Linux)
+      if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        sudo cp -r .cuda-cache/cuda-${{ inputs.cuda-version }} /usr/local/
+
+    - name: Set CUDA environment (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        echo "/usr/local/cuda-${{ inputs.cuda-version }}/bin" >> $GITHUB_PATH
+        echo "CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}" >> $GITHUB_ENV
+
+    # ============== WINDOWS ==============
+    - name: Restore CUDA cache (Windows)
+      if: inputs.platform == 'windows'
+      id: cuda-cache-windows
+      uses: actions/cache/restore@v4
+      with:
+        path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
+        key: cuda-${{ inputs.cuda-version }}-windows
+
+    - name: Install CUDA toolkit (Windows)
+      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $cudaVersion = "${{ inputs.cuda-version }}"
+        if ($cudaVersion -eq "12.4") {
+          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.4.1/network_installers/cuda_12.4.1_windows_network.exe"
+        } elseif ($cudaVersion -eq "12.8") {
+          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe"
+        } else {
+          throw "Unsupported CUDA version: $cudaVersion"
+        }
+        Write-Host "Downloading CUDA from $installerUrl"
+        Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
+        Write-Host "Installing CUDA toolkit..."
+        Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "thrust_$cudaVersion" -Wait -NoNewWindow
+        Write-Host "CUDA installed successfully"
+
+    - name: Save CUDA cache (Windows)
+      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
+        key: cuda-${{ inputs.cuda-version }}-windows
+
+    - name: Set CUDA environment (Windows)
+      if: inputs.platform == 'windows'
+      shell: powershell
+      run: |
+        $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
+        echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    # Set combined output
+    - name: Set cache-hit output
+      id: cuda-cache
+      shell: bash
+      run: |
+        if [ "${{ inputs.platform }}" == "linux" ]; then
+          echo "cache-hit=${{ steps.cuda-cache-linux.outputs.cache-hit }}" >> $GITHUB_OUTPUT
+        else
+          echo "cache-hit=${{ steps.cuda-cache-windows.outputs.cache-hit }}" >> $GITHUB_OUTPUT
+        fi

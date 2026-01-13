@@ -1,0 +1,92 @@
+name: 'Setup Build Environment'
+description: 'Install Python, PyTorch, and build dependencies with caching'
+
+inputs:
+  python-version:
+    description: 'Python version (e.g., 3.11)'
+    required: true
+  pytorch-version:
+    description: 'PyTorch version (e.g., 2.4.0)'
+    required: true
+  cuda-short:
+    description: 'CUDA short version (e.g., 124)'
+    required: true
+  platform:
+    description: 'Platform (linux or windows)'
+    required: true
+  extra-deps:
+    description: 'Extra pip dependencies'
+    required: false
+    default: ''
+
+outputs:
+  cache-hit:
+    description: 'Whether uv cache was restored'
+    value: ${{ steps.uv-cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # ============== LINUX ==============
+    - name: Restore uv cache (Linux)
+      if: inputs.platform == 'linux'
+      id: uv-cache-linux
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-linux-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
+
+    - name: Install dependencies (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        pip install uv
+        uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
+        uv pip install --system wheel setuptools ninja numpy triton packaging ${{ inputs.extra-deps }}
+
+    - name: Save uv cache (Linux)
+      if: inputs.platform == 'linux' && steps.uv-cache-linux.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.cache/uv
+        key: uv-linux-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
+
+    # ============== WINDOWS ==============
+    - name: Restore uv cache (Windows)
+      if: inputs.platform == 'windows'
+      id: uv-cache-windows
+      uses: actions/cache/restore@v4
+      with:
+        path: ~\AppData\Local\uv\cache
+        key: uv-windows-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
+
+    - name: Install dependencies (Windows)
+      if: inputs.platform == 'windows'
+      shell: bash
+      run: |
+        pip install uv
+        uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
+        uv pip install --system wheel setuptools ninja numpy packaging ${{ inputs.extra-deps }}
+
+    - name: Save uv cache (Windows)
+      if: inputs.platform == 'windows' && steps.uv-cache-windows.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~\AppData\Local\uv\cache
+        key: uv-windows-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
+
+    # Set combined output
+    - name: Set cache-hit output
+      id: uv-cache
+      shell: bash
+      run: |
+        if [ "${{ inputs.platform }}" == "linux" ]; then
+          echo "cache-hit=${{ steps.uv-cache-linux.outputs.cache-hit }}" >> $GITHUB_OUTPUT
+        else
+          echo "cache-hit=${{ steps.uv-cache-windows.outputs.cache-hit }}" >> $GITHUB_OUTPUT
+        fi
