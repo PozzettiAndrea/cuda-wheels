@@ -50,6 +50,7 @@ def generate_matrix(package_filter: str) -> list:
                         "arch_list": pkg.get("arch_list", "7.5;8.0;8.6;8.9;9.0"),
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
+                        "free_disk_space": pkg.get("free_disk_space", False),
                     })
 
     return matrix

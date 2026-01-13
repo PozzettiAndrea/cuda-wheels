@@ -48,6 +48,7 @@ jobs:
 
     steps:
       - name: Free disk space
+        if: matrix.free_disk_space == true
         run: |
           sudo rm -rf /usr/share/dotnet &
           sudo rm -rf /usr/local/lib/android &

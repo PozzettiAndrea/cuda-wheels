@@ -3,6 +3,10 @@ source_repo: thu-ml/SageAttention
 version: "2.2.0"
 source_tag: v2.2.0
 
+# Optional: free disk space before build (default: false)
+# Only needed for very large packages - 14GB free is usually enough
+free_disk_space: false
+
 build_matrix:
   combinations:
     - cuda: "12.4"
