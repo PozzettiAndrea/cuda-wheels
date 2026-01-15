@@ -14,7 +14,7 @@ on:
           - nvdiffrast
           - torch_generic_nms
           - cc_torch
-          - flexgemm
+          - flex_gemm
           - cumesh
           - ovoxel
           - nvdiffrec_render
