@@ -46,7 +46,7 @@ runs:
         cp -r /usr/local/cuda-${{ inputs.cuda-version }} .cuda-cache/
 
     - name: Save CUDA cache (Linux)
-      if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit != 'true'
+      if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit != 'true' && (inputs.cuda-version == '12.4' || inputs.cuda-version == '12.8')
       uses: actions/cache/save@v4
       with:
         path: .cuda-cache/cuda-${{ inputs.cuda-version }}
@@ -97,7 +97,7 @@ runs:
         Write-Host "CUDA installed successfully"
 
     - name: Save CUDA cache (Windows)
-      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
+      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true' && (inputs.cuda-version == '12.4' || inputs.cuda-version == '12.8')
       uses: actions/cache/save@v4
       with:
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
