@@ -114,21 +114,25 @@ runs:
         Write-Host "Downloading CUDA ($installerType installer) from $installerUrl"
         Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
 
-        # Base components needed for most builds
+        # Base components needed for most builds (matches original wheel repos)
         $components = @(
           "nvcc_$cudaVersion",
           "cudart_$cudaVersion",
-          "crt_$cudaVersion",
-          "nvvm_$cudaVersion",
-          "nvptxcompiler_$cudaVersion",
-          "cublas_$cudaVersion",
           "cublas_dev_$cudaVersion",
-          "cusparse_$cudaVersion",
           "cusparse_dev_$cudaVersion",
-          "cusolver_$cudaVersion",
           "cusolver_dev_$cudaVersion",
           "thrust_$cudaVersion"
         )
+
+        # CUDA 13.0+ needs additional components (crt, nvvm, nvptxcompiler)
+        $cudaMajor = [int]($cudaVersion.Split('.')[0])
+        if ($cudaMajor -ge 13) {
+          $components += @(
+            "crt_$cudaVersion",
+            "nvvm_$cudaVersion",
+            "nvptxcompiler_$cudaVersion"
+          )
+        }
 
         # Add extra components from config (e.g., "curand_dev cufft_dev nvtx")
         $extraComponents = "${{ inputs.extra-components }}"
