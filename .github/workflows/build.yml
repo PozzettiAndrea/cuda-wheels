@@ -127,6 +127,7 @@ jobs:
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: linux
+          installer-type: ${{ matrix.cuda_installer }}
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
@@ -236,6 +237,7 @@ jobs:
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: windows
+          installer-type: ${{ matrix.cuda_installer }}
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'

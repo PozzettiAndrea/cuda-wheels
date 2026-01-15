@@ -139,6 +139,7 @@ def generate_matrix(package_filter: str) -> list:
                         "clone_recursive": pkg.get("clone_recursive", False),
                         "patch_script": pkg.get("patch_script", ""),
                         "build_subdir": pkg.get("build_subdir", ""),
+                        "cuda_installer": pkg.get("cuda_installer", "network"),
                     })
 
     if skipped > 0:
