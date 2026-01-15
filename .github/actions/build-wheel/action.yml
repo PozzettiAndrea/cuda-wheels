@@ -143,7 +143,8 @@ runs:
         $cudaShort = "${{ inputs.cuda-short }}"
         $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join ''
         Get-ChildItem *.whl | ForEach-Object {
-          $newName = $_.Name -replace '-cp', "+cu${cudaShort}torch${torchMM}-cp"
+          # Only replace first occurrence of -cp (use regex with explicit pattern)
+          $newName = $_.Name -replace '^([^-]+-[^-]+)-cp', "`$1+cu${cudaShort}torch${torchMM}-cp"
           Rename-Item $_.FullName $newName
           echo "wheel-path=$buildDir/dist/$newName" >> $env:GITHUB_OUTPUT
         }
