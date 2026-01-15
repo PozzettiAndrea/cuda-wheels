@@ -1,6 +1,7 @@
 """Patch ovoxel for wheel building:
 1. Remove git URL dependencies from pyproject.toml
 2. Add batched BVH queries to avoid GPU timeout (issue #19)
+3. Fix MSVC compatibility (double literals, size_t narrowing)
 """
 import re
 from pathlib import Path
@@ -48,3 +49,27 @@ content = content.replace(
 )
 postprocess.write_text(content)
 print("Patched postprocess.py for batched BVH queries")
+
+# MSVC compatibility patches
+# Fix 1: Remove 'd' suffix from double literals (MSVC doesn't support this)
+# Preserve Eigen types like Vector2d by using negative lookbehind
+cpp_file = Path("o-voxel/src/convert/flexible_dual_grid.cpp")
+content = cpp_file.read_text()
+content = re.sub(r'(?<![a-zA-Z_])(\d+\.?\d*(?:[eE][+-]?\d+)?)d\b', r'\1', content)
+cpp_file.write_text(content)
+print("Fixed double literal suffix in flexible_dual_grid.cpp")
+
+# Fix 2: Cast size_t to int64_t in torch calls (narrowing conversion error on MSVC)
+for f in ["o-voxel/src/io/filter_neighbor.cpp", "o-voxel/src/io/filter_parent.cpp"]:
+    fpath = Path(f)
+    content = fpath.read_text()
+    content = re.sub(r'torch::zeros\(\{(\w+),\s*(\w+)\}', r'torch::zeros({(int64_t)\1, (int64_t)\2}', content)
+    fpath.write_text(content)
+print("Fixed size_t narrowing in filter_*.cpp")
+
+# Fix 3: Cast size_t in svo.cpp
+svo_file = Path("o-voxel/src/io/svo.cpp")
+content = svo_file.read_text()
+content = re.sub(r'\{(\w+)\.size\(\)\}', r'{(int64_t)\1.size()}', content)
+svo_file.write_text(content)
+print("Fixed size_t narrowing in svo.cpp")
