@@ -16,7 +16,7 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     - 9.0: Hopper (H100)
 
     Blackwell architectures (conditionally added):
-    - 10.0: B200 (requires PyTorch 2.6+ and CUDA 12.6+)
+    - 10.0: B200 (requires PyTorch 2.6+ and CUDA 12.8+)
     - 12.0: RTX 50xx (requires PyTorch 2.6+ and CUDA 12.8+)
 
     Note: PyTorch version determines Blackwell support:
@@ -34,8 +34,8 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     pytorch_supports_blackwell = (pytorch_major, pytorch_minor) >= (2, 6)
 
     if pytorch_supports_blackwell:
-        # sm_100 (B200) - needs CUDA 12.6+
-        if (cuda_major, cuda_minor) >= (12, 6):
+        # sm_100 (B200) - needs CUDA 12.8+
+        if (cuda_major, cuda_minor) >= (12, 8):
             archs.append("10.0")
 
         # sm_120 (RTX 50xx) - needs CUDA 12.8+

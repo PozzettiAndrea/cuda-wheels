@@ -129,7 +129,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}
+          name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
           path: dist/*.whl
 
   build-windows:
@@ -205,7 +205,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}
+          name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
           path: dist/*.whl
 
   release:
