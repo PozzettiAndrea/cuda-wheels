@@ -68,11 +68,36 @@ jobs:
       - name: Compute wheel filename
         id: meta
         run: |
+          # Fetch version and name from source pyproject.toml (single source of truth)
+          REPO="${{ matrix.source_repo }}"
+          TAG="${{ matrix.source_tag }}"
+          REF="${TAG:-main}"
+          SUBDIR="${{ matrix.build_subdir }}"
+
+          if [ -n "$SUBDIR" ]; then
+            PYPROJECT_URL="https://raw.githubusercontent.com/${REPO}/${REF}/${SUBDIR}/pyproject.toml"
+          else
+            PYPROJECT_URL="https://raw.githubusercontent.com/${REPO}/${REF}/pyproject.toml"
+          fi
+
+          PYPROJECT=$(curl -sfL "$PYPROJECT_URL" || echo "")
+          if [ -n "$PYPROJECT" ]; then
+            PKG_NAME=$(echo "$PYPROJECT" | grep -E '^name\s*=' | head -1 | sed 's/.*=\s*["'\'']\([^"'\'']*\)["'\''].*/\1/' | tr '-' '_')
+            PKG_VERSION=$(echo "$PYPROJECT" | grep -E '^version\s*=' | head -1 | sed 's/.*=\s*["'\'']\([^"'\'']*\)["'\''].*/\1/')
+          fi
+
+          # Fallback to matrix values if not found
+          PKG_NAME="${PKG_NAME:-${{ matrix.package }}}"
+          PKG_VERSION="${PKG_VERSION:-${{ matrix.version }}}"
+
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-          WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
+          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
+
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check if wheel exists in release
         id: check
@@ -151,11 +176,36 @@ jobs:
         id: meta
         shell: bash
         run: |
+          # Fetch version and name from source pyproject.toml (single source of truth)
+          REPO="${{ matrix.source_repo }}"
+          TAG="${{ matrix.source_tag }}"
+          REF="${TAG:-main}"
+          SUBDIR="${{ matrix.build_subdir }}"
+
+          if [ -n "$SUBDIR" ]; then
+            PYPROJECT_URL="https://raw.githubusercontent.com/${REPO}/${REF}/${SUBDIR}/pyproject.toml"
+          else
+            PYPROJECT_URL="https://raw.githubusercontent.com/${REPO}/${REF}/pyproject.toml"
+          fi
+
+          PYPROJECT=$(curl -sfL "$PYPROJECT_URL" || echo "")
+          if [ -n "$PYPROJECT" ]; then
+            PKG_NAME=$(echo "$PYPROJECT" | grep -E '^name\s*=' | head -1 | sed 's/.*=\s*["'\'']\([^"'\'']*\)["'\''].*/\1/' | tr '-' '_')
+            PKG_VERSION=$(echo "$PYPROJECT" | grep -E '^version\s*=' | head -1 | sed 's/.*=\s*["'\'']\([^"'\'']*\)["'\''].*/\1/')
+          fi
+
+          # Fallback to matrix values if not found
+          PKG_NAME="${PKG_NAME:-${{ matrix.package }}}"
+          PKG_VERSION="${PKG_VERSION:-${{ matrix.version }}}"
+
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-          WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
+          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
+
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check if wheel exists in release
         id: check
