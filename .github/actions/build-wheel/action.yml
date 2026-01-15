@@ -105,6 +105,15 @@ runs:
       if: inputs.platform == 'windows'
       shell: powershell
       run: |
+        # Ensure ninja is in PATH (pip Scripts directory)
+        $pythonPath = (python -c "import sys; print(sys.prefix)")
+        $scriptsPath = "$pythonPath\Scripts"
+        $env:PATH = "$scriptsPath;$env:PATH"
+
+        # Verify ninja is available
+        Write-Host "Checking ninja..."
+        ninja --version
+
         $buildDir = "source"
         if ("${{ inputs.build-subdir }}" -ne "") {
           $buildDir = "source/${{ inputs.build-subdir }}"
