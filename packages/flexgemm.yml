@@ -5,6 +5,7 @@ source_tag: ""
 clone_recursive: true
 free_disk_space: true
 patch_script: patches/flexgemm.py
+extra_cuda_components: "cufft_dev nvtx"
 
 build_matrix:
   combinations:

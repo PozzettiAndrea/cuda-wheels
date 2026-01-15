@@ -49,6 +49,22 @@ runs:
           libcusparse-dev-${CUDA_APT} \
           libcurand-dev-${CUDA_APT} \
           libcusolver-dev-${CUDA_APT}
+
+        # Install extra components if specified (e.g., "cufft_dev nvtx")
+        EXTRA="${{ inputs.extra-components }}"
+        if [ -n "$EXTRA" ]; then
+          EXTRA_PKGS=""
+          for comp in $EXTRA; do
+            case "$comp" in
+              *_dev) EXTRA_PKGS="$EXTRA_PKGS lib${comp%_dev}-dev-${CUDA_APT}" ;;
+              nvtx)  EXTRA_PKGS="$EXTRA_PKGS cuda-nvtx-${CUDA_APT}" ;;
+              *)     EXTRA_PKGS="$EXTRA_PKGS cuda-${comp}-${CUDA_APT}" ;;
+            esac
+          done
+          echo "Installing extra CUDA components:$EXTRA_PKGS"
+          sudo apt-get install -y $EXTRA_PKGS
+        fi
+
         # Copy to cacheable workspace location
         mkdir -p .cuda-cache
         cp -r /usr/local/cuda-${{ inputs.cuda-version }} .cuda-cache/
