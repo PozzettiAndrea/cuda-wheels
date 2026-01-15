@@ -4,6 +4,7 @@ source_tag: ""
 
 clone_recursive: true
 free_disk_space: true
+max_jobs: 2
 patch_script: patches/cumesh.py
 extra_cuda_components: "curand_dev cufft_dev nvtx"
 
