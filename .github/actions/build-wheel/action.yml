@@ -110,18 +110,9 @@ runs:
         $scriptsPath = "$pythonPath\Scripts"
         $env:PATH = "$scriptsPath;$env:PATH"
 
-        # Verify tools are available
-        Write-Host "=== Checking build tools ==="
-        Write-Host "ninja:"
+        # Verify ninja is available
+        Write-Host "Checking ninja..."
         ninja --version
-        Write-Host "cl:"
-        where.exe cl
-        Write-Host "nvcc:"
-        where.exe nvcc
-        nvcc --version
-        Write-Host "cmake:"
-        where.exe cmake
-        cmake --version
 
         $buildDir = "source"
         if ("${{ inputs.build-subdir }}" -ne "") {

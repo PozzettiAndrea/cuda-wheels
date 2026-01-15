@@ -72,7 +72,7 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
-        key: cuda-${{ inputs.cuda-version }}-windows
+        key: cuda-${{ inputs.cuda-version }}-windows-v2
 
     - name: Install CUDA toolkit (Windows)
       if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
@@ -96,12 +96,31 @@ runs:
         Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "crt_$cudaVersion", "nvvm_$cudaVersion", "nvptxcompiler_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "thrust_$cudaVersion" -Wait -NoNewWindow
         Write-Host "CUDA installed successfully"
 
+    - name: Verify CUDA installation (Windows)
+      if: inputs.platform == 'windows'
+      shell: powershell
+      run: |
+        $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
+        $nvccPath = "$cudaPath\bin\nvcc.exe"
+        if (-not (Test-Path $nvccPath)) {
+          Write-Host "ERROR: nvcc not found at $nvccPath"
+          Write-Host "Contents of CUDA bin directory:"
+          if (Test-Path "$cudaPath\bin") {
+            Get-ChildItem "$cudaPath\bin" | Select-Object Name
+          } else {
+            Write-Host "bin directory does not exist!"
+          }
+          throw "CUDA installation verification failed - nvcc not found"
+        }
+        Write-Host "CUDA installation verified: $nvccPath"
+        & $nvccPath --version
+
     - name: Save CUDA cache (Windows)
       if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true' && (inputs.cuda-version == '12.4' || inputs.cuda-version == '12.8')
       uses: actions/cache/save@v4
       with:
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
-        key: cuda-${{ inputs.cuda-version }}-windows
+        key: cuda-${{ inputs.cuda-version }}-windows-v2
 
     - name: Set CUDA environment (Windows)
       if: inputs.platform == 'windows'
