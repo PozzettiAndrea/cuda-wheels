@@ -5,7 +5,7 @@ MSVC doesn't handle preprocessor directives inside macro arguments correctly.
 """
 from pathlib import Path
 
-atlas_file = Path("source/src/atlas.cu")
+atlas_file = Path("src/atlas.cu")
 content = atlas_file.read_text()
 
 # The issue: #if directives inside CUDA_CHECK() macro don't work on MSVC

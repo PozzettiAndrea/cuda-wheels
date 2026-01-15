@@ -5,7 +5,7 @@ Fix: Make triton dependency platform-specific (triton on Linux, triton-windows o
 import re
 from pathlib import Path
 
-pyproject = Path("source/pyproject.toml")
+pyproject = Path("pyproject.toml")
 content = pyproject.read_text()
 
 # Replace triton dependency with platform-specific versions
