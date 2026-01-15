@@ -1,6 +1,5 @@
 name: nvdiffrec_render
 source_repo: NVlabs/nvdiffrec
-version: "0.0.1"
 source_tag: ""
 
 free_disk_space: true

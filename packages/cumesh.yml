@@ -1,6 +1,5 @@
 name: cumesh
 source_repo: JeffreyXiang/CuMesh
-version: "0.0.1"
 source_tag: ""
 
 clone_recursive: true

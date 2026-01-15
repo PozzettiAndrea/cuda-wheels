@@ -1,6 +1,5 @@
 name: flex_gemm
 source_repo: JeffreyXiang/FlexGEMM
-version: "1.0.0"
 source_tag: ""
 
 clone_recursive: true

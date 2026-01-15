@@ -1,6 +1,5 @@
 name: ovoxel
 source_repo: microsoft/TRELLIS.2
-version: "0.0.1"
 source_tag: ""
 
 clone_recursive: true

@@ -79,7 +79,7 @@ def generate_matrix(package_filter: str) -> list:
                 for platform in build["platforms"]:
                     matrix.append({
                         "package": pkg["name"],
-                        "version": pkg["version"],
+                        "version": pkg.get("version", ""),  # Optional fallback, auto-detected from source
                         "source_repo": pkg["source_repo"],
                         "source_tag": pkg.get("source_tag", ""),
                         "cuda": cuda,

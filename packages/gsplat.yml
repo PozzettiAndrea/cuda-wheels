@@ -1,6 +1,5 @@
 name: gsplat
 source_repo: nerfstudio-project/gsplat
-version: "1.5.3"
 source_tag: v1.5.3
 
 clone_recursive: true  # Needs submodules
