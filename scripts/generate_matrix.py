@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Generate build matrix from package YAML configs."""
+"""Generate build matrix from package YAML configs, excluding existing wheels."""
 import argparse
 import json
+import subprocess
 import yaml
 from pathlib import Path
 
@@ -46,16 +47,46 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     return " ".join(archs)
 
 
+def get_existing_wheels(package_name: str) -> set:
+    """Fetch existing wheel filenames from GitHub release."""
+    try:
+        result = subprocess.run(
+            ["gh", "release", "view", f"{package_name}-latest",
+             "--json", "assets", "-q", ".assets[].name"],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return set(result.stdout.strip().split("\n"))
+    except Exception:
+        pass
+    return set()
+
+
+def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
+                 torch_short: str, python_short: str, platform: str) -> bool:
+    """Check if a wheel matching this combo exists."""
+    platform_tag = "linux_x86_64" if platform == "linux" else "win_amd64"
+    # Match pattern: {pkg}-{ver}+cu{cuda}torch{torch}-cp{py}-cp{py}-{plat}.whl
+    pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-{platform_tag}.whl"
+    return any(pattern in w for w in existing_wheels)
+
+
 def generate_matrix(package_filter: str) -> list:
-    """Generate build matrix from package configs."""
+    """Generate build matrix from package configs, excluding existing wheels."""
     packages_dir = Path(__file__).parent.parent / "packages"
     matrix = []
+    skipped = 0
 
     for pkg_file in packages_dir.glob("*.yml"):
         pkg = yaml.safe_load(pkg_file.read_text())
 
         if package_filter != "all" and pkg["name"] != package_filter:
             continue
+
+        # Fetch existing wheels for this package
+        existing_wheels = get_existing_wheels(pkg["name"])
+        if existing_wheels:
+            print(f"Found {len(existing_wheels)} existing wheels for {pkg['name']}")
 
         build = pkg["build_matrix"]
 
@@ -75,19 +106,30 @@ def generate_matrix(package_filter: str) -> list:
                       for pytorch in build["pytorch_versions"]]
 
         for cuda, pytorch, python_versions, combo_arch_list in combos:
+            cuda_short = cuda.replace(".", "")
+            torch_short = pytorch.replace(".", "")[:2]  # 2.9.1 -> 29
+
             for python_ver in python_versions:
+                python_short = python_ver.replace(".", "")
+
                 for platform in build["platforms"]:
+                    # Skip if wheel already exists
+                    if wheel_exists(existing_wheels, pkg["name"], cuda_short,
+                                    torch_short, python_short, platform):
+                        skipped += 1
+                        continue
+
                     matrix.append({
                         "package": pkg["name"],
                         "version": pkg.get("version", ""),  # Optional fallback, auto-detected from source
                         "source_repo": pkg["source_repo"],
                         "source_tag": pkg.get("source_tag", ""),
                         "cuda": cuda,
-                        "cuda_short": cuda.replace(".", ""),
+                        "cuda_short": cuda_short,
                         "cuda_apt": cuda.replace(".", "-"),
                         "pytorch": pytorch,
                         "python": python_ver,
-                        "python_short": python_ver.replace(".", ""),
+                        "python_short": python_short,
                         "platform": platform,
                         "arch_list": combo_arch_list or pkg.get("arch_list") or get_default_arch_list(cuda, pytorch),
                         "extra_deps": pkg.get("extra_deps", ""),
@@ -98,6 +140,9 @@ def generate_matrix(package_filter: str) -> list:
                         "patch_script": pkg.get("patch_script", ""),
                         "build_subdir": pkg.get("build_subdir", ""),
                     })
+
+    if skipped > 0:
+        print(f"Skipped {skipped} existing wheels")
 
     return matrix
 
