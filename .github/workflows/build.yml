@@ -19,9 +19,6 @@ on:
           - ovoxel
           - nvdiffrec_render
 
-env:
-  UPSTREAM_INDEX: "https://pozzettiandrea.github.io/cuda-wheels"
-
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
@@ -77,19 +74,24 @@ jobs:
           WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
 
-      - name: Check upstream index
+      - name: Check if wheel exists in release
         id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          URL="${{ env.UPSTREAM_INDEX }}/${{ matrix.package }}/${{ steps.meta.outputs.wheel_filename }}"
-          echo "Checking: $URL"
+          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: $WHEEL"
           mkdir -p dist
-          if curl -sfI "$URL" 2>/dev/null; then
+
+          # Check if wheel exists in release
+          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel exists upstream, downloading: ${{ steps.meta.outputs.wheel_filename }}"
-            curl -L -o "dist/${{ steps.meta.outputs.wheel_filename }}" "$URL"
+            echo "::notice::Wheel exists in release, downloading: $WHEEL"
+            gh release download "$RELEASE" -p "$WHEEL" -D dist
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel not found upstream, will build: ${{ steps.meta.outputs.wheel_filename }}"
+            echo "::notice::Wheel not found in release, will build: $WHEEL"
           fi
 
       - name: Setup CUDA
@@ -155,17 +157,25 @@ jobs:
           WHEEL="${{ matrix.package }}-${{ matrix.version }}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
           echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
 
-      - name: Check upstream index
+      - name: Check if wheel exists in release
         id: check
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          URL="${{ env.UPSTREAM_INDEX }}/${{ matrix.package }}/${{ steps.meta.outputs.wheel_filename }}"
+          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: $WHEEL"
           mkdir -p dist
-          if curl -sfI "$URL" 2>/dev/null; then
+
+          # Check if wheel exists in release
+          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            curl -L -o "dist/${{ steps.meta.outputs.wheel_filename }}" "$URL"
+            echo "::notice::Wheel exists in release, downloading: $WHEEL"
+            gh release download "$RELEASE" -p "$WHEEL" -D dist
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel not found in release, will build: $WHEEL"
           fi
 
       - name: Setup CUDA
