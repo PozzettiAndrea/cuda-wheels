@@ -37,6 +37,8 @@ jobs:
 
       - name: Generate build matrix
         id: generate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
