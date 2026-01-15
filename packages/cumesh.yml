@@ -5,7 +5,6 @@ source_tag: ""
 clone_recursive: true
 free_disk_space: true
 patch_script: patches/cumesh.py
-cuda_installer: local  # Network installer was failing silently on Windows
 
 build_matrix:
   combinations:

@@ -110,7 +110,7 @@ runs:
         Write-Host "Downloading CUDA ($installerType installer) from $installerUrl"
         Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
         Write-Host "Installing CUDA toolkit..."
-        $process = Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "crt_$cudaVersion", "nvvm_$cudaVersion", "nvptxcompiler_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "thrust_$cudaVersion" -Wait -PassThru
+        $process = Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_$cudaVersion", "cudart_$cudaVersion", "crt_$cudaVersion", "nvvm_$cudaVersion", "nvptxcompiler_$cudaVersion", "cublas_$cudaVersion", "cublas_dev_$cudaVersion", "cusparse_$cudaVersion", "cusparse_dev_$cudaVersion", "cusolver_$cudaVersion", "cusolver_dev_$cudaVersion", "curand_dev_$cudaVersion", "cufft_dev_$cudaVersion", "nvtx_$cudaVersion", "thrust_$cudaVersion" -Wait -PassThru
         if ($process.ExitCode -ne 0) {
           throw "CUDA installer failed with exit code: $($process.ExitCode)"
         }
