@@ -16,7 +16,7 @@ on:
           - cc_torch
           - flex_gemm
           - cumesh
-          - ovoxel
+          - o_voxel
           - nvdiffrec_render
 
 jobs:
