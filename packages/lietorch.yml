@@ -25,6 +25,6 @@ build_matrix:
     - cuda: "12.8"
       pytorch: "2.9.1"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-  platforms: ["linux"]
+  platforms: ["linux", "windows"]
 
 extra_deps: "numpy"
