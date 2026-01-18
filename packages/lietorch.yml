@@ -1,0 +1,30 @@
+name: lietorch
+source_repo: princeton-vl/lietorch
+version: "0.8.2"
+source_tag: "v0.8.2"
+
+free_disk_space: true
+
+build_matrix:
+  combinations:
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.6"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  platforms: ["linux"]
+
+extra_deps: "numpy"
