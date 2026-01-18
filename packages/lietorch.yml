@@ -4,12 +4,7 @@ version: "0.8.2"
 source_tag: ""
 
 free_disk_space: true
-
-pre_build_script: |
-  # Install Eigen headers (required by lietorch)
-  curl -sL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz -o eigen.tar.gz
-  tar -xzf eigen.tar.gz
-  mv eigen-3.4.0 eigen
+patch_script: patches/lietorch.py
 
 build_matrix:
   combinations:
