@@ -6,10 +6,6 @@ free_disk_space: true
 
 build_matrix:
   combinations:
-    # Older systems (CUDA 12.1)
-    - cuda: "12.1"
-      pytorch: "2.5.1"
-      python_versions: ["3.10", "3.11", "3.12"]
     - cuda: "12.4"
       pytorch: "2.5.1"
       python_versions: ["3.10", "3.11", "3.12"]
