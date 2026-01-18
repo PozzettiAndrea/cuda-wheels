@@ -9,8 +9,7 @@ pre_build_script: |
   # Install Eigen headers (required by lietorch)
   curl -sL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz -o eigen.tar.gz
   tar -xzf eigen.tar.gz
-  export CPLUS_INCLUDE_PATH="$PWD/eigen-3.4.0:$CPLUS_INCLUDE_PATH"
-  export C_INCLUDE_PATH="$PWD/eigen-3.4.0:$C_INCLUDE_PATH"
+  mv eigen-3.4.0 eigen
 
 build_matrix:
   combinations:
