@@ -27,6 +27,6 @@ build_matrix:
     - cuda: "13.0"
       pytorch: "2.9.1"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-  platforms: ["linux"]  # triton doesn't support Windows
+  platforms: ["linux", "windows"]
 
-extra_deps: "triton numpy"
+extra_deps: "numpy"
