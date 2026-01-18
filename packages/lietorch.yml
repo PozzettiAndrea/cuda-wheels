@@ -1,7 +1,7 @@
 name: lietorch
 source_repo: princeton-vl/lietorch
 version: "0.8.2"
-source_tag: "v0.8.2"
+source_tag: ""
 
 free_disk_space: true
 
