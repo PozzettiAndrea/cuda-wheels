@@ -20,6 +20,7 @@ on:
           - nvdiffrec_render
           - lietorch
           - dpvo-cuda
+          - pytorch3d
 
 jobs:
   generate-matrix:
