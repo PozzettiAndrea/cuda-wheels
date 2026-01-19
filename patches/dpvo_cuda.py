@@ -32,14 +32,18 @@ print("setup.py patched: renamed to dpvo-cuda")
 
 # Fix PyTorch API compatibility: .type() -> .scalar_type()
 # This is needed for PyTorch 2.0+ which deprecated tensor.type()
-cuda_files = [
+files_to_patch = [
+    # DPVO cuda files
     Path("dpvo/altcorr/correlation_kernel.cu"),
     Path("dpvo/fastba/ba_cuda.cu"),
+    # Lietorch files (also use deprecated .type() API)
+    Path("dpvo/lietorch/src/lietorch_cpu.cpp"),
+    Path("dpvo/lietorch/src/lietorch_gpu.cu"),
 ]
 
-for cuda_file in cuda_files:
-    if cuda_file.exists():
-        content = cuda_file.read_text()
+for src_file in files_to_patch:
+    if src_file.exists():
+        content = src_file.read_text()
         original = content
 
         # Replace .type() with .scalar_type() in AT_DISPATCH macros
@@ -50,7 +54,7 @@ for cuda_file in cuda_files:
         content = content.replace(".mutable_data_ptr<", ".data_ptr<")
 
         if content != original:
-            cuda_file.write_text(content)
-            print(f"Patched {cuda_file}")
+            src_file.write_text(content)
+            print(f"Patched {src_file}")
 
 print("PyTorch API compatibility patches applied")
