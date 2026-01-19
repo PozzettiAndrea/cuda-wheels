@@ -51,7 +51,8 @@ for src_file in files_to_patch:
 
         # Fix Windows linker error: mutable_data_ptr<T> template not exported
         # Use data_ptr<T> instead which works on both platforms
-        content = content.replace(".mutable_data_ptr<", ".data_ptr<")
+        # Handle both .mutable_data_ptr< and ->mutable_data_ptr< accessors
+        content = content.replace("mutable_data_ptr<", "data_ptr<")
 
         if content != original:
             src_file.write_text(content)
