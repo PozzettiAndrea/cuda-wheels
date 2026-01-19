@@ -19,6 +19,7 @@ on:
           - o_voxel
           - nvdiffrec_render
           - lietorch
+          - dpvo-cuda
 
 jobs:
   generate-matrix:
