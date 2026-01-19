@@ -40,10 +40,17 @@ cuda_files = [
 for cuda_file in cuda_files:
     if cuda_file.exists():
         content = cuda_file.read_text()
+        original = content
+
         # Replace .type() with .scalar_type() in AT_DISPATCH macros
-        new_content = content.replace(".type()", ".scalar_type()")
-        if new_content != content:
-            cuda_file.write_text(new_content)
-            print(f"Patched {cuda_file}: .type() -> .scalar_type()")
+        content = content.replace(".type()", ".scalar_type()")
+
+        # Fix Windows linker error: mutable_data_ptr<T> template not exported
+        # Use data_ptr<T> instead which works on both platforms
+        content = content.replace(".mutable_data_ptr<", ".data_ptr<")
+
+        if content != original:
+            cuda_file.write_text(content)
+            print(f"Patched {cuda_file}")
 
 print("PyTorch API compatibility patches applied")
