@@ -1,0 +1,16 @@
+name: gsplat
+source_repo: nerfstudio-project/gsplat
+source_tag: v1.5.3
+
+clone_recursive: true  # Needs submodules
+free_disk_space: true  # PyTorch 2.8.0 + CUDA 12.8 needs space
+
+build_matrix:
+  combinations:
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  platforms: ["linux", "windows"]
