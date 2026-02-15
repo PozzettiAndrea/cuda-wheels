@@ -1,6 +1,6 @@
 """Patch nvdiffrec to create nvdiffrec_render package:
 1. Restructure render/ as standalone package
-2. Create setup.py for CUDA extension
+2. Create setup.py for CUDA extension (with MSVC-compatible flags)
 3. Patch ops.py to use pre-built extension with JIT fallback
 """
 import shutil
@@ -13,8 +13,11 @@ shutil.copytree("render", pkg_dir / "nvdiffrec_render")
 print("Created package structure: nvdiffrec_render/nvdiffrec_render/")
 
 # Create setup.py
-setup_py = '''from setuptools import setup, find_packages
+setup_py = '''import os
+from setuptools import setup, find_packages
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+
+cxx_flags = ['/O2', '-DNVDR_TORCH'] if os.name == 'nt' else ['-O3', '-DNVDR_TORCH']
 
 setup(
     name='nvdiffrec_render',
@@ -34,7 +37,7 @@ setup(
                 'nvdiffrec_render/renderutils/c_src/torch_bindings.cpp',
             ],
             extra_compile_args={
-                'cxx': ['-O3', '-DNVDR_TORCH'],
+                'cxx': cxx_flags,
                 'nvcc': ['-O3', '-DNVDR_TORCH'],
             },
         ),

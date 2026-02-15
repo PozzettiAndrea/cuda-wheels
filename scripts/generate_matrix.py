@@ -115,7 +115,7 @@ def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
     return any(pattern in w for w in existing_wheels)
 
 
-def generate_matrix(package_filter: str) -> list:
+def generate_matrix(package_filter: str, overwrite: bool = False) -> list:
     """Generate build matrix from package configs, excluding existing wheels."""
     packages_dir = Path(__file__).parent.parent / "packages"
     matrix = []
@@ -142,12 +142,16 @@ def generate_matrix(package_filter: str) -> list:
         else:
             print(f"WARNING: No version found for {pkg['name']}")
 
-        # Fetch existing wheels for this package
-        # Normalize name: wheels/releases use underscores (PEP 427), configs may use hyphens
-        wheel_pkg_name = pkg["name"].replace("-", "_")
-        existing_wheels = get_existing_wheels(wheel_pkg_name)
-        if existing_wheels:
-            print(f"Found {len(existing_wheels)} existing wheels for {pkg['name']}")
+        # Fetch existing wheels for this package (skip when overwriting)
+        existing_wheels = set()
+        if not overwrite:
+            # Normalize name: wheels/releases use underscores (PEP 427), configs may use hyphens
+            wheel_pkg_name = pkg["name"].replace("-", "_")
+            existing_wheels = get_existing_wheels(wheel_pkg_name)
+            if existing_wheels:
+                print(f"Found {len(existing_wheels)} existing wheels for {pkg['name']}")
+        else:
+            print(f"Overwrite enabled, skipping existing wheel check for {pkg['name']}")
 
         build = pkg["build_matrix"]
 
@@ -212,9 +216,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generate build matrix from package configs")
     parser.add_argument("--package", default="all", help="Package to build (or 'all')")
     parser.add_argument("--output", default="matrix.json", help="Output file path")
+    parser.add_argument("--overwrite", action="store_true", help="Ignore existing wheels and rebuild all")
     args = parser.parse_args()
 
-    matrix = generate_matrix(args.package)
+    matrix = generate_matrix(args.package, overwrite=args.overwrite)
 
     # Split by platform
     linux_jobs = [j for j in matrix if j["platform"] == "linux"]

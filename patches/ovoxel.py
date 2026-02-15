@@ -2,6 +2,7 @@
 1. Remove git URL dependencies from pyproject.toml
 2. Add batched BVH queries to avoid GPU timeout (issue #19)
 3. Fix MSVC compatibility (double literals, size_t narrowing)
+4. Fix GCC-only CXX_FLAGS for Windows MSVC builds
 """
 import re
 from pathlib import Path
@@ -73,3 +74,21 @@ content = svo_file.read_text()
 content = re.sub(r'\{(\w+)\.size\(\)\}', r'{(int64_t)\1.size()}', content)
 svo_file.write_text(content)
 print("Fixed size_t narrowing in svo.cpp")
+
+# Fix 4: Replace GCC-only CXX_FLAGS with MSVC equivalents on Windows
+setup_file = Path("o-voxel/setup.py")
+content = setup_file.read_text()
+old_cxx = """            extra_compile_args={
+                "cxx": ["-O3", "-std=c++17"],
+                "nvcc": ["-O3","-std=c++17"] + cc_flag,
+            }"""
+new_cxx = """            extra_compile_args={
+                "cxx": ["/O2", "/std:c++17"] if os.name == "nt" else ["-O3", "-std=c++17"],
+                "nvcc": ["-O3", "-std=c++17"] + cc_flag,
+            }"""
+if old_cxx in content:
+    content = content.replace(old_cxx, new_cxx)
+    setup_file.write_text(content)
+    print("Patched setup.py CXX_FLAGS for MSVC compatibility")
+else:
+    print("WARNING: Could not find CXX_FLAGS block in setup.py - source may have changed")

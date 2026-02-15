@@ -7,8 +7,10 @@ source_tag: v2.2.0
 free_disk_space: true
 
 # Optional: parallel compilation jobs (default: 1)
-# SageAttention builds multiple extensions in parallel, so keep this low
-max_jobs: 1
+max_jobs: 2
+
+# Fix GCC-only CXX_FLAGS for Windows MSVC builds
+patch_script: patches/sageattention.py
 
 build_matrix:
   combinations:
