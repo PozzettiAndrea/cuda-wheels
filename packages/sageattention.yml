@@ -14,15 +14,44 @@ build_matrix:
   combinations:
     - cuda: "12.4"
       pytorch: "2.4.0"
-      python_versions: ["3.10", "3.11", "3.12"]  # PyTorch 2.4 doesn't support 3.13
-      arch_list: "8.0 8.6 8.9 9.0 10.0"  # Ampere thru Blackwell B200 (no 12.0 - needs CUDA 12.8)
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.6"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
     - cuda: "12.8"
       pytorch: "2.8.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"  # Ampere thru Blackwell RTX 50xx
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "13.0"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "13.0"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
   platforms: ["linux", "windows"]
 
-# Default arch_list (can be overridden per-combination)
-arch_list: "7.0;7.5;8.0;8.6;8.9;9.0"
 extra_deps: ""
 pre_build_script: ""

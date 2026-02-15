@@ -1,4 +1,5 @@
 name: Build Wheels
+run-name: "Build ${{ inputs.package }} wheels"
 
 on:
   workflow_dispatch:
