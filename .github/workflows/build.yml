@@ -58,7 +58,7 @@ jobs:
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
   build-linux:
-    name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
+    name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
     runs-on: ubuntu-22.04
     strategy:
@@ -161,7 +161,7 @@ jobs:
           path: dist/*.whl
 
   build-windows:
-    name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
+    name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
     runs-on: windows-2022
     strategy:
