@@ -140,10 +140,10 @@ jobs:
       - name: Add swap space
         if: steps.check.outputs.exists != 'true' && matrix.package == 'sageattention'
         run: |
-          sudo fallocate -l 6G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 6G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
 
       - name: Build wheel
         if: steps.check.outputs.exists != 'true'
