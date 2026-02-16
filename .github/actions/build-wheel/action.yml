@@ -122,7 +122,7 @@ runs:
           # Bundle external shared libs into the wheel
           # Exclude: driver libs (must come from host), PyTorch libs (installed separately)
           if auditwheel repair "$whl" \
-            --plat manylinux_2_17_x86_64 \
+            --plat manylinux_2_35_x86_64 \
             -w repaired/ \
             --exclude libcuda.so \
             --exclude libcuda.so.1 \
