@@ -2,7 +2,7 @@
 
 Pre-built CUDA Python wheels for ML/3D packages that are painful to compile from source.
 
-**[Browse available wheels →](https://pozzettiandrea.github.io/cuda-wheels)**
+**[Package Index](https://pozzettiandrea.github.io/cuda-wheels)** · **[Dashboard](https://pozzettiandrea.github.io/cuda-wheels/dashboard/)** · **[Wheel Inspection](https://pozzettiandrea.github.io/cuda-wheels/inspection/)**
 
 ## Built Packages
 
