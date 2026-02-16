@@ -1,0 +1,40 @@
+name: sageattn3
+source_repo: thu-ml/SageAttention
+source_tag: v2.2.0
+
+# SageAttention3 is Blackwell-only: requires SM >= 10.0 (B200, RTX 50xx)
+arch_list: "10.0 12.0"
+version: "1.0.0"
+
+# Build from the sageattention3_blackwell subdirectory
+build_subdir: sageattention3_blackwell
+
+free_disk_space: true
+max_jobs: 1
+
+patch_script: patches/sageattn3.py
+
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "13.0"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "13.0"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  platforms: ["linux", "windows"]
+
+extra_deps: ""
+pre_build_script: ""
