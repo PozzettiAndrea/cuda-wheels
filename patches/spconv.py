@@ -64,13 +64,15 @@ BF16_SHUFFLE_PARAMS = '''SHUFFLE_AMPERE_PARAMS: List[GemmAlgoParams] = [
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
 ]'''
 
-# Replace the entire SHUFFLE_AMPERE_PARAMS block (including commented-out entries)
+# Replace the entire SHUFFLE_AMPERE_PARAMS block (including commented-out entries).
+# Use MULTILINE so ^ matches line starts — match up to a ] on its own line
+# (the closing bracket), not ] characters inside commented-out code.
 content = re.sub(
-    r'SHUFFLE_AMPERE_PARAMS\s*(?::\s*List\[GemmAlgoParams\]\s*)?=\s*\[.*?\]',
+    r'SHUFFLE_AMPERE_PARAMS\s*(?::\s*List\[GemmAlgoParams\]\s*)?=\s*\[.*?^\]',
     BF16_SHUFFLE_PARAMS,
     content,
     count=1,
-    flags=re.DOTALL
+    flags=re.DOTALL | re.MULTILINE
 )
 
 # ─── 2. Add bf16 entries to IMPLGEMM_AMPERE_PARAMS ───
