@@ -97,6 +97,29 @@ def main():
         print(f"External packages: {', '.join(sorted(external_packages))}")
     print(f"Total: {len(all_packages)} packages in index")
 
+    # Generate dashboard (separate from PEP 503 index)
+    try:
+        from generate_dashboard import generate_dashboard, parse_external_wheels, parse_wheel_filename
+
+        built_for_dashboard = {}
+        for release in releases:
+            for asset in release.get("assets", []):
+                name = asset["name"]
+                if not name.endswith(".whl"):
+                    continue
+                info = parse_wheel_filename(name)
+                if not info:
+                    continue
+                info["url"] = asset["browser_download_url"]
+                info["source"] = "built"
+                pkg_name = name.split("-")[0].lower().replace("_", "-")
+                built_for_dashboard.setdefault(pkg_name, []).append(info)
+
+        ext_for_dashboard = parse_external_wheels(external_dir)
+        generate_dashboard(built_for_dashboard, ext_for_dashboard, docs / "dashboard")
+    except Exception as e:
+        print(f"Dashboard generation failed (non-fatal): {e}")
+
 
 if __name__ == "__main__":
     main()

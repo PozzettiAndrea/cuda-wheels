@@ -1,132 +1,45 @@
 # cuda-wheels
 
-Pre-built CUDA Python wheels for popular ML/3D packages. Installable via pip with `--extra-index-url`.
+Pre-built CUDA Python wheels for ML/3D packages that are painful to compile from source.
 
-## Installation
+**[Browse available wheels →](https://pozzettiandrea.github.io/cuda-wheels)**
 
-```bash
-pip install <package> --extra-index-url https://pozzettiandrea.github.io/cuda-wheels
-```
+## Built Packages
 
-Example:
-```bash
-pip install sageattention gsplat nvdiffrast --extra-index-url https://pozzettiandrea.github.io/cuda-wheels
-```
+| Package | Source |
+|---------|--------|
+| sageattention | [thu-ml/SageAttention](https://github.com/thu-ml/SageAttention) |
+| gsplat | [nerfstudio-project/gsplat](https://github.com/nerfstudio-project/gsplat) |
+| nvdiffrast | [NVlabs/nvdiffrast](https://github.com/NVlabs/nvdiffrast) |
+| pytorch3d | [facebookresearch/pytorch3d](https://github.com/facebookresearch/pytorch3d) |
+| cumesh | [JeffreyXiang/CuMesh](https://github.com/JeffreyXiang/CuMesh) |
+| cubvh | [ashawkey/cubvh](https://github.com/ashawkey/cubvh) |
+| ovoxel | [microsoft/TRELLIS.2](https://github.com/microsoft/TRELLIS.2) |
+| flexgemm | [JeffreyXiang/FlexGEMM](https://github.com/JeffreyXiang/FlexGEMM) |
+| nvdiffrec_render | [NVlabs/nvdiffrec](https://github.com/NVlabs/nvdiffrec) |
+| torch_generic_nms | [ronghanghu/torch_generic_nms](https://github.com/ronghanghu/torch_generic_nms) |
+| cc_torch | [ronghanghu/cc_torch](https://github.com/ronghanghu/cc_torch) |
+| spconv | [traveller59/spconv](https://github.com/traveller59/spconv) |
 
-## Available Packages
+## External Packages (curated links)
 
-| Package | Source | Description |
-|---------|--------|-------------|
-| sageattention | thu-ml/SageAttention | Efficient attention implementation |
-| gsplat | nerfstudio-project/gsplat | Gaussian splatting |
-| nvdiffrast | NVlabs/nvdiffrast | Differentiable rasterization |
-| flexgemm | JeffreyXiang/FlexGEMM | Flexible GEMM operations |
-| cumesh | JeffreyXiang/CuMesh | CUDA mesh processing |
-| ovoxel | microsoft/TRELLIS.2 | Voxel operations |
-| nvdiffrec_render | NVlabs/nvdiffrec | Render utilities from nvdiffrec |
-| torch_generic_nms | ronghanghu/torch_generic_nms | Generic NMS for PyTorch |
-| cc_torch | ronghanghu/cc_torch | Connected components for PyTorch |
+| Package | Source |
+|---------|--------|
+| flash-attn | [mjun0812/flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels) |
+| detectron2 | [facebookresearch/detectron2](https://github.com/facebookresearch/detectron2) |
+| pyg-lib | [pyg-team/pyg-lib](https://github.com/pyg-team/pyg-lib) |
+| torch-cluster | [pyg-team/pytorch_cluster](https://github.com/pyg-team/pytorch_cluster) |
+| torch-scatter | [pyg-team/pytorch_scatter](https://github.com/pyg-team/pytorch_scatter) |
+| torch-sparse | [pyg-team/pytorch_sparse](https://github.com/pyg-team/pytorch_sparse) |
+| torch-spline-conv | [pyg-team/pytorch_spline_conv](https://github.com/pyg-team/pytorch_spline_conv) |
 
-## Supported Configurations
+## Usage
 
-- **CUDA**: 12.4, 12.6, 12.8, 13.0
-- **PyTorch**: 2.4.0 - 2.9.1
-- **Python**: 3.10, 3.11, 3.12, 3.13
-- **Platforms**: Linux (x86_64), Windows (amd64)
+Used by [comfy-env](https://github.com/PozzettiAndrea/comfy-env) to automatically resolve and install CUDA packages for ComfyUI custom nodes.
 
-## Adding a New Package
+## Adding a package
 
-1. Create a config file in `packages/<name>.yml`:
-
-```yaml
-name: my_package
-source_repo: owner/repo           # GitHub repository
-version: "1.0.0"                  # Package version
-source_tag: "v1.0.0"              # Git tag (optional, empty = main branch)
-
-# Build options
-clone_recursive: true             # Clone with --recursive for submodules
-free_disk_space: true             # Free disk space before build (large builds)
-patch_script: patches/my_pkg.py   # Python script to patch source (optional)
-build_subdir: subdir              # Build from subdirectory (optional)
-extra_deps: "numpy scipy"         # Extra pip dependencies (optional)
-
-# Build matrix
-build_matrix:
-  combinations:
-    - cuda: "12.4"
-      pytorch: "2.5.1"
-      python_versions: ["3.10", "3.11", "3.12"]
-    - cuda: "12.8"
-      pytorch: "2.8.0"
-      python_versions: ["3.10", "3.11", "3.12", "3.13"]
-  platforms: ["linux", "windows"]
-```
-
-2. (Optional) Create a patch script in `patches/<name>.py` if source modifications are needed.
-
-3. Add the package to the workflow dropdown in `.github/workflows/build.yml`.
-
-4. Run:
-```bash
-# Test matrix generation
-python scripts/generate_matrix.py --package my_package --output /tmp/test.json
-
-# Trigger build
-gh workflow run build.yml -f package=my_package
-```
-
-## Architecture Detection
-
-CUDA architectures are auto-detected based on CUDA and PyTorch versions:
-
-| PyTorch | CUDA 12.4 | CUDA 12.6+ | CUDA 12.8+ |
-|---------|-----------|------------|------------|
-| 2.4.x, 2.5.x | 7.0-9.0 | 7.0-9.0 | 7.0-9.0 |
-| 2.6.x+ | 7.0-9.0 | 7.0-9.0, 10.0 | 7.0-9.0, 10.0, 12.0 |
-
-- **sm_100** (10.0): B200, requires CUDA 12.6+ and PyTorch 2.6+
-- **sm_120** (12.0): RTX 50xx, requires CUDA 12.8+ and PyTorch 2.6+
-
-Override with per-combination `arch_list` or package-level `arch_list` in config.
-
-## Patch Scripts
-
-For packages requiring source modifications, create `patches/<name>.py`:
-
-```python
-"""Patch script for my_package."""
-from pathlib import Path
-import re
-
-# Modify source files
-setup_py = Path("setup.py")
-content = setup_py.read_text()
-content = content.replace("old", "new")
-setup_py.write_text(content)
-
-print("Applied patches")
-```
-
-The script runs in the source directory after clone, before build.
-
-## Project Structure
-
-```
-cuda-wheels/
-├── .github/
-│   ├── actions/
-│   │   ├── build-wheel/    # Composite action for wheel building
-│   │   └── setup-cuda/     # Composite action for CUDA setup
-│   └── workflows/
-│       └── build.yml       # Main build workflow
-├── packages/               # Package configs (*.yml)
-├── patches/                # Patch scripts (*.py)
-├── scripts/
-│   ├── generate_matrix.py  # Matrix generation from configs
-│   └── generate_index.py   # PEP 503 index generation
-└── docs/                   # Generated GitHub Pages index
-```
+See [packages/README.md](packages/README.md) for build config format. For external wheels, add an `index.html` to `external_wheels/<package>/`.
 
 ## License
 

@@ -1,0 +1,140 @@
+name: Inspect Wheels
+run-name: "Inspect ${{ inputs.package }} wheels"
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to inspect (release name, e.g. "sageattention-latest")'
+        required: true
+        type: string
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download wheels from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p wheels
+          gh release download "${{ inputs.package }}" -D wheels -p "*.whl" || {
+            echo "No release found: ${{ inputs.package }}"
+            echo "Available releases:"
+            gh release list --limit 20
+            exit 1
+          }
+          echo "Downloaded $(ls wheels/*.whl | wc -l) wheels"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Inspect wheels
+        run: |
+          pip install pkginfo
+
+          cat > inspect.py << 'PYEOF'
+          import json
+          import os
+          import re
+          import zipfile
+          from pathlib import Path
+          from pkginfo import Wheel
+
+          results = []
+
+          for whl_path in sorted(Path("wheels").glob("*.whl")):
+              print(f"\n{'='*80}")
+              print(f"WHEEL: {whl_path.name}")
+              print(f"{'='*80}")
+
+              info = {"filename": whl_path.name, "size_mb": round(whl_path.stat().st_size / 1024 / 1024, 1)}
+
+              # pkginfo metadata
+              try:
+                  w = Wheel(str(whl_path))
+                  info["name"] = w.name
+                  info["version"] = w.version
+                  info["requires_python"] = w.requires_python
+                  info["requires_dist"] = list(w.requires_dist) if w.requires_dist else []
+
+                  print(f"  Name: {w.name}")
+                  print(f"  Version: {w.version}")
+                  print(f"  Requires-Python: {w.requires_python}")
+                  if w.requires_dist:
+                      print(f"  Requires-Dist:")
+                      for dep in w.requires_dist:
+                          print(f"    - {dep}")
+              except Exception as e:
+                  print(f"  pkginfo error: {e}")
+
+              # Inspect contents
+              try:
+                  with zipfile.ZipFile(whl_path) as zf:
+                      names = zf.namelist()
+                      info["file_count"] = len(names)
+
+                      # Find shared libraries
+                      so_files = [n for n in names if n.endswith(('.so', '.pyd', '.dll'))]
+                      info["shared_libs"] = so_files
+                      if so_files:
+                          print(f"  Shared libraries ({len(so_files)}):")
+                          for f in so_files:
+                              zi = zf.getinfo(f)
+                              size_mb = round(zi.file_size / 1024 / 1024, 1)
+                              print(f"    {f} ({size_mb} MB)")
+
+                      # Find and show WHEEL metadata
+                      wheel_files = [n for n in names if n.endswith('/WHEEL')]
+                      for wf in wheel_files:
+                          content = zf.read(wf).decode()
+                          print(f"  WHEEL metadata:")
+                          for line in content.strip().split('\n'):
+                              print(f"    {line}")
+                          # Parse tags
+                          tags = re.findall(r'Tag: (.+)', content)
+                          info["tags"] = tags
+
+                      # Find and show METADATA
+                      meta_files = [n for n in names if n.endswith('/METADATA')]
+                      for mf in meta_files:
+                          content = zf.read(mf).decode()
+                          # Extract key fields
+                          for field in ['Author', 'License', 'Summary', 'Home-page']:
+                              m = re.search(rf'^{field}: (.+)$', content, re.MULTILINE)
+                              if m:
+                                  info[field.lower().replace('-', '_')] = m.group(1)
+                                  print(f"  {field}: {m.group(1)}")
+
+                      # Check for RECORD
+                      record_files = [n for n in names if n.endswith('/RECORD')]
+                      if record_files:
+                          content = zf.read(record_files[0]).decode()
+                          info["record_entries"] = len(content.strip().split('\n'))
+
+                      # Top-level dirs
+                      top_dirs = sorted(set(n.split('/')[0] for n in names if '/' in n))
+                      info["top_level_dirs"] = top_dirs
+                      print(f"  Top-level dirs: {', '.join(top_dirs)}")
+
+              except Exception as e:
+                  print(f"  zipfile error: {e}")
+
+              results.append(info)
+
+          # Write JSON summary
+          Path("inspection.json").write_text(json.dumps(results, indent=2))
+          print(f"\n\nTotal: {len(results)} wheels inspected")
+          PYEOF
+
+          python inspect.py
+
+      - name: Upload inspection results
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-inspection-${{ inputs.package }}
+          path: inspection.json
