@@ -36,31 +36,31 @@ BF16_SHUFFLE_PARAMS = '''SHUFFLE_AMPERE_PARAMS: List[GemmAlgoParams] = [
     # bf16 with f32 accumulator - Ampere TensorOp (16, 8, 16)
     *gen_shuffle_params(
         (64, 64, 32),
-        (32, 32, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (32, 32, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 128, 32),
-        (32, 64, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (32, 64, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 128, 32),
-        (64, 32, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (64, 32, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 256, 32),
-        (64, 64, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (64, 64, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (256, 128, 32),
-        (64, 64, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (64, 64, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 64, 32),
-        (64, 32, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (64, 32, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (64, 128, 32),
-        (32, 64, 32), ["bf16,bf16,bf16,bf16,bf16"], "bf16,bf16,bf16,f32,f32", 2,
+        (32, 64, 32), ["bf16,bf16,bf16,f32,f32"], "bf16,bf16,bf16,f32,f32", 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
 ]'''
 
@@ -85,7 +85,7 @@ BF16_CONV_PARAMS = '''
     *gen_conv_params(ConvFwdAndBwdInput, (64, 64, 32), (32, 32, 32),
                      NDIM_DONT_CARE,
                      ConvIterAlgo.Optimized,
-                     [2, 3, 4], ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"],
+                     [2, 3, 4], ["bf16,bf16,bf16,f32,f32"],
                      NHWC, NHWC, NHWC,
                      GemmAlgo.Ampere,
                      TensorOp((16, 8, 16)),
@@ -95,7 +95,7 @@ BF16_CONV_PARAMS = '''
     *gen_conv_params(ConvFwdAndBwdInput, (64, 128, 32), (32, 64, 32),
                      NDIM_DONT_CARE,
                      ConvIterAlgo.Optimized,
-                     [2, 3, 4], ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"],
+                     [2, 3, 4], ["bf16,bf16,bf16,f32,f32"],
                      NHWC, NHWC, NHWC,
                      GemmAlgo.Ampere,
                      TensorOp((16, 8, 16)),
@@ -105,7 +105,7 @@ BF16_CONV_PARAMS = '''
     *gen_conv_params(ConvFwdAndBwdInput, (128, 64, 32), (64, 32, 32),
                      NDIM_DONT_CARE,
                      ConvIterAlgo.Optimized,
-                     [2, 3, 4], ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"],
+                     [2, 3, 4], ["bf16,bf16,bf16,f32,f32"],
                      NHWC, NHWC, NHWC,
                      GemmAlgo.Ampere,
                      TensorOp((16, 8, 16)),

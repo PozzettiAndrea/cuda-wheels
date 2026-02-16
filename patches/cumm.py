@@ -36,43 +36,43 @@ content = main_py.read_text()
 AMPERE_PARAMS_BLOCK = '''
 # bf16 Ampere GEMM kernels (sm_80+)
 # TensorOp((16, 8, 16)) is the Ampere-optimized shape for 16-bit types.
-# Two dtype configs: bf16 with f32 accumulator (accurate), all-bf16 (fast).
+# Uses f32 accumulator for numerical stability (bf16 accumulation not supported by hardware).
 SHUFFLE_AMPERE_PARAMS: List[GemmAlgoParams] = [
     *gen_shuffle_params(
         (64, 64, 32),
-        (32, 32, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (32, 32, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 128, 32),
-        (32, 64, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (32, 64, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 128, 32),
-        (64, 32, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (64, 32, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (64, 64, 64),
-        (32, 32, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (32, 32, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (64, 128, 64),
-        (32, 64, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (32, 64, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 256, 32),
-        (64, 64, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (64, 64, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (256, 128, 32),
-        (64, 64, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (64, 64, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (128, 64, 32),
-        (64, 32, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (64, 32, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
     *gen_shuffle_params(
         (64, 128, 32),
-        (32, 64, 32), ["bf16,bf16,bf16,bf16,bf16", "bf16,bf16,bf16,f32,f32"], 2,
+        (32, 64, 32), ["bf16,bf16,bf16,f32,f32"], 2,
         kernel.GemmAlgo.Ampere, TensorOp((16, 8, 16))),
 ]
 
@@ -111,5 +111,5 @@ content = re.sub(
 
 main_py.write_text(content)
 print("Patched cumm/gemm/main.py with bf16 Ampere GEMM params")
-print("  - Added SHUFFLE_AMPERE_PARAMS with 9 tile configs x 2 dtype combos")
+print("  - Added SHUFFLE_AMPERE_PARAMS with 9 tile configs (bf16 in/out, f32 acc)")
 print("  - Populated ampere_params in GemmMainUnitTest.__init__")
