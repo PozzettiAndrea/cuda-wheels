@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Generate PEP 503 compliant package index from GitHub releases."""
+"""Generate PEP 503 compliant package index from GitHub releases + external wheels."""
 import os
 import json
+import shutil
 import urllib.request
 from pathlib import Path
 
@@ -27,7 +28,7 @@ def main():
     # Fetch releases
     releases = get_releases(repo, token)
 
-    # Collect all wheels
+    # Collect all wheels from releases
     packages = {}
     for release in releases:
         for asset in release.get("assets", []):
@@ -48,17 +49,33 @@ def main():
     docs = Path("docs")
     docs.mkdir(exist_ok=True)
 
+    # Copy external_wheels/ into docs/ (pre-built index.html files for external packages)
+    external_dir = Path("external_wheels")
+    external_packages = set()
+    if external_dir.is_dir():
+        for pkg_dir in sorted(external_dir.iterdir()):
+            if pkg_dir.is_dir() and (pkg_dir / "index.html").exists():
+                dest = docs / pkg_dir.name
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(pkg_dir, dest)
+                external_packages.add(pkg_dir.name)
+        print(f"Copied {len(external_packages)} external packages: {', '.join(sorted(external_packages))}")
+
+    # Merge all package names for root index
+    all_packages = sorted(set(packages.keys()) | external_packages)
+
     # Generate root index
     with open(docs / "index.html", "w") as f:
         f.write("<!DOCTYPE html>\n")
         f.write("<html>\n<head><title>CUDA Wheels Index</title></head>\n")
         f.write("<body>\n")
         f.write("<h1>CUDA Wheels</h1>\n")
-        for pkg in sorted(packages.keys()):
+        for pkg in all_packages:
             f.write(f'<a href="{pkg}/">{pkg}</a><br>\n')
         f.write("</body>\n</html>\n")
 
-    # Generate per-package index
+    # Generate per-package index (only for built packages, externals already have index.html)
     for pkg, wheels in packages.items():
         pkg_dir = docs / pkg
         pkg_dir.mkdir(exist_ok=True)
@@ -73,9 +90,12 @@ def main():
                 f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
             f.write("</body>\n</html>\n")
 
-    print(f"Generated index for {len(packages)} packages:")
+    print(f"Generated index for {len(packages)} built packages:")
     for pkg, wheels in packages.items():
         print(f"  - {pkg}: {len(wheels)} wheels")
+    if external_packages:
+        print(f"External packages: {', '.join(sorted(external_packages))}")
+    print(f"Total: {len(all_packages)} packages in index")
 
 
 if __name__ == "__main__":
