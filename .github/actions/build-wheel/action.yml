@@ -97,7 +97,8 @@ runs:
         # For cumm/spconv: set CUDA version for prebuilt mode
         export CUMM_CUDA_VERSION="${{ inputs.cuda-version }}"
         export CUMM_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
-        # For spconv: disable JIT to force ahead-of-time CUDA compilation
+        # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
+        export CUMM_DISABLE_JIT=1
         export SPCONV_DISABLE_JIT=1
         pip wheel . --no-build-isolation --no-deps -v -w dist
 
@@ -129,7 +130,8 @@ runs:
         # For cumm/spconv: set CUDA version for prebuilt mode
         $env:CUMM_CUDA_VERSION = "${{ inputs.cuda-version }}"
         $env:CUMM_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
-        # For spconv: disable JIT to force ahead-of-time CUDA compilation
+        # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
+        $env:CUMM_DISABLE_JIT = "1"
         $env:SPCONV_DISABLE_JIT = "1"
         pip wheel . --no-build-isolation --no-deps -v -w dist
 
