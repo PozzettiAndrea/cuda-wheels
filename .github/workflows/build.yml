@@ -137,6 +137,14 @@ jobs:
           platform: linux
           extra-deps: ${{ matrix.extra_deps }}
 
+      - name: Add swap space
+        if: steps.check.outputs.exists != 'true' && matrix.package == 'sageattention'
+        run: |
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
       - name: Build wheel
         if: steps.check.outputs.exists != 'true'
         uses: ./.github/actions/build-wheel
