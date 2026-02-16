@@ -102,6 +102,47 @@ runs:
         export SPCONV_DISABLE_JIT=1
         pip wheel . --no-build-isolation --no-deps -v -w dist
 
+    - name: Repair wheel (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        pip install auditwheel patchelf
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        # Add CUDA toolkit libs so auditwheel can find and bundle them (e.g. libnvrtc-builtins.so)
+        export LD_LIBRARY_PATH=/usr/local/cuda-${{ inputs.cuda-version }}/lib64:${LD_LIBRARY_PATH:-}
+        cd $BUILD_DIR/dist
+        for whl in *.whl; do
+          # Skip pure Python wheels
+          if [[ "$whl" == *"-py3-none-any.whl" ]]; then
+            continue
+          fi
+          # Bundle external shared libs into the wheel
+          # Exclude: driver libs (must come from host), PyTorch libs (installed separately)
+          if auditwheel repair "$whl" \
+            --plat manylinux_2_17_x86_64 \
+            -w repaired/ \
+            --exclude libcuda.so \
+            --exclude libcuda.so.1 \
+            --exclude libcudart.so.12 \
+            --exclude libtorch.so \
+            --exclude libtorch_cpu.so \
+            --exclude libtorch_cuda.so \
+            --exclude libtorch_python.so \
+            --exclude libc10.so \
+            --exclude libc10_cuda.so; then
+            rm "$whl"
+          else
+            echo "::warning::auditwheel repair failed for $whl, using original"
+          fi
+        done
+        if [ -d repaired ] && ls repaired/*.whl 1>/dev/null 2>&1; then
+          mv repaired/*.whl .
+          rm -rf repaired/
+        fi
+
     - name: Setup MSVC (Windows)
       if: inputs.platform == 'windows'
       uses: ilammy/msvc-dev-cmd@v1
