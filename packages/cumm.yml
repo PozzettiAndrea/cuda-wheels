@@ -1,0 +1,20 @@
+name: cumm
+source_repo: FindDefinition/cumm
+source_tag: v0.8.2
+
+extra_deps: "pccm>=0.4.16 ccimport>=0.4.4"
+patch_script: patches/cumm.py
+# cumm generates CUDA GEMM kernels at build time (like spconv)
+# CUMM_CUDA_VERSION and CUMM_CUDA_ARCH_LIST are set by build-wheel action
+# free_disk_space needed due to many bf16 kernel variants
+free_disk_space: true
+
+build_matrix:
+  combinations:
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  platforms: ["linux", "windows"]

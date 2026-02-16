@@ -23,6 +23,7 @@ on:
           - nvdiffrec_render
           - dpvo-cuda
           - pytorch3d
+          - cumm
           - spconv
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
