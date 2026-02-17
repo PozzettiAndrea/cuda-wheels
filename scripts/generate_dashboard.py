@@ -8,6 +8,7 @@ import shutil
 import struct
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
@@ -178,6 +179,143 @@ def get_workflow_runs(repo: str, token: str = None) -> dict:
             })
 
     return runs_by_pkg
+
+
+def _format_duration(total_secs: int) -> str:
+    if total_secs >= 3600:
+        return f"{total_secs // 3600}h {(total_secs % 3600) // 60}m"
+    elif total_secs >= 60:
+        return f"{total_secs // 60}m {total_secs % 60}s"
+    return f"{total_secs}s"
+
+
+def _parse_job_duration(job: dict) -> str | None:
+    started = job.get("started_at")
+    completed = job.get("completed_at")
+    if not started or not completed:
+        return None
+    s = datetime.fromisoformat(started.replace("Z", "+00:00"))
+    e = datetime.fromisoformat(completed.replace("Z", "+00:00"))
+    return _format_duration(int((e - s).total_seconds()))
+
+
+def get_build_durations(repo: str, token: str = None) -> tuple[dict, dict]:
+    """Fetch per-job build durations from ALL workflow runs.
+
+    Fetches all runs for build.yml, then fetches jobs for each run.
+    Handles two job name formats:
+      New: "Linux sageattention py3.10 cu124 torch2.4.0"
+      Old: "Windows torch_generic_nms py3.10 cu126"
+
+    Returns (specific_durations, fallback_durations):
+      specific: {pkg-cu{X}-torch{Y}-cp{Z}-{os} -> duration_str}
+      fallback: {pkg-cu{X}-cp{Z}-{os} -> duration_str}  (for old format without torch)
+    """
+    # Two job name patterns
+    new_re = re.compile(
+        r"^(?P<os>\S+)\s+(?P<pkg>\S+)\s+py(?P<py>\d+\.\d+)\s+cu(?P<cu>\d+)\s+torch(?P<torch>\S+)$"
+    )
+    old_re = re.compile(
+        r"^(?P<os>\S+)\s+(?P<pkg>\S+)\s+py(?P<py>\d+\.\d+)\s+cu(?P<cu>\d+)$"
+    )
+
+    specific = {}   # with torch version
+    fallback = {}   # without torch version
+
+    # Fetch ALL workflow runs (paginated)
+    base = f"https://api.github.com/repos/{repo}/actions/workflows/build.yml/runs"
+    data = _github_api(f"{base}?per_page=1", token)
+    total = data.get("total_count", 0)
+    per_page = 100
+    pages = math.ceil(total / per_page)
+
+    all_run_ids = []
+    for page in range(1, pages + 1):
+        data = _github_api(f"{base}?per_page={per_page}&page={page}", token)
+        for run in data.get("workflow_runs", []):
+            all_run_ids.append(run["id"])
+
+    print(f"  Fetching jobs for {len(all_run_ids)} runs...")
+
+    def _fetch_jobs(run_id):
+        try:
+            return _github_api(
+                f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100",
+                token,
+            )
+        except Exception:
+            return {"jobs": []}
+
+    done = 0
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_fetch_jobs, rid): rid for rid in all_run_ids}
+        for future in as_completed(futures):
+            jobs_data = future.result()
+            for job in jobs_data.get("jobs", []):
+                if job.get("conclusion") != "success":
+                    continue
+                name = job.get("name", "")
+
+                # Try new format first
+                m = new_re.match(name)
+                if m:
+                    os_tag = "linux" if m.group("os").lower() == "linux" else "win"
+                    pkg = m.group("pkg").lower().replace("_", "-")
+                    py = m.group("py").replace(".", "")
+                    cu = m.group("cu")
+                    torch_raw = m.group("torch").replace(".", "")
+                    # Normalize: "240" -> "24", "2100" -> "210"
+                    if len(torch_raw) >= 3 and torch_raw.endswith("0"):
+                        torch_raw = torch_raw.rstrip("0") or torch_raw[:-1]
+
+                    key = f"{pkg}-cu{cu}-torch{torch_raw}-cp{py}-{os_tag}"
+                    if key not in specific:
+                        dur = _parse_job_duration(job)
+                        if dur:
+                            specific[key] = dur
+                    # Also record as fallback
+                    fb_key = f"{pkg}-cu{cu}-cp{py}-{os_tag}"
+                    if fb_key not in fallback:
+                        dur = _parse_job_duration(job)
+                        if dur:
+                            fallback[fb_key] = dur
+                    continue
+
+                # Try old format (no torch)
+                m = old_re.match(name)
+                if m:
+                    os_tag = "linux" if m.group("os").lower() == "linux" else "win"
+                    pkg = m.group("pkg").lower().replace("_", "-")
+                    py = m.group("py").replace(".", "")
+                    cu = m.group("cu")
+                    fb_key = f"{pkg}-cu{cu}-cp{py}-{os_tag}"
+                    if fb_key not in fallback:
+                        dur = _parse_job_duration(job)
+                        if dur:
+                            fallback[fb_key] = dur
+
+            done += 1
+            if done % 25 == 0:
+                print(f"  ... {done}/{len(all_run_ids)} runs")
+
+    print(f"  Found {len(specific)} specific + {len(fallback)} fallback durations")
+    return specific, fallback
+
+
+def _build_duration_keys(wheel_name: str) -> tuple[str, str]:
+    """Build config keys from a wheel filename. Returns (specific_key, fallback_key)."""
+    m = re.match(
+        r"^[^-]+-[^+]+\+cu(\d+)torch(\d+)-cp(\d+)-[^-]+-(.+)\.whl$",
+        wheel_name,
+    )
+    if not m:
+        return "", ""
+    cu, torch_ver, py, plat = m.group(1), m.group(2), m.group(3), m.group(4)
+    pkg = wheel_name.split("-")[0].lower().replace("_", "-")
+    os_tag = "linux" if "linux" in plat or "manylinux" in plat else "win"
+    specific = f"{pkg}-cu{cu}-torch{torch_ver}-cp{py}-{os_tag}"
+    fallback = f"{pkg}-cu{cu}-cp{py}-{os_tag}"
+    return specific, fallback
 
 
 def parse_wheel_filename(filename: str) -> dict:
@@ -403,6 +541,19 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
     # Extract wheel contents (Range requests + cache)
     print("Extracting wheel contents...")
     extract_all_contents(all_pkg_wheels, token=token)
+
+    # Fetch build durations and merge into wheel data
+    print("Fetching build durations...")
+    specific_dur, fallback_dur = get_build_durations(repo, token)
+    matched = 0
+    for wheels in all_pkg_wheels.values():
+        for w in wheels:
+            sk, fk = _build_duration_keys(w.get("name", ""))
+            dur = specific_dur.get(sk) or fallback_dur.get(fk)
+            if dur:
+                w["build_time"] = dur
+                matched += 1
+    print(f"  {matched} wheels matched with build durations")
 
     # Strip raw_size from output (only needed for cache matching)
     for wheels in all_pkg_wheels.values():
