@@ -109,10 +109,13 @@ def get_existing_wheels(package_name: str) -> set:
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                  torch_short: str, python_short: str, platform: str) -> bool:
     """Check if a wheel matching this combo exists."""
-    platform_tag = "linux_x86_64" if platform == "linux" else "win_amd64"
     # Match pattern: {pkg}-{ver}+cu{cuda}torch{torch}-cp{py}-cp{py}-{plat}.whl
-    pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-{platform_tag}.whl"
-    return any(pattern in w for w in existing_wheels)
+    # Linux: require manylinux (auditwheel-repaired) wheels, not raw linux_x86_64
+    version_pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-"
+    if platform == "linux":
+        return any(version_pattern in w and "manylinux" in w for w in existing_wheels)
+    else:
+        return any(version_pattern in w and "win_amd64" in w for w in existing_wheels)
 
 
 def generate_matrix(package_filter: str, overwrite: bool = False) -> list:
