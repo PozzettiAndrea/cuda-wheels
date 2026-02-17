@@ -113,14 +113,15 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "::notice::Overwrite enabled, will rebuild"
           else
-            MATCHING=$(gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep "^${WHEEL_PREFIX}" | head -1)
+            # Require manylinux (auditwheel-repaired) wheels on Linux
+            MATCHING=$(gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep "^${WHEEL_PREFIX}" | grep "manylinux" | head -1)
             if [ -n "$MATCHING" ]; then
               echo "exists=true" >> $GITHUB_OUTPUT
               echo "::notice::Wheel exists in release: $MATCHING"
               gh release download "$RELEASE" -p "$MATCHING" -D dist
             else
               echo "exists=false" >> $GITHUB_OUTPUT
-              echo "::notice::No wheel found matching: ${WHEEL_PREFIX}*"
+              echo "::notice::No manylinux wheel found matching: ${WHEEL_PREFIX}*"
             fi
           fi
 
