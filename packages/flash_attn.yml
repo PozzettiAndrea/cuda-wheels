@@ -1,0 +1,96 @@
+name: flash_attn
+source_repo: Dao-AILab/flash-attention
+source_tag: v2.8.3
+version: "2.8.3"
+
+# Flash-attn only supports SM >= 8.0 (Ampere+). No 8.6/8.9 needed — SM 80 binary compat.
+arch_list: "8.0 9.0"
+
+free_disk_space: true
+clone_recursive: true
+max_jobs: 1
+
+# Bridge TORCH_CUDA_ARCH_LIST → FLASH_ATTN_CUDA_ARCHS
+patch_script: patches/flash_attn.py
+
+extra_deps: "psutil"
+
+build_matrix:
+  combinations:
+    # ── cu124 (torch 2.4.0 – 2.6.0) ──
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.4.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.5.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    # ── cu126 (torch 2.6.0 – 2.10.0) ──
+    - cuda: "12.6"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.7.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.6"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.6"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    # ── cu128 (torch 2.7.0 – 2.10.0, Blackwell archs) ──
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "12.8"
+      pytorch: "2.7.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "12.8"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    # ── cu130 (torch 2.9.0 – 2.10.0) ──
+    - cuda: "13.0"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "13.0"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+    - cuda: "13.0"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      arch_list: "8.0 9.0 10.0 12.0"
+  platforms: ["linux", "windows"]
