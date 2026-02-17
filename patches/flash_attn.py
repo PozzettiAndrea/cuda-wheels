@@ -1,14 +1,29 @@
-"""Patch flash-attn setup.py to read TORCH_CUDA_ARCH_LIST for architecture selection.
+"""Patch flash-attn for CI builds.
 
-flash-attn reads FLASH_ATTN_CUDA_ARCHS (semicolon-separated, no dots, e.g. "80;90")
-but the build action sets TORCH_CUDA_ARCH_LIST (space-separated, with dots, e.g. "8.0 9.0").
-This patch bridges the two formats.
+1. Init only csrc/cutlass submodule (skip composable_kernel — ROCm only, breaks Windows due to long filenames).
+2. Bridge TORCH_CUDA_ARCH_LIST → FLASH_ATTN_CUDA_ARCHS.
 """
-import re
+import subprocess
 from pathlib import Path
+
+# Init only the CUDA submodule (composable_kernel is ROCm-only and has
+# filenames exceeding Windows' 260-char path limit)
+subprocess.run(["git", "submodule", "update", "--init", "csrc/cutlass"], check=True)
+print("Initialized csrc/cutlass submodule")
 
 setup_file = Path("setup.py")
 content = setup_file.read_text()
+
+# Remove submodule init calls from setup.py (cutlass already done, composable_kernel not needed)
+content = content.replace(
+    'subprocess.run(["git", "submodule", "update", "--init", "csrc/composable_kernel"])',
+    "# skipped composable_kernel submodule (ROCm only)",
+)
+content = content.replace(
+    'subprocess.run(["git", "submodule", "update", "--init", "csrc/cutlass"])',
+    "# skipped cutlass submodule (already initialized)",
+)
+print("Patched out submodule init calls from setup.py")
 
 # Replace cuda_archs() to also read TORCH_CUDA_ARCH_LIST
 old_func = '''def cuda_archs() -> str:
