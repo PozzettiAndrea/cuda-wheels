@@ -4,280 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cuda-wheels dashboard</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-         background: #0d1117; color: #c9d1d9; padding: 2rem; }
-  h1 { color: #f0f6fc; margin-bottom: 0.5rem; }
-  .subtitle { color: #8b949e; margin-bottom: 2rem; }
-  .stats { display: flex; gap: 2rem; margin-bottom: 2rem; }
-  .stat { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem 1.5rem; }
-  .stat-value { font-size: 2rem; font-weight: bold; color: #58a6ff; }
-  .stat-label { color: #8b949e; font-size: 0.85rem; }
-  table { width: 100%; border-collapse: collapse; background: #161b22;
-           border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }
-  th { background: #21262d; color: #f0f6fc; text-align: left; padding: 0.75rem 1rem;
-       font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  td { padding: 0.6rem 1rem; border-top: 1px solid #21262d; font-size: 0.9rem; }
-  tr:hover td { background: #1c2128; }
-  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px;
-            font-size: 0.75rem; font-weight: 500; margin: 1px; }
-  .badge.built { background: #1f6feb33; color: #58a6ff; }
-  .badge.external { background: #f0883e33; color: #f0883e; }
-  .badge.cuda { background: #23882533; color: #3fb950; }
-  .badge.torch { background: #f0883e33; color: #f0883e; }
-  .badge.py { background: #8957e533; color: #bc8cff; }
-  .badge.plat { background: #38849633; color: #58a6ff; }
-  footer { margin-top: 2rem; color: #484f58; font-size: 0.8rem; }
-  a { color: #58a6ff; text-decoration: none; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h1>cuda-wheels</h1>
 <p class="subtitle">Pre-built CUDA Python wheels for ML/3D packages</p>
 
 <div class="stats">
-  <div class="stat"><div class="stat-value">25</div><div class="stat-label">packages</div></div>
-  <div class="stat"><div class="stat-value">2394</div><div class="stat-label">wheels</div></div>
-  <div class="stat"><div class="stat-value">18</div><div class="stat-label">built by CI</div></div>
-  <div class="stat"><div class="stat-value">7</div><div class="stat-label">external links</div></div>
+  <div class="stat"><div class="stat-value">23</div><div class="stat-label">packages</div></div>
+  <div class="stat"><div class="stat-value">2647</div><div class="stat-label">wheels</div></div>
+  <div class="stat"><div class="stat-value">16</div><div class="stat-label">built by CI</div></div>
+  <div class="stat"><div class="stat-value">7</div><div class="stat-label">external</div></div>
 </div>
 
+<h2>Built by CI</h2>
 <table>
 <thead>
-<tr><th>Package</th><th>Version</th><th>CUDA</th><th>Torch</th><th>Python</th><th>Platform</th><th>#</th></tr>
+<tr><th>Package</th><th>Versions</th><th># Wheels</th><th>Builds</th><th>Release</th></tr>
 </thead>
 <tbody>
-<tr>
-  <td><strong>cc-torch</strong> <span class="badge built">built</span></td>
-  <td>0.2</td>
-  <td><span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.10</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>97</td>
-</tr>
-<tr>
-  <td><strong>cubvh</strong> <span class="badge built">built</span></td>
-  <td>0.1.2</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>14</td>
-</tr>
-<tr>
-  <td><strong>cumesh</strong> <span class="badge built">built</span></td>
-  <td>0.0.1</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>46</td>
-</tr>
-<tr>
-  <td><strong>cumm</strong> <span class="badge built">built</span></td>
-  <td>0.8.2</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>14</td>
-</tr>
-<tr>
-  <td><strong>detectron2</strong> <span class="badge external">external</span></td>
-  <td>0.6</td>
-  <td><span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.14</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>167</td>
-</tr>
-<tr>
-  <td><strong>dpvo-cuda</strong> <span class="badge built">built</span></td>
-  <td>0.0.0</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>14</td>
-</tr>
-<tr>
-  <td><strong>flash-attn</strong> <span class="badge external">external</span></td>
-  <td>2.5.9, 2.6.3, 2.7.4, 2.8.2, 2.8.3</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span> <span class="badge cuda">13.0</span> <span class="badge cuda">13.1</span></td>
-  <td><span class="badge torch">2.10</span> <span class="badge torch">2.11</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.14</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>276</td>
-</tr>
-<tr>
-  <td><strong>flex-gemm</strong> <span class="badge built">built</span></td>
-  <td>1.0.0</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>46</td>
-</tr>
-<tr>
-  <td><strong>gsplat</strong> <span class="badge built">built</span></td>
-  <td>1.5.3</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>14</td>
-</tr>
-<tr>
-  <td><strong>lietorch</strong> <span class="badge built">built</span></td>
-  <td>0.3</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>44</td>
-</tr>
-<tr>
-  <td><strong>nvdiffrast</strong> <span class="badge built">built</span></td>
-  <td>0.4.0</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>52</td>
-</tr>
-<tr>
-  <td><strong>nvdiffrec-render</strong> <span class="badge built">built</span></td>
-  <td>0.0.1</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>46</td>
-</tr>
-<tr>
-  <td><strong>o-voxel</strong> <span class="badge built">built</span></td>
-  <td>0.0.1</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>46</td>
-</tr>
-<tr>
-  <td><strong>pyg-lib</strong> <span class="badge external">external</span></td>
-  <td>0.2.0, 0.3.0, 0.3.1, 0.4.0, 0.5.0</td>
-  <td><span class="badge cuda">11.7</span> <span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.0</span> <span class="badge torch">2.1</span> <span class="badge torch">2.2</span> <span class="badge torch">2.3</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>300</td>
-</tr>
-<tr>
-  <td><strong>pytorch3d</strong> <span class="badge built">built</span></td>
-  <td>0.7.9</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>14</td>
-</tr>
-<tr>
-  <td><strong>sageattention</strong> <span class="badge built">built</span></td>
-  <td>2.2.0</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.10</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>100</td>
-</tr>
-<tr>
-  <td><strong>sageattn3</strong> <span class="badge built">built</span></td>
-  <td>1.0.0</td>
-  <td><span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.10</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>48</td>
-</tr>
-<tr>
-  <td><strong>spconv</strong> <span class="badge built">built</span></td>
-  <td>2.3.8</td>
-  <td><span class="badge cuda">12.4</span> <span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.4</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>21</td>
-</tr>
-<tr>
-  <td><strong>spconv-cu124</strong> <span class="badge built">built</span></td>
-  <td>2.3.8</td>
-  <td><span class="badge cuda">12.4</span></td>
-  <td><span class="badge torch">2.4</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>6</td>
-</tr>
-<tr>
-  <td><strong>spconv-cu128</strong> <span class="badge built">built</span></td>
-  <td>2.3.8</td>
-  <td><span class="badge cuda">12.8</span></td>
-  <td><span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>8</td>
-</tr>
-<tr>
-  <td><strong>torch-cluster</strong> <span class="badge external">external</span></td>
-  <td>1.6.1, 1.6.2, 1.6.3</td>
-  <td><span class="badge cuda">11.7</span> <span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.0</span> <span class="badge torch">2.1</span> <span class="badge torch">2.2</span> <span class="badge torch">2.3</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>262</td>
-</tr>
-<tr>
-  <td><strong>torch-generic-nms</strong> <span class="badge built">built</span></td>
-  <td>0.1</td>
-  <td><span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">13.0</span></td>
-  <td><span class="badge torch">2.10</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span> <span class="badge torch">2.9</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>97</td>
-</tr>
-<tr>
-  <td><strong>torch-scatter</strong> <span class="badge external">external</span></td>
-  <td>2.1.1, 2.1.2</td>
-  <td><span class="badge cuda">11.7</span> <span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.0</span> <span class="badge torch">2.1</span> <span class="badge torch">2.2</span> <span class="badge torch">2.3</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>226</td>
-</tr>
-<tr>
-  <td><strong>torch-sparse</strong> <span class="badge external">external</span></td>
-  <td>0.6.17, 0.6.18</td>
-  <td><span class="badge cuda">11.7</span> <span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.0</span> <span class="badge torch">2.1</span> <span class="badge torch">2.2</span> <span class="badge torch">2.3</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>226</td>
-</tr>
-<tr>
-  <td><strong>torch-spline-conv</strong> <span class="badge external">external</span></td>
-  <td>1.2.2</td>
-  <td><span class="badge cuda">11.7</span> <span class="badge cuda">11.8</span> <span class="badge cuda">12.1</span> <span class="badge cuda">12.4</span> <span class="badge cuda">12.6</span> <span class="badge cuda">12.8</span> <span class="badge cuda">12.9</span></td>
-  <td><span class="badge torch">2.0</span> <span class="badge torch">2.1</span> <span class="badge torch">2.2</span> <span class="badge torch">2.3</span> <span class="badge torch">2.4</span> <span class="badge torch">2.5</span> <span class="badge torch">2.6</span> <span class="badge torch">2.7</span> <span class="badge torch">2.8</span></td>
-  <td><span class="badge py">3.10</span> <span class="badge py">3.11</span> <span class="badge py">3.12</span> <span class="badge py">3.13</span> <span class="badge py">3.8</span> <span class="badge py">3.9</span></td>
-  <td><span class="badge plat">Linux</span> <span class="badge plat">Windows</span></td>
-  <td>210</td>
-</tr>
+<tr><td><strong>cc-torch</strong></td><td>0.2</td><td><a href="#pkg=cc-torch" class="wheel-count">97</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103846636" title="Build cc_torch wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039877475" title="Build cc_torch wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/cc_torch-latest">Release</a></td></tr>
+<tr><td><strong>cubvh</strong></td><td>0.1.2</td><td><a href="#pkg=cubvh" class="wheel-count">21</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103851938" title="Build cubvh wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039878365" title="Build cubvh wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/cubvh-latest">Release</a></td></tr>
+<tr><td><strong>cumesh</strong></td><td>0.0.1</td><td><a href="#pkg=cumesh" class="wheel-count">69</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103850089" title="Build cumesh wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039878105" title="Build cumesh wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/cumesh-latest">Release</a></td></tr>
+<tr><td><strong>cumm</strong></td><td>0.8.2</td><td><a href="#pkg=cumm" class="wheel-count">14</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22102616699" title="Build cumm wheels (overwrite) (2026-02-17)"><span style="color:#3fb950">&#x2713;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22069642998" title="Build cumm wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22069043183" title="Build cumm wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22068182864" title="Build cumm wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22062320245" title="Build cumm wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/cumm-latest">Release</a></td></tr>
+<tr><td><strong>dpvo-cuda</strong></td><td>0.0.0</td><td><a href="#pkg=dpvo-cuda" class="wheel-count">21</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103857055" title="Build dpvo-cuda wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039879293" title="Build dpvo-cuda wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/dpvo_cuda-latest">Release</a></td></tr>
+<tr><td><strong>flex-gemm</strong></td><td>1.0.0</td><td><a href="#pkg=flex-gemm" class="wheel-count">69</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103848500" title="Build flex_gemm wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039877783" title="Build flex_gemm wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/flex_gemm-latest">Release</a></td></tr>
+<tr><td><strong>gsplat</strong></td><td>1.5.3</td><td><a href="#pkg=gsplat" class="wheel-count">21</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103840937" title="Build gsplat wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039876446" title="Build gsplat wheels (overwrite) (2026-02-15)"><span style="color:#3fb950">&#x2713;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/gsplat-latest">Release</a></td></tr>
+<tr><td><strong>lietorch</strong></td><td>0.3</td><td><a href="#pkg=lietorch" class="wheel-count">44</a></td><td class="runs-cell">-</td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/lietorch-latest">Release</a></td></tr>
+<tr><td><strong>nvdiffrast</strong></td><td>0.4.0</td><td><a href="#pkg=nvdiffrast" class="wheel-count">78</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103842711" title="Build nvdiffrast wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039876792" title="Build nvdiffrast wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/nvdiffrast-latest">Release</a></td></tr>
+<tr><td><strong>nvdiffrec-render</strong></td><td>0.0.1</td><td><a href="#pkg=nvdiffrec-render" class="wheel-count">69</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103855337" title="Build nvdiffrec_render wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039878946" title="Build nvdiffrec_render wheels (overwrite) (2026-02-15)"><span style="color:#3fb950">&#x2713;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/nvdiffrec_render-latest">Release</a></td></tr>
+<tr><td><strong>o-voxel</strong></td><td>0.0.1</td><td><a href="#pkg=o-voxel" class="wheel-count">69</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103853524" title="Build o_voxel wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039878637" title="Build o_voxel wheels (overwrite) (2026-02-15)"><span style="color:#3fb950">&#x2713;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/o_voxel-latest">Release</a></td></tr>
+<tr><td><strong>pytorch3d</strong></td><td>0.7.9</td><td><a href="#pkg=pytorch3d" class="wheel-count">21</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103858961" title="Build pytorch3d wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039879633" title="Build pytorch3d wheels (overwrite) (2026-02-15)"><span style="color:#3fb950">&#x2713;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/pytorch3d-latest">Release</a></td></tr>
+<tr><td><strong>sageattention</strong></td><td>2.2.0</td><td><a href="#pkg=sageattention" class="wheel-count">150</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103837752" title="Build sageattention wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22050049867" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22049401133" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22048936312" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22048489632" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22048357192" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22045975437" title="Build sageattention wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22045526912" title="Build sageattention wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22045160280" title="Build sageattention wheels (overwrite) (2026-02-15)"><span style="color:#3fb950">&#x2713;</span> 2026-02-15</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22045018483" title="Build sageattention wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039876009" title="Build sageattention wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039586783" title="Build sageattention wheels (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/sageattention-latest">Release</a></td></tr>
+<tr><td><strong>sageattn3</strong></td><td>1.0.0</td><td><a href="#pkg=sageattn3" class="wheel-count">72</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103839362" title="Build sageattn3 wheels (2026-02-17)"><span style="color:#3fb950">&#x2713;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22059227965" title="Build sageattn3 wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22050050317" title="Build sageattn3 wheels (overwrite) (2026-02-16)"><span style="color:#f85149">&#x2717;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22049401502" title="Build sageattn3 wheels (overwrite) (2026-02-16)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-16</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/sageattn3-latest">Release</a></td></tr>
+<tr><td><strong>spconv</strong></td><td>2.3.8</td><td><a href="#pkg=spconv" class="wheel-count">21</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22078591129" title="Build spconv wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22063228398" title="Build spconv wheels (overwrite) (2026-02-16)"><span style="color:#3fb950">&#x2713;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22063084781" title="Build spconv wheels (overwrite) (2026-02-16)"><span style="color:#f85149">&#x2717;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22062622322" title="Build spconv wheels (overwrite) (2026-02-16)"><span style="color:#f85149">&#x2717;</span> 2026-02-16</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039880037" title="Build spconv wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/spconv-latest">Release</a></td></tr>
+<tr><td><strong>torch-generic-nms</strong></td><td>0.1</td><td><a href="#pkg=torch-generic-nms" class="wheel-count">144</a></td><td class="runs-cell"><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22103844557" title="Build torch_generic_nms wheels (2026-02-17)"><span style="color:#f85149">&#x2717;</span> 2026-02-17</a><br><a href="https://github.com/PozzettiAndrea/cuda-wheels/actions/runs/22039877151" title="Build torch_generic_nms wheels (overwrite) (2026-02-15)"><span style="color:#8b949e">&#x25cb;</span> 2026-02-15</a></td><td><a href="https://github.com/PozzettiAndrea/cuda-wheels/releases/tag/torch_generic_nms-latest">Release</a></td></tr>
 </tbody>
 </table>
 
+<h2>External</h2>
+<table>
+<thead>
+<tr><th>Package</th><th>Versions</th><th># Wheels</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>detectron2</strong></td><td>0.6</td><td><a href="#pkg=detectron2" class="wheel-count">167</a></td><td><a href="https://github.com/MiroPsota/torch_packages_builder">Source</a></td></tr>
+<tr><td><strong>flash-attn</strong></td><td>2.5.9, 2.6.3, 2.7.4, 2.8.2, 2.8.3</td><td><a href="#pkg=flash-attn" class="wheel-count">276</a></td><td><a href="https://github.com/mjun0812/flash-attention-prebuild-wheels">Source</a></td></tr>
+<tr><td><strong>pyg-lib</strong></td><td>0.2.0, 0.3.0, 0.3.1, 0.4.0, 0.5.0</td><td><a href="#pkg=pyg-lib" class="wheel-count">300</a></td><td><a href="https://data.pyg.org/whl/">Source</a></td></tr>
+<tr><td><strong>torch-cluster</strong></td><td>1.6.1, 1.6.2, 1.6.3</td><td><a href="#pkg=torch-cluster" class="wheel-count">262</a></td><td><a href="https://data.pyg.org/whl/">Source</a></td></tr>
+<tr><td><strong>torch-scatter</strong></td><td>2.1.1, 2.1.2</td><td><a href="#pkg=torch-scatter" class="wheel-count">226</a></td><td><a href="https://data.pyg.org/whl/">Source</a></td></tr>
+<tr><td><strong>torch-sparse</strong></td><td>0.6.17, 0.6.18</td><td><a href="#pkg=torch-sparse" class="wheel-count">226</a></td><td><a href="https://data.pyg.org/whl/">Source</a></td></tr>
+<tr><td><strong>torch-spline-conv</strong></td><td>1.2.2</td><td><a href="#pkg=torch-spline-conv" class="wheel-count">210</a></td><td><a href="https://data.pyg.org/whl/">Source</a></td></tr>
+</tbody>
+</table>
+
+<!-- Wheel list modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Wheels</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table>
+        <thead><tr><th>Wheel</th><th>Size</th><th>Contents</th></tr></thead>
+        <tbody id="modal-wheels"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Wheel contents modal -->
+<div class="modal-overlay" id="contents-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="contents-title">Contents</h3>
+      <button class="modal-close" onclick="closeContentsModal()">&times;</button>
+    </div>
+    <div id="contents-loading" class="loading-bar" style="display:none">
+      <div class="loading-text">Downloading wheel...</div>
+      <div class="loading-track"><div class="loading-fill" id="loading-fill"></div></div>
+    </div>
+    <div class="modal-body">
+      <table>
+        <thead><tr><th>File</th><th>Size</th></tr></thead>
+        <tbody id="contents-files"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <footer>
-  <p><a href="https://github.com/PozzettiAndrea/cuda-wheels">GitHub</a> · <a href="../">Package Index</a></p>
+  <p><a href="https://github.com/PozzettiAndrea/cuda-wheels">GitHub</a> &middot; <a href="../">Package Index</a></p>
 </footer>
+
+<script src="packages.js"></script>
+<script src="dashboard.js"></script>
 </body>
 </html>

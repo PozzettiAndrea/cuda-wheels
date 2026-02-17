@@ -1,14 +1,143 @@
 #!/usr/bin/env python3
 """Generate a dashboard page showing all available wheels and their metadata."""
 import json
+import math
 import os
 import re
+import shutil
+import struct
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).parent
+CACHE_FILE = SCRIPT_DIR / ".wheel_contents_cache.json"
 
-def get_releases(repo: str, token: str = None) -> list:
-    url = f"https://api.github.com/repos/{repo}/releases"
+
+# --- Wheel contents extraction via Range requests ---
+
+def _load_contents_cache():
+    if CACHE_FILE.exists():
+        return json.loads(CACHE_FILE.read_text())
+    return {}
+
+
+def _save_contents_cache(cache):
+    CACHE_FILE.write_text(json.dumps(cache, separators=(",", ":")))
+
+
+def _extract_contents_range(url, token=None):
+    """Extract file listing from a wheel using HTTP Range requests.
+
+    Downloads only the zip central directory (~64KB) instead of the full file.
+    Returns list of {path, size, dir} or None on failure.
+    """
+    try:
+        # Don't send auth tokens to download URLs (they redirect to CDNs that reject them)
+        req = urllib.request.Request(url, method="HEAD")
+        with urllib.request.urlopen(req) as resp:
+            total_size = int(resp.headers.get("Content-Length", 0))
+            final_url = resp.url  # after redirects
+
+        if total_size == 0:
+            return None
+
+        # Download last 64KB (contains zip End of Central Directory + central directory)
+        tail_size = min(65536, total_size)
+        range_headers = {"Range": f"bytes={total_size - tail_size}-{total_size - 1}"}
+        req = urllib.request.Request(final_url, headers=range_headers)
+        with urllib.request.urlopen(req) as resp:
+            tail = resp.read()
+
+        # Find End of Central Directory record (signature 0x06054b50)
+        eocd_sig = b"\x50\x4b\x05\x06"
+        eocd_pos = tail.rfind(eocd_sig)
+        if eocd_pos == -1:
+            return None
+
+        # Parse EOCD: skip sig(4), disk stuff(4), then num_entries(2), cd_size(4), cd_offset(4)
+        if len(tail) - eocd_pos < 22:
+            return None
+        num_entries = struct.unpack_from("<H", tail, eocd_pos + 8)[0]
+        cd_size = struct.unpack_from("<I", tail, eocd_pos + 12)[0]
+        cd_offset = struct.unpack_from("<I", tail, eocd_pos + 16)[0]
+
+        # Check if central directory is within our tail buffer
+        cd_start_in_tail = cd_offset - (total_size - tail_size)
+        if cd_start_in_tail >= 0:
+            cd_data = tail[cd_start_in_tail:cd_start_in_tail + cd_size]
+        else:
+            # Need a separate Range request for the central directory
+            range_headers = {"Range": f"bytes={cd_offset}-{cd_offset + cd_size - 1}"}
+            req = urllib.request.Request(final_url, headers=range_headers)
+            with urllib.request.urlopen(req) as resp:
+                cd_data = resp.read()
+
+        # Parse central directory entries
+        files = []
+        pos = 0
+        cd_file_sig = b"\x50\x4b\x01\x02"
+        while pos + 46 <= len(cd_data):
+            if cd_data[pos:pos + 4] != cd_file_sig:
+                break
+            uncomp_size = struct.unpack_from("<I", cd_data, pos + 24)[0]
+            name_len = struct.unpack_from("<H", cd_data, pos + 28)[0]
+            extra_len = struct.unpack_from("<H", cd_data, pos + 30)[0]
+            comment_len = struct.unpack_from("<H", cd_data, pos + 32)[0]
+            pos += 46
+            if pos + name_len > len(cd_data):
+                break
+            name = cd_data[pos:pos + name_len].decode("utf-8", errors="replace")
+            pos += name_len + extra_len + comment_len
+            files.append({"path": name, "size": uncomp_size, "dir": name.endswith("/")})
+
+        return files
+    except Exception as e:
+        print(f"  Warning: failed to extract {url}: {e}")
+        return None
+
+
+def extract_all_contents(all_pkg_wheels, token=None):
+    """Extract contents for all wheels using cache + parallel Range requests."""
+    cache = _load_contents_cache()
+    to_fetch = []
+
+    for pkg, wheels in all_pkg_wheels.items():
+        for i, w in enumerate(wheels):
+            url = w.get("url", "")
+            raw_size = w.get("raw_size")
+            cache_key = url
+            if cache_key and cache_key in cache and cache[cache_key].get("size") == raw_size:
+                w["contents"] = cache[cache_key]["files"]
+            elif url:
+                to_fetch.append((pkg, i, url, raw_size))
+
+    if to_fetch:
+        print(f"  Extracting contents for {len(to_fetch)} wheels ({len(cache)} cached)...")
+        done = 0
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = {
+                pool.submit(_extract_contents_range, url, token): (pkg, i, url, raw_size)
+                for pkg, i, url, raw_size in to_fetch
+            }
+            for future in as_completed(futures):
+                pkg, i, url, raw_size = futures[future]
+                files = future.result()
+                if files is not None:
+                    all_pkg_wheels[pkg][i]["contents"] = files
+                    cache[url] = {"size": raw_size, "files": files}
+                done += 1
+                if done % 50 == 0:
+                    print(f"  ... {done}/{len(to_fetch)}")
+
+        print(f"  Done: extracted {done} wheels")
+    else:
+        print(f"  All {sum(len(v) for v in all_pkg_wheels.values())} wheels cached")
+
+    _save_contents_cache(cache)
+
+
+def _github_api(url: str, token: str = None) -> dict:
     headers = {"Accept": "application/vnd.github.v3+json"}
     if token:
         headers["Authorization"] = f"token {token}"
@@ -17,13 +146,42 @@ def get_releases(repo: str, token: str = None) -> list:
         return json.loads(response.read().decode())
 
 
-def parse_wheel_filename(filename: str) -> dict:
-    """Extract metadata from wheel filename.
+def get_releases(repo: str, token: str = None) -> list:
+    return _github_api(f"https://api.github.com/repos/{repo}/releases", token)
 
-    Formats:
-      pkg-1.0.0+cu128torch28-cp312-cp312-linux_x86_64.whl
-      pkg-1.0.0+pt28cu128-cp312-cp312-linux_x86_64.whl
-    """
+
+def get_workflow_runs(repo: str, token: str = None) -> dict:
+    """Fetch all workflow runs for build.yml and group by package name."""
+    base = f"https://api.github.com/repos/{repo}/actions/workflows/build.yml/runs"
+    per_page = 100
+
+    data = _github_api(f"{base}?per_page=1", token)
+    total = data.get("total_count", 0)
+    pages = math.ceil(total / per_page)
+
+    runs_by_pkg = {}
+    title_re = re.compile(r"^Build (\S+) wheels")
+
+    for page in range(1, pages + 1):
+        data = _github_api(f"{base}?per_page={per_page}&page={page}", token)
+        for run in data.get("workflow_runs", []):
+            title = run.get("display_title", "")
+            m = title_re.match(title)
+            if not m:
+                continue
+            pkg = m.group(1).lower().replace("_", "-")
+            runs_by_pkg.setdefault(pkg, []).append({
+                "html_url": run["html_url"],
+                "display_title": title,
+                "conclusion": run.get("conclusion"),
+                "created_at": run.get("created_at", ""),
+            })
+
+    return runs_by_pkg
+
+
+def parse_wheel_filename(filename: str) -> dict:
+    """Extract metadata from wheel filename."""
     m = re.match(
         r"^(?P<pkg>[^-]+)-(?P<ver>[^-]+)-(?P<pytag>cp\d+)-[^-]+-(?P<plat>.+)\.whl$",
         filename,
@@ -39,7 +197,6 @@ def parse_wheel_filename(filename: str) -> dict:
     }
 
     ver = m.group("ver")
-    # Extract CUDA and torch from local version
     cuda_m = re.search(r"cu(\d{2,3})", ver)
     torch_m = re.search(r"torch(\d{2,3})", ver) or re.search(r"pt(\d{2,3})", ver)
 
@@ -50,13 +207,11 @@ def parse_wheel_filename(filename: str) -> dict:
         t = torch_m.group(1)
         info["torch"] = f"{t[0]}.{t[1:]}" if len(t) <= 3 else t
 
-    # Python version
-    py = m.group("pytag")  # e.g. cp312
+    py = m.group("pytag")
     digits = py.replace("cp", "")
     if len(digits) >= 2:
         info["python_version"] = f"{digits[0]}.{digits[1:]}"
 
-    # Platform
     plat = m.group("plat")
     if "linux" in plat:
         info["os"] = "Linux"
@@ -77,6 +232,7 @@ def parse_external_wheels(external_dir: Path) -> dict:
         return packages
 
     link_pattern = re.compile(r'href="([^"]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
+    source_pattern = re.compile(r'<p>.*?<a href="([^"]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
 
     for pkg_dir in sorted(external_dir.iterdir()):
         if not pkg_dir.is_dir():
@@ -86,6 +242,12 @@ def parse_external_wheels(external_dir: Path) -> dict:
             continue
 
         html = index_file.read_text()
+
+        source_url = None
+        source_match = source_pattern.search(html)
+        if source_match:
+            source_url = source_match.group(1)
+
         wheels = []
         for match in link_pattern.finditer(html):
             url, display = match.group(1), match.group(2)
@@ -94,133 +256,168 @@ def parse_external_wheels(external_dir: Path) -> dict:
                 if info:
                     info["url"] = url
                     info["source"] = "external"
+                    info["display_name"] = display
                     wheels.append(info)
         if wheels:
-            packages[pkg_dir.name] = wheels
+            packages[pkg_dir.name] = {"wheels": wheels, "source_url": source_url}
 
     return packages
 
 
-def generate_dashboard(built_packages: dict, external_packages: dict, output_dir: Path):
-    """Generate dashboard HTML."""
+# --- HTML rendering helpers ---
+
+def _format_size(size_bytes):
+    if size_bytes is None:
+        return "-"
+    if size_bytes >= 1_073_741_824:
+        return f"{size_bytes / 1_073_741_824:.1f} GB"
+    if size_bytes >= 1_048_576:
+        return f"{size_bytes / 1_048_576:.1f} MB"
+    if size_bytes >= 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes} B"
+
+
+def _status_icon(conclusion):
+    if conclusion == "success":
+        return '<span style="color:#3fb950">&#x2713;</span>'
+    elif conclusion == "failure":
+        return '<span style="color:#f85149">&#x2717;</span>'
+    elif conclusion is None:
+        return '<span style="color:#d29922">&#x25cf;</span>'
+    return '<span style="color:#8b949e">&#x25cb;</span>'
+
+
+def _runs_cell(runs):
+    if not runs:
+        return "-"
+    links = []
+    for r in runs:
+        icon = _status_icon(r["conclusion"])
+        date = r["created_at"][:10] if r.get("created_at") else ""
+        title = r.get("display_title", "")
+        links.append(f'<a href="{r["html_url"]}" title="{title} ({date})">{icon} {date}</a>')
+    return "<br>".join(links)
+
+
+def _built_row(p):
+    release_link = f'<a href="{p["release_url"]}">Release</a>' if p.get("release_url") else "-"
+    runs_html = _runs_cell(p["runs"])
+    return (
+        f'<tr>'
+        f'<td><strong>{p["name"]}</strong></td>'
+        f'<td>{", ".join(p["versions"])}</td>'
+        f'<td><a href="#pkg={p["name"]}" class="wheel-count">{p["count"]}</a></td>'
+        f'<td class="runs-cell">{runs_html}</td>'
+        f'<td>{release_link}</td>'
+        f'</tr>'
+    )
+
+
+def _ext_row(p):
+    source_link = f'<a href="{p["source_url"]}">Source</a>' if p.get("source_url") else "-"
+    return (
+        f'<tr>'
+        f'<td><strong>{p["name"]}</strong></td>'
+        f'<td>{", ".join(p["versions"])}</td>'
+        f'<td><a href="#pkg={p["name"]}" class="wheel-count">{p["count"]}</a></td>'
+        f'<td>{source_link}</td>'
+        f'</tr>'
+    )
+
+
+# --- Main generation ---
+
+def generate_dashboard(built_packages: dict, external_packages: dict, output_dir: Path,
+                       release_urls: dict = None, workflow_runs: dict = None,
+                       repo: str = "PozzettiAndrea/cuda-wheels", token: str = None):
+    """Generate dashboard HTML from template + static assets."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    release_urls = release_urls or {}
+    workflow_runs = workflow_runs or {}
 
-    all_packages = {}
-    for name, wheels in built_packages.items():
-        all_packages[name] = {"wheels": wheels, "source": "built"}
-    for name, wheels in external_packages.items():
-        all_packages[name] = {"wheels": wheels, "source": "external"}
-
-    # Build summary data per package
-    pkg_summaries = []
-    for name in sorted(all_packages.keys()):
-        data = all_packages[name]
-        wheels = data["wheels"]
-        cuda_versions = sorted(set(w.get("cuda", "?") for w in wheels))
-        torch_versions = sorted(set(w.get("torch", "?") for w in wheels))
-        python_versions = sorted(set(w.get("python_version", "?") for w in wheels))
-        platforms = sorted(set(w.get("os", "?") for w in wheels))
+    # Build summaries
+    built_summaries = []
+    all_pkg_wheels = {}
+    for name in sorted(built_packages.keys()):
+        wheels = built_packages[name]
         versions = sorted(set(w.get("version", "?").split("+")[0] for w in wheels))
-
-        pkg_summaries.append({
+        wheel_list = []
+        for w in sorted(wheels, key=lambda x: x.get("display_name", x.get("version", ""))):
+            wheel_list.append({
+                "name": w.get("display_name", f"{w['package']}-{w['version']}-{w['python']}-{w['python']}-{w['platform']}.whl"),
+                "url": w.get("url", ""),
+                "size": _format_size(w.get("size")),
+                "raw_size": w.get("size"),
+            })
+        all_pkg_wheels[name] = wheel_list
+        built_summaries.append({
             "name": name,
-            "source": data["source"],
             "count": len(wheels),
             "versions": versions,
-            "cuda": cuda_versions,
-            "torch": torch_versions,
-            "python": python_versions,
-            "platforms": platforms,
-            "wheels": wheels,
+            "release_url": release_urls.get(name),
+            "runs": workflow_runs.get(name, []),
         })
 
-    # Generate HTML
-    html = _render_dashboard(pkg_summaries)
+    ext_summaries = []
+    for name in sorted(external_packages.keys()):
+        data = external_packages[name]
+        wheels = data["wheels"]
+        versions = sorted(set(w.get("version", "?").split("+")[0] for w in wheels))
+        wheel_list = []
+        for w in sorted(wheels, key=lambda x: x.get("display_name", "")):
+            wheel_list.append({
+                "name": w.get("display_name", ""),
+                "url": w.get("url", ""),
+                "size": _format_size(w.get("size")),
+                "raw_size": w.get("size"),
+            })
+        all_pkg_wheels[name] = wheel_list
+        ext_summaries.append({
+            "name": name,
+            "count": len(wheels),
+            "versions": versions,
+            "source_url": data.get("source_url"),
+        })
+
+    total_wheels = sum(p["count"] for p in built_summaries) + sum(p["count"] for p in ext_summaries)
+
+    # Render rows
+    built_rows = "\n".join(_built_row(p) for p in built_summaries)
+    ext_rows = "\n".join(_ext_row(p) for p in ext_summaries)
+
+    # Read template
+    template = (SCRIPT_DIR / "dashboard_template.html").read_text()
+
+    # Substitute placeholders
+    html = template.replace("{{total_packages}}", str(len(built_summaries) + len(ext_summaries)))
+    html = html.replace("{{total_wheels}}", str(total_wheels))
+    html = html.replace("{{built_count}}", str(len(built_summaries)))
+    html = html.replace("{{external_count}}", str(len(ext_summaries)))
+    html = html.replace("{{built_rows}}", built_rows)
+    html = html.replace("{{ext_rows}}", ext_rows)
+    html = html.replace("{{repo}}", repo)
+
     (output_dir / "index.html").write_text(html)
-    print(f"Dashboard: {len(pkg_summaries)} packages, {sum(p['count'] for p in pkg_summaries)} total wheels")
 
+    # Extract wheel contents (Range requests + cache)
+    print("Extracting wheel contents...")
+    extract_all_contents(all_pkg_wheels, token=token)
 
-def _render_dashboard(pkg_summaries: list) -> str:
-    total_wheels = sum(p["count"] for p in pkg_summaries)
-    built = [p for p in pkg_summaries if p["source"] == "built"]
-    external = [p for p in pkg_summaries if p["source"] == "external"]
+    # Strip raw_size from output (only needed for cache matching)
+    for wheels in all_pkg_wheels.values():
+        for w in wheels:
+            w.pop("raw_size", None)
 
-    def badge(items, cls="badge"):
-        return " ".join(f'<span class="{cls}">{v}</span>' for v in items if v != "?")
+    # Write package data as a separate JS file
+    (output_dir / "packages.js").write_text(f"window.__WHEEL_DATA__ = {json.dumps(all_pkg_wheels)};\n")
 
-    def pkg_row(p):
-        source_badge = '<span class="badge built">built</span>' if p["source"] == "built" else '<span class="badge external">external</span>'
-        return f"""<tr>
-  <td><strong>{p["name"]}</strong> {source_badge}</td>
-  <td>{", ".join(p["versions"])}</td>
-  <td>{badge(p["cuda"], "badge cuda")}</td>
-  <td>{badge(p["torch"], "badge torch")}</td>
-  <td>{badge(p["python"], "badge py")}</td>
-  <td>{badge(p["platforms"], "badge plat")}</td>
-  <td>{p["count"]}</td>
-</tr>"""
+    # Copy static assets
+    static_dir = SCRIPT_DIR / "dashboard_static"
+    for f in static_dir.iterdir():
+        shutil.copy2(f, output_dir / f.name)
 
-    rows = "\n".join(pkg_row(p) for p in pkg_summaries)
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cuda-wheels dashboard</title>
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-         background: #0d1117; color: #c9d1d9; padding: 2rem; }}
-  h1 {{ color: #f0f6fc; margin-bottom: 0.5rem; }}
-  .subtitle {{ color: #8b949e; margin-bottom: 2rem; }}
-  .stats {{ display: flex; gap: 2rem; margin-bottom: 2rem; }}
-  .stat {{ background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem 1.5rem; }}
-  .stat-value {{ font-size: 2rem; font-weight: bold; color: #58a6ff; }}
-  .stat-label {{ color: #8b949e; font-size: 0.85rem; }}
-  table {{ width: 100%; border-collapse: collapse; background: #161b22;
-           border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }}
-  th {{ background: #21262d; color: #f0f6fc; text-align: left; padding: 0.75rem 1rem;
-       font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }}
-  td {{ padding: 0.6rem 1rem; border-top: 1px solid #21262d; font-size: 0.9rem; }}
-  tr:hover td {{ background: #1c2128; }}
-  .badge {{ display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px;
-            font-size: 0.75rem; font-weight: 500; margin: 1px; }}
-  .badge.built {{ background: #1f6feb33; color: #58a6ff; }}
-  .badge.external {{ background: #f0883e33; color: #f0883e; }}
-  .badge.cuda {{ background: #23882533; color: #3fb950; }}
-  .badge.torch {{ background: #f0883e33; color: #f0883e; }}
-  .badge.py {{ background: #8957e533; color: #bc8cff; }}
-  .badge.plat {{ background: #38849633; color: #58a6ff; }}
-  footer {{ margin-top: 2rem; color: #484f58; font-size: 0.8rem; }}
-  a {{ color: #58a6ff; text-decoration: none; }}
-</style>
-</head>
-<body>
-<h1>cuda-wheels</h1>
-<p class="subtitle">Pre-built CUDA Python wheels for ML/3D packages</p>
-
-<div class="stats">
-  <div class="stat"><div class="stat-value">{len(pkg_summaries)}</div><div class="stat-label">packages</div></div>
-  <div class="stat"><div class="stat-value">{total_wheels}</div><div class="stat-label">wheels</div></div>
-  <div class="stat"><div class="stat-value">{len(built)}</div><div class="stat-label">built by CI</div></div>
-  <div class="stat"><div class="stat-value">{len(external)}</div><div class="stat-label">external links</div></div>
-</div>
-
-<table>
-<thead>
-<tr><th>Package</th><th>Version</th><th>CUDA</th><th>Torch</th><th>Python</th><th>Platform</th><th>#</th></tr>
-</thead>
-<tbody>
-{rows}
-</tbody>
-</table>
-
-<footer>
-  <p><a href="https://github.com/PozzettiAndrea/cuda-wheels">GitHub</a> · <a href="../">Package Index</a></p>
-</footer>
-</body>
-</html>"""
+    print(f"Dashboard: {len(built_summaries) + len(ext_summaries)} packages, {total_wheels} total wheels")
 
 
 def main():
@@ -231,8 +428,9 @@ def main():
 
     releases = get_releases(repo, token)
 
-    # Collect built wheels from releases
+    # Collect built wheels from releases + release URLs + sizes
     built_packages = {}
+    release_urls = {}
     for release in releases:
         for asset in release.get("assets", []):
             name = asset["name"]
@@ -243,14 +441,26 @@ def main():
                 continue
             info["url"] = asset["browser_download_url"]
             info["source"] = "built"
+            info["size"] = asset.get("size")
+            info["display_name"] = name
             pkg_name = name.split("-")[0].lower().replace("_", "-")
             built_packages.setdefault(pkg_name, []).append(info)
+            if pkg_name not in release_urls:
+                release_urls[pkg_name] = release.get("html_url")
+
+    # Collect workflow runs
+    print("Fetching workflow runs...")
+    workflow_runs = get_workflow_runs(repo, token)
+    total_runs = sum(len(v) for v in workflow_runs.values())
+    print(f"  {total_runs} runs across {len(workflow_runs)} packages")
 
     # Collect external wheels
     external_packages = parse_external_wheels(Path("external_wheels"))
 
-    # Generate dashboard at docs/dashboard/
-    generate_dashboard(built_packages, external_packages, Path("docs") / "dashboard")
+    # Generate dashboard
+    generate_dashboard(built_packages, external_packages, Path("docs") / "dashboard",
+                       release_urls=release_urls, workflow_runs=workflow_runs, repo=repo,
+                       token=token)
 
 
 if __name__ == "__main__":
