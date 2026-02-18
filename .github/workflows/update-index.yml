@@ -1,12 +1,14 @@
 name: Update Index
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
 jobs:
   update-index:
     runs-on: ubuntu-22.04
+    environment: deploy-index
     permissions:
       contents: write
     steps:
