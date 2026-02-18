@@ -275,7 +275,7 @@ jobs:
 
   release:
     needs: [build-linux, build-windows]
-    if: always() && (needs.build-linux.result == 'success' || needs.build-windows.result == 'success')
+    if: always() && (needs.build-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: write
