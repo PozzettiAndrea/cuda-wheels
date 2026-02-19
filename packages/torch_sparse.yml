@@ -3,6 +3,7 @@ source_repo: rusty1s/pytorch_sparse
 source_tag: ""  # latest main (0.6.18 + PyTorch 2.8 support)
 
 patch_script: patches/torch_sparse.py
+clone_recursive: true
 
 build_matrix:
   combinations:
