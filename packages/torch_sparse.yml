@@ -1,0 +1,46 @@
+name: torch_sparse
+source_repo: pyg-team/pytorch_sparse
+source_tag: ""  # latest main (0.6.18 + PyTorch 2.8 support)
+
+patch_script: patches/torch_sparse.py
+
+extra_deps: "torch-scatter"
+
+build_matrix:
+  combinations:
+    # ── cu124 (torch 2.4.0 – 2.6.0) ──
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.4.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.5.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    # ── cu128 (torch 2.7.0 – 2.10.0) ──
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.7.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  platforms: ["linux", "windows"]
