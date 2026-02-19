@@ -4,8 +4,6 @@ source_tag: ""  # latest main (0.6.18 + PyTorch 2.8 support)
 
 patch_script: patches/torch_sparse.py
 
-extra_deps: "torch-scatter"
-
 build_matrix:
   combinations:
     # ── cu124 (torch 2.4.0 – 2.6.0) ──
