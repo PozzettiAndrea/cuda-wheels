@@ -1,5 +1,5 @@
 """Patch ovoxel for wheel building:
-1. Remove git URL dependencies from pyproject.toml
+1. Replace git URL dependencies with simple package names in pyproject.toml
 2. Add batched BVH queries to avoid GPU timeout (issue #19)
 3. Fix MSVC compatibility (double literals, size_t narrowing)
 4. Fix GCC-only CXX_FLAGS for Windows MSVC builds
@@ -7,13 +7,13 @@
 import re
 from pathlib import Path
 
-# Remove git URL deps from pyproject.toml
+# Replace git URL deps with simple package names in pyproject.toml
 pyproject = Path("o-voxel/pyproject.toml")
 content = pyproject.read_text()
-content = re.sub(r'.*cumesh@.*\n', '', content)
-content = re.sub(r'.*flex_gemm@.*\n', '', content)
+content = re.sub(r'"cumesh\s*@\s*[^"]*"', '"cumesh"', content)
+content = re.sub(r'"flex_gemm\s*@\s*[^"]*"', '"flex_gemm"', content)
 pyproject.write_text(content)
-print("Removed git URL dependencies from pyproject.toml")
+print("Replaced git URL dependencies with package names in pyproject.toml")
 
 # Patch postprocess.py for batched BVH queries
 postprocess = Path("o-voxel/o_voxel/postprocess.py")

@@ -7,6 +7,7 @@ import re
 import shutil
 import struct
 import urllib.request
+import zlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,10 +29,11 @@ def _save_contents_cache(cache):
 
 
 def _extract_contents_range(url, token=None):
-    """Extract file listing from a wheel using HTTP Range requests.
+    """Extract file listing and METADATA from a wheel using HTTP Range requests.
 
-    Downloads only the zip central directory (~64KB) instead of the full file.
-    Returns list of {path, size, dir} or None on failure.
+    Downloads only the zip central directory (~64KB) instead of the full file,
+    plus a small Range request for the METADATA file.
+    Returns (list of {path, size, dir}, metadata_str) or (None, None) on failure.
     """
     try:
         # Don't send auth tokens to download URLs (they redirect to CDNs that reject them)
@@ -41,7 +43,7 @@ def _extract_contents_range(url, token=None):
             final_url = resp.url  # after redirects
 
         if total_size == 0:
-            return None
+            return None, None
 
         # Download last 64KB (contains zip End of Central Directory + central directory)
         tail_size = min(65536, total_size)
@@ -54,11 +56,11 @@ def _extract_contents_range(url, token=None):
         eocd_sig = b"\x50\x4b\x05\x06"
         eocd_pos = tail.rfind(eocd_sig)
         if eocd_pos == -1:
-            return None
+            return None, None
 
         # Parse EOCD: skip sig(4), disk stuff(4), then num_entries(2), cd_size(4), cd_offset(4)
         if len(tail) - eocd_pos < 22:
-            return None
+            return None, None
         num_entries = struct.unpack_from("<H", tail, eocd_pos + 8)[0]
         cd_size = struct.unpack_from("<I", tail, eocd_pos + 12)[0]
         cd_offset = struct.unpack_from("<I", tail, eocd_pos + 16)[0]
@@ -74,17 +76,21 @@ def _extract_contents_range(url, token=None):
             with urllib.request.urlopen(req) as resp:
                 cd_data = resp.read()
 
-        # Parse central directory entries
+        # Parse central directory entries, also look for METADATA file
         files = []
+        meta_entry = None  # (compression_method, compressed_size, local_header_offset)
         pos = 0
         cd_file_sig = b"\x50\x4b\x01\x02"
         while pos + 46 <= len(cd_data):
             if cd_data[pos:pos + 4] != cd_file_sig:
                 break
+            comp_method = struct.unpack_from("<H", cd_data, pos + 10)[0]
+            comp_size = struct.unpack_from("<I", cd_data, pos + 20)[0]
             uncomp_size = struct.unpack_from("<I", cd_data, pos + 24)[0]
             name_len = struct.unpack_from("<H", cd_data, pos + 28)[0]
             extra_len = struct.unpack_from("<H", cd_data, pos + 30)[0]
             comment_len = struct.unpack_from("<H", cd_data, pos + 32)[0]
+            local_offset = struct.unpack_from("<I", cd_data, pos + 42)[0]
             pos += 46
             if pos + name_len > len(cd_data):
                 break
@@ -92,14 +98,47 @@ def _extract_contents_range(url, token=None):
             pos += name_len + extra_len + comment_len
             files.append({"path": name, "size": uncomp_size, "dir": name.endswith("/")})
 
-        return files
+            # Identify the METADATA file (inside .dist-info directory)
+            if name.endswith(".dist-info/METADATA"):
+                meta_entry = (comp_method, comp_size, uncomp_size, local_offset)
+
+        # Extract METADATA file content via a small Range request
+        metadata_str = None
+        if meta_entry:
+            comp_method, comp_size, uncomp_size, local_offset = meta_entry
+            # Local file header: 30 fixed bytes + variable filename + extra field
+            # Download enough to cover header + compressed data
+            fetch_size = 30 + 256 + comp_size  # 256 bytes buffer for filename + extra
+            range_start = local_offset
+            range_end = min(local_offset + fetch_size - 1, total_size - 1)
+            try:
+                range_headers = {"Range": f"bytes={range_start}-{range_end}"}
+                req = urllib.request.Request(final_url, headers=range_headers)
+                with urllib.request.urlopen(req) as resp:
+                    local_data = resp.read()
+
+                # Parse local file header to find data start
+                if len(local_data) >= 30 and local_data[:4] == b"\x50\x4b\x03\x04":
+                    local_name_len = struct.unpack_from("<H", local_data, 26)[0]
+                    local_extra_len = struct.unpack_from("<H", local_data, 28)[0]
+                    data_start = 30 + local_name_len + local_extra_len
+                    raw_data = local_data[data_start:data_start + comp_size]
+
+                    if comp_method == 8:  # deflate
+                        metadata_str = zlib.decompress(raw_data, -15).decode("utf-8", errors="replace")
+                    elif comp_method == 0:  # stored
+                        metadata_str = raw_data.decode("utf-8", errors="replace")
+            except Exception as e:
+                print(f"  Warning: failed to extract METADATA from {url}: {e}")
+
+        return files, metadata_str
     except Exception as e:
         print(f"  Warning: failed to extract {url}: {e}")
-        return None
+        return None, None
 
 
 def extract_all_contents(all_pkg_wheels, token=None):
-    """Extract contents for all wheels using cache + parallel Range requests."""
+    """Extract contents and metadata for all wheels using cache + parallel Range requests."""
     cache = _load_contents_cache()
     to_fetch = []
 
@@ -108,8 +147,10 @@ def extract_all_contents(all_pkg_wheels, token=None):
             url = w.get("url", "")
             raw_size = w.get("raw_size")
             cache_key = url
-            if cache_key and cache_key in cache and cache[cache_key].get("size") == raw_size:
+            if cache_key and cache_key in cache and cache[cache_key].get("size") == raw_size and "metadata" in cache[cache_key]:
                 w["contents"] = cache[cache_key]["files"]
+                if cache[cache_key]["metadata"]:
+                    w["metadata"] = cache[cache_key]["metadata"]
             elif url:
                 to_fetch.append((pkg, i, url, raw_size))
 
@@ -123,10 +164,12 @@ def extract_all_contents(all_pkg_wheels, token=None):
             }
             for future in as_completed(futures):
                 pkg, i, url, raw_size = futures[future]
-                files = future.result()
+                files, metadata = future.result()
                 if files is not None:
                     all_pkg_wheels[pkg][i]["contents"] = files
-                    cache[url] = {"size": raw_size, "files": files}
+                    if metadata:
+                        all_pkg_wheels[pkg][i]["metadata"] = metadata
+                    cache[url] = {"size": raw_size, "files": files, "metadata": metadata}
                 done += 1
                 if done % 50 == 0:
                     print(f"  ... {done}/{len(to_fetch)}")
