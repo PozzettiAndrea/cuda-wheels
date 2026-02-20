@@ -2,11 +2,14 @@
 
 cumm has all the low-level bf16 primitives (MMA instructions, tensor ops,
 dtype definitions, numeric converters) but never instantiates bf16 GEMM
-kernels. This patch adds bf16 Ampere GEMM params to cumm/gemm/main.py.
+kernels. This patch adds:
+  - bf16 Ampere TensorOp GEMM params (aligned, fast path)
+  - bf16 Simt GEMM params (unaligned fallback for non-power-of-2 channels)
 
 Also forces package name to 'cumm' (not 'cumm-cu{version}').
 
 bf16 tensor core MMA instructions require sm_80+ (Ampere).
+bf16 Simt uses CUDA cores with f32 accumulation (works on any arch).
 """
 import re
 from pathlib import Path
@@ -109,7 +112,51 @@ content = re.sub(
     count=1
 )
 
+# ─── 3. Add bf16 Simt fallback kernels to SHUFFLE_SIMT_PARAMS ───
+# Simt kernels handle unaligned dimensions (e.g. 9-channel input).
+# Without these, bf16 GEMM fails when LDA is not a multiple of 8.
+# Mirrors the existing f16 Simt fallback entries in spconv/core.py.
+# cumm's gen_shuffle_params: gen_shuffle_params(ts, wts, dss, stage, algo, tensorop)
+
+BF16_SIMT_PARAMS = '''
+    # bf16 Simt fallback kernels for misaligned dimensions
+    *gen_shuffle_params(
+        (128, 128, 8),
+        (32, 64, 8), ["bf16,bf16,bf16,f32,f32"], 2,
+        kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params(
+        (32, 64, 32),
+        (32, 32, 8), ["bf16,bf16,bf16,f32,f32"], 2,
+        kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params(
+        (32, 32, 32),
+        (32, 32, 8), ["bf16,bf16,bf16,f32,f32"], 2,
+        kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params(
+        (64, 128, 16),
+        (32, 64, 8), ["bf16,bf16,bf16,f32,f32"], 2,
+        kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params(
+        (64, 64, 8),
+        (32, 32, 8), ["bf16,bf16,bf16,f32,f32"], 2,
+        kernel.GemmAlgo.Simt, None),
+'''
+
+# Find the closing ] of SHUFFLE_SIMT_PARAMS and insert bf16 entries before it
+simt_match = re.search(
+    r'(SHUFFLE_SIMT_PARAMS\s*:.*?\n(?:.*\n)*?)(^\]\s*$)',
+    content,
+    re.MULTILINE
+)
+if simt_match:
+    insert_pos = simt_match.start(2)
+    content = content[:insert_pos] + BF16_SIMT_PARAMS + content[insert_pos:]
+    print("  - Added bf16 Simt fallback params to SHUFFLE_SIMT_PARAMS")
+else:
+    print("WARNING: Could not find SHUFFLE_SIMT_PARAMS closing bracket")
+
 main_py.write_text(content)
-print("Patched cumm/gemm/main.py with bf16 Ampere GEMM params")
-print("  - Added SHUFFLE_AMPERE_PARAMS with 9 tile configs (bf16 in/out, f32 acc)")
+print("Patched cumm/gemm/main.py with bf16 GEMM params")
+print("  - Added SHUFFLE_AMPERE_PARAMS with 9 tile configs (bf16 TensorOp)")
+print("  - Added bf16 Simt fallback params (5 tile configs, unaligned support)")
 print("  - Populated ampere_params in GemmMainUnitTest.__init__")

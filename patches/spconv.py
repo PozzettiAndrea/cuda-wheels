@@ -1,7 +1,8 @@
 """Patch spconv to add bfloat16 sparse convolution support.
 
-Adds bf16 GEMM shuffle params and implicit GEMM conv params to spconv/core.py.
-Requires a cumm build that includes bf16 GEMM kernels (see patches/cumm.py).
+Adds bf16 GEMM shuffle params (Ampere TensorOp + Simt fallback) and implicit
+GEMM conv params to spconv/core.py. Requires a cumm build that includes bf16
+GEMM kernels (see patches/cumm.py).
 
 Also forces package name to 'spconv' (not 'spconv-cu{version}').
 
@@ -27,6 +28,38 @@ if setup_py.exists():
 
 core_py = Path("spconv/core.py")
 content = core_py.read_text()
+
+# ─── 1a. Add bf16 Simt fallback entries to SHUFFLE_SIMT_PARAMS ───
+# Simt kernels handle unaligned dimensions (e.g. 9-channel input where LDA=9).
+# Without these, bf16 fails on the first conv layer since TensorOp requires
+# LDA alignment to 8 elements. Mirrors existing f16 Simt fallback entries.
+
+BF16_SIMT_FALLBACK = '''
+    # bf16 Simt fallback kernels for misaligned dimensions
+    *gen_shuffle_params((128, 128, 8), (32, 64, 8), ["bf16,bf16,bf16,f32,f32"],
+                        "bf16,bf16,bf16,f32,f32", 2, kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params((32, 64, 32), (32, 32, 8), ["bf16,bf16,bf16,f32,f32"],
+                        "bf16,bf16,bf16,f32,f32", 2, kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params((32, 32, 32), (32, 32, 8), ["bf16,bf16,bf16,f32,f32"],
+                        "bf16,bf16,bf16,f32,f32", 2, kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params((64, 128, 16), (32, 64, 8), ["bf16,bf16,bf16,f32,f32"],
+                        "bf16,bf16,bf16,f32,f32", 2, kernel.GemmAlgo.Simt, None),
+    *gen_shuffle_params((64, 64, 8), (32, 32, 8), ["bf16,bf16,bf16,f32,f32"],
+                        "bf16,bf16,bf16,f32,f32", 2, kernel.GemmAlgo.Simt, None),
+'''
+
+# Insert before the closing ] of SHUFFLE_SIMT_PARAMS
+simt_match = re.search(
+    r'(SHUFFLE_SIMT_PARAMS\s*:.*?\n(?:.*\n)*?)(^\]\s*$)',
+    content,
+    re.MULTILINE
+)
+if simt_match:
+    insert_pos = simt_match.start(2)
+    content = content[:insert_pos] + BF16_SIMT_FALLBACK + content[insert_pos:]
+    print("Added bf16 Simt fallback params to SHUFFLE_SIMT_PARAMS")
+else:
+    print("WARNING: Could not find SHUFFLE_SIMT_PARAMS closing bracket")
 
 # ─── 1. Replace empty SHUFFLE_AMPERE_PARAMS with bf16 entries ───
 # spconv's gen_shuffle_params is actually gen_shuffle_params_v2 with signature:
@@ -172,6 +205,7 @@ else:
 
 core_py.write_text(content)
 print("Patched spconv/core.py with bf16 support")
+print("  - Added bf16 Simt fallback to SHUFFLE_SIMT_PARAMS (5 tile configs)")
 print("  - Added bf16 SHUFFLE_AMPERE_PARAMS (7 tile configs)")
 print("  - Added bf16 IMPLGEMM_AMPERE_PARAMS (3 FwdBwd + 2 BwdWeight)")
 
