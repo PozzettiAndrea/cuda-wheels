@@ -336,6 +336,7 @@ jobs:
 
   update-index:
     needs: release
+    if: always() && needs.release.result == 'success'
     runs-on: ubuntu-latest
     environment: deploy-index
     permissions:
