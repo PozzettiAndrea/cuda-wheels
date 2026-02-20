@@ -174,3 +174,15 @@ core_py.write_text(content)
 print("Patched spconv/core.py with bf16 support")
 print("  - Added bf16 SHUFFLE_AMPERE_PARAMS (7 tile configs)")
 print("  - Added bf16 IMPLGEMM_AMPERE_PARAMS (3 FwdBwd + 2 BwdWeight)")
+
+# ─── 3. Add bf16 to _TORCH_DTYPE_TO_TV in cppcore.py ───
+cppcore_py = Path("spconv/pytorch/cppcore.py")
+cppcore_content = cppcore_py.read_text()
+
+cppcore_content = cppcore_content.replace(
+    "torch.float16: tv.float16,",
+    "torch.float16: tv.float16,\n    torch.bfloat16: tv.bfloat16,"
+)
+
+cppcore_py.write_text(cppcore_content)
+print("Patched spconv/pytorch/cppcore.py with bf16 dtype mapping")
