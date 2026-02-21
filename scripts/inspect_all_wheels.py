@@ -424,12 +424,167 @@ def main():
 
     Path("inspection_report.md").write_text("\n".join(md))
 
+    # ---------------------------------------------------------------------------
+    # Write HTML report (for gh-pages at /inspection/)
+    # ---------------------------------------------------------------------------
+    _generate_html_report(report, Path("inspection_page"))
+
     # Print summary
     print(f"\n{'='*60}")
     print(f"DONE: {report['total_wheels']} wheels, {report['inspected']} inspected, {report['clusters']} clusters")
     if failed:
         print(f"FAILED: {len(failed)} downloads")
-    print(f"Reports: inspection_report.json, inspection_report.md")
+    print(f"Reports: inspection_report.json, inspection_report.md, inspection_page/index.html")
+
+
+def _generate_html_report(report: dict, out_dir: Path):
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    def badge(text, cls="badge"):
+        return f'<span class="{cls}">{text}</span>'
+
+    def badges(items, cls="badge"):
+        return " ".join(badge(v, cls) for v in items)
+
+    pkg_sections = []
+    for pkg_name in sorted(report["packages"].keys()):
+        pkg_data = report["packages"][pkg_name]
+        cluster_cards = []
+
+        for c in pkg_data["clusters"]:
+            libs_html = ""
+            if c["shared_libs"]:
+                lib_rows = "".join(
+                    f'<tr><td><code>{lib}</code></td><td>{c["shared_libs_sizes_mb"].get(lib, "?")} MB</td></tr>'
+                    for lib in c["shared_libs"]
+                )
+                libs_html = f"""<details><summary>{len(c["shared_libs"])} shared libraries</summary>
+<table class="inner"><tr><th>File</th><th>Size</th></tr>{lib_rows}</table></details>"""
+
+            deps_html = ""
+            if c["requires_dist"]:
+                dep_list = "".join(f"<li><code>{d}</code></li>" for d in c["requires_dist"])
+                deps_html = f'<details><summary>{len(c["requires_dist"])} dependencies</summary><ul>{dep_list}</ul></details>'
+
+            cluster_cards.append(f"""<div class="cluster">
+<div class="cluster-header">
+  <span class="version">v{c["version"]}</span>
+  <span class="wheel-count">{c["wheel_count"]} wheels</span>
+  <span class="file-count">{c["file_count"]} files</span>
+</div>
+<div class="matrix">
+  <div class="matrix-row"><span class="label">CUDA</span> {badges(c["cuda_versions"], "badge cuda")}</div>
+  <div class="matrix-row"><span class="label">Torch</span> {badges(c["torch_versions"], "badge torch")}</div>
+  <div class="matrix-row"><span class="label">Python</span> {badges(c["python_versions"], "badge py")}</div>
+  <div class="matrix-row"><span class="label">Platform</span> {badges(c["platforms"], "badge plat")}</div>
+  <div class="matrix-row"><span class="label">Requires-Python</span> <code>{c["requires_python"] or "unspecified"}</code></div>
+</div>
+{libs_html}
+{deps_html}
+</div>""")
+
+        total_wheels = sum(c["wheel_count"] for c in pkg_data["clusters"])
+        pkg_sections.append(f"""<div class="package" id="{pkg_name}">
+<h2>{pkg_name} <span class="pkg-count">{total_wheels} wheels, {len(pkg_data["clusters"])} cluster{"s" if len(pkg_data["clusters"]) != 1 else ""}</span></h2>
+{"".join(cluster_cards)}
+</div>""")
+
+    # Table of contents
+    toc_items = []
+    for pkg_name in sorted(report["packages"].keys()):
+        pkg_data = report["packages"][pkg_name]
+        total = sum(c["wheel_count"] for c in pkg_data["clusters"])
+        toc_items.append(f'<a href="#{pkg_name}" class="toc-item">{pkg_name} <span class="toc-count">{total}</span></a>')
+
+    failed_html = ""
+    if report.get("failed_wheels"):
+        failed_rows = "".join(
+            f'<tr><td><code>{f["filename"]}</code></td><td>{f.get("error", "")}</td></tr>'
+            for f in report["failed_wheels"]
+        )
+        failed_html = f"""<details class="failed"><summary>{len(report["failed_wheels"])} failed downloads</summary>
+<table><tr><th>Filename</th><th>Error</th></tr>{failed_rows}</table></details>"""
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cuda-wheels inspection</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+         background: #0d1117; color: #c9d1d9; padding: 2rem; max-width: 1200px; margin: 0 auto; }}
+  h1 {{ color: #f0f6fc; margin-bottom: 0.3rem; }}
+  h2 {{ color: #f0f6fc; margin-bottom: 1rem; font-size: 1.3rem; border-bottom: 1px solid #21262d; padding-bottom: 0.5rem; }}
+  .subtitle {{ color: #8b949e; margin-bottom: 1.5rem; }}
+  .stats {{ display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }}
+  .stat {{ background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 0.8rem 1.2rem; }}
+  .stat-value {{ font-size: 1.8rem; font-weight: bold; color: #58a6ff; }}
+  .stat-label {{ color: #8b949e; font-size: 0.8rem; }}
+  .toc {{ background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem;
+          margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }}
+  .toc-item {{ color: #58a6ff; text-decoration: none; padding: 0.3rem 0.7rem; border-radius: 4px;
+               background: #21262d; font-size: 0.85rem; }}
+  .toc-item:hover {{ background: #30363d; }}
+  .toc-count {{ color: #8b949e; font-size: 0.75rem; }}
+  .package {{ margin-bottom: 2.5rem; }}
+  .pkg-count {{ color: #8b949e; font-size: 0.85rem; font-weight: normal; }}
+  .cluster {{ background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+              padding: 1rem; margin-bottom: 0.75rem; }}
+  .cluster-header {{ display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; }}
+  .version {{ font-weight: bold; color: #f0f6fc; font-size: 1.1rem; }}
+  .wheel-count, .file-count {{ color: #8b949e; font-size: 0.85rem; }}
+  .matrix {{ display: grid; gap: 0.3rem; margin-bottom: 0.5rem; }}
+  .matrix-row {{ display: flex; align-items: center; gap: 0.5rem; }}
+  .label {{ color: #8b949e; font-size: 0.8rem; min-width: 100px; }}
+  .badge {{ display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px;
+            font-size: 0.75rem; font-weight: 500; margin: 1px; }}
+  .badge.cuda {{ background: #23882533; color: #3fb950; }}
+  .badge.torch {{ background: #f0883e33; color: #f0883e; }}
+  .badge.py {{ background: #8957e533; color: #bc8cff; }}
+  .badge.plat {{ background: #38849633; color: #58a6ff; }}
+  details {{ margin-top: 0.5rem; }}
+  summary {{ cursor: pointer; color: #58a6ff; font-size: 0.85rem; }}
+  summary:hover {{ color: #79c0ff; }}
+  table.inner {{ margin-top: 0.5rem; border-collapse: collapse; width: 100%; }}
+  table.inner th, table.inner td {{ text-align: left; padding: 0.3rem 0.6rem; border-bottom: 1px solid #21262d; font-size: 0.8rem; }}
+  table.inner th {{ color: #8b949e; }}
+  ul {{ margin: 0.5rem 0 0 1.5rem; font-size: 0.8rem; }}
+  li {{ margin-bottom: 0.2rem; }}
+  code {{ font-size: 0.8rem; }}
+  .failed {{ margin-bottom: 2rem; }}
+  .failed table {{ width: 100%; border-collapse: collapse; margin-top: 0.5rem; }}
+  .failed th, .failed td {{ text-align: left; padding: 0.3rem 0.6rem; border-bottom: 1px solid #21262d; font-size: 0.8rem; }}
+  footer {{ margin-top: 2rem; color: #484f58; font-size: 0.8rem; }}
+  a {{ color: #58a6ff; text-decoration: none; }}
+</style>
+</head>
+<body>
+<h1>cuda-wheels inspection</h1>
+<p class="subtitle">Generated {report["generated_at"]}</p>
+
+<div class="stats">
+  <div class="stat"><div class="stat-value">{report["total_wheels"]}</div><div class="stat-label">total wheels</div></div>
+  <div class="stat"><div class="stat-value">{report["inspected"]}</div><div class="stat-label">inspected</div></div>
+  <div class="stat"><div class="stat-value">{report["clusters"]}</div><div class="stat-label">clusters</div></div>
+  <div class="stat"><div class="stat-value">{len(report["packages"])}</div><div class="stat-label">packages</div></div>
+</div>
+
+<div class="toc">{"".join(toc_items)}</div>
+
+{failed_html}
+
+{"".join(pkg_sections)}
+
+<footer>
+  <p><a href="https://github.com/PozzettiAndrea/cuda-wheels">GitHub</a> · <a href="../">Package Index</a> · <a href="../dashboard/">Dashboard</a></p>
+</footer>
+</body>
+</html>"""
+
+    (out_dir / "index.html").write_text(html)
+    print(f"HTML report: {out_dir / 'index.html'}")
 
 
 if __name__ == "__main__":

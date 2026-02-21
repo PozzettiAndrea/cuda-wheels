@@ -8,6 +8,8 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -32,10 +34,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/inspect_all_wheels.py
 
-      - name: Upload results
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wheel-inspection
           path: |
             inspection_report.json
             inspection_report.md
+
+      - name: Deploy inspection page to gh-pages
+        run: |
+          git fetch origin gh-pages:gh-pages
+          git checkout gh-pages
+          rm -rf inspection
+          cp -r inspection_page inspection
+          git add inspection/
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -m "Update wheel inspection report" || echo "No changes"
+          git push origin gh-pages
