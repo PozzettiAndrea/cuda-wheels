@@ -1,13 +1,25 @@
 """Patch SageAttention for build compatibility.
 
-1. Replace GCC-specific CXX_FLAGS with MSVC equivalents on Windows.
-2. Skip _GLIBCXX_USE_CXX11_ABI on Windows.
-3. Reduce nvcc --threads from 8 to 4 to avoid OOM on CI runners.
+1. Fix arch parser to handle space-separated TORCH_CUDA_ARCH_LIST.
+2. Replace GCC-specific CXX_FLAGS with MSVC equivalents on Windows.
+3. Skip _GLIBCXX_USE_CXX11_ABI on Windows.
+4. Reduce nvcc --threads from 8 to 4 to avoid OOM on CI runners.
 """
 from pathlib import Path
 
 setup_file = Path("setup.py")
 content = setup_file.read_text()
+
+# Fix TORCH_CUDA_ARCH_LIST parser: upstream only handles comma/semicolon
+# separators but PyTorch convention uses spaces (e.g. "7.0 7.5 8.0 8.6 8.9 9.0").
+# Without this, HAS_SM80/89/90 are never set and qattn CUDA kernels are skipped.
+old_parser = '    for item in arch_list_env.replace(",", ";").split(";"):'
+new_parser = '    for item in arch_list_env.replace(",", " ").replace(";", " ").split():'
+if old_parser in content:
+    content = content.replace(old_parser, new_parser)
+    print("Patched arch parser to handle space-separated TORCH_CUDA_ARCH_LIST")
+else:
+    print("WARNING: Could not find arch parser line - source may have changed")
 
 # Replace hardcoded GCC CXX_FLAGS with platform-aware version
 old_flags = '    CXX_FLAGS = ["-g", "-O3", "-fopenmp", "-lgomp", "-std=c++17", "-DENABLE_BF16"]'
