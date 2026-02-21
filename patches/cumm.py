@@ -160,3 +160,19 @@ print("Patched cumm/gemm/main.py with bf16 GEMM params")
 print("  - Added SHUFFLE_AMPERE_PARAMS with 9 tile configs (bf16 TensorOp)")
 print("  - Added bf16 Simt fallback params (5 tile configs, unaligned support)")
 print("  - Populated ampere_params in GemmMainUnitTest.__init__")
+
+# ─── 4. Fix zero_whole_storage_ pybind11 binding (missing default Context arg) ───
+# The binding for zero_whole_storage_ doesn't declare a default Context arg,
+# even though the C++ signature has `Context ctx = Context()`.
+# This causes spconv's algo.py to fail when calling `tensor.zero_whole_storage_()`
+# without arguments. Fix: add `py::arg("ctx") = tv::Context()` like clone_whole_storage has.
+bind_py = Path("cumm/tensorview_bind.py")
+bind_content = bind_py.read_text()
+old_binding = '.def("zero_whole_storage_", &tv::Tensor::zero_whole_storage_)'
+new_binding = '.def("zero_whole_storage_", &tv::Tensor::zero_whole_storage_, py::arg("ctx") = tv::Context())'
+if old_binding in bind_content:
+    bind_content = bind_content.replace(old_binding, new_binding)
+    bind_py.write_text(bind_content)
+    print("Patched cumm/tensorview_bind.py: added default Context arg to zero_whole_storage_")
+else:
+    print("WARNING: Could not find zero_whole_storage_ binding to patch")
