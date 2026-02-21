@@ -106,14 +106,31 @@ def get_existing_wheels(package_name: str) -> set:
     return set()
 
 
+def get_external_wheels(package_name: str) -> set:
+    """Parse external wheel filenames from external_wheels/{pkg}/index.html."""
+    import re
+    external_dir = Path(__file__).parent.parent / "external_wheels"
+    # Try both underscore and hyphen variants (PEP 503 normalization)
+    names = [package_name, package_name.replace("_", "-")]
+    for name in names:
+        index_file = external_dir / name / "index.html"
+        if index_file.exists():
+            content = index_file.read_text()
+            # Extract wheel filenames from <a> tag text
+            wheels = set(re.findall(r'>([^<]+\.whl)<', content))
+            if wheels:
+                print(f"Found {len(wheels)} external wheels for {package_name}")
+            return wheels
+    return set()
+
+
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                  torch_short: str, python_short: str, platform: str) -> bool:
-    """Check if a wheel matching this combo exists."""
-    # Match pattern: {pkg}-{ver}+cu{cuda}torch{torch}-cp{py}-cp{py}-{plat}.whl
-    # Linux: require manylinux (auditwheel-repaired) wheels, not raw linux_x86_64
+    """Check if a wheel matching this combo exists (in our releases or external sources)."""
     version_pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-"
     if platform == "linux":
-        return any(version_pattern in w and "manylinux" in w for w in existing_wheels)
+        return any(version_pattern in w and ("manylinux" in w or "linux_x86_64" in w)
+                   for w in existing_wheels)
     else:
         return any(version_pattern in w and "win_amd64" in w for w in existing_wheels)
 
@@ -150,7 +167,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False) -> list:
         if not overwrite:
             # Normalize name: wheels/releases use underscores (PEP 427), configs may use hyphens
             wheel_pkg_name = pkg["name"].replace("-", "_")
-            existing_wheels = get_existing_wheels(wheel_pkg_name)
+            existing_wheels = get_existing_wheels(wheel_pkg_name) | get_external_wheels(wheel_pkg_name)
             if existing_wheels:
                 print(f"Found {len(existing_wheels)} existing wheels for {pkg['name']}")
         else:
