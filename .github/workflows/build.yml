@@ -34,6 +34,26 @@ on:
         required: false
         type: boolean
         default: false
+      platform:
+        description: 'Platform filter (or "all")'
+        required: false
+        type: choice
+        options:
+          - all
+          - linux
+          - windows
+        default: all
+      cuda:
+        description: 'CUDA version filter (or "all")'
+        required: false
+        type: choice
+        options:
+          - all
+          - "12.4"
+          - "12.6"
+          - "12.8"
+          - "13.0"
+        default: all
 
 jobs:
   generate-matrix:
@@ -60,7 +80,7 @@ jobs:
           if [ "${{ inputs.overwrite }}" = "true" ]; then
             OVERWRITE_FLAG="--overwrite"
           fi
-          python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json $OVERWRITE_FLAG
+          python scripts/generate_matrix.py --package "${{ inputs.package }}" --platform "${{ inputs.platform || 'all' }}" --cuda "${{ inputs.cuda || 'all' }}" --output matrix.json $OVERWRITE_FLAG
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
   build-linux:
