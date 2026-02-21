@@ -315,6 +315,7 @@ jobs:
   update-index:
     needs: release
     runs-on: ubuntu-latest
+    environment: deploy-index
     permissions:
       contents: write
       pages: write
