@@ -92,9 +92,10 @@ jobs:
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
+          # Prefix without platform tag (auditwheel changes linux_x86_64 → manylinux_*)
+          WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
 
-          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "wheel_prefix=$WHEEL_PREFIX" >> $GITHUB_OUTPUT
           echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
           echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
 
@@ -103,21 +104,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          WHEEL_PREFIX="${{ steps.meta.outputs.wheel_prefix }}"
           RELEASE="${{ matrix.package }}-latest"
-          echo "Checking release $RELEASE for: $WHEEL"
+          echo "Checking release $RELEASE for: ${WHEEL_PREFIX}*.whl"
           mkdir -p dist
 
           if [ "${{ inputs.overwrite }}" = "true" ]; then
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Overwrite enabled, will rebuild: $WHEEL"
-          elif gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel exists in release, downloading: $WHEEL"
-            gh release download "$RELEASE" -p "$WHEEL" -D dist
+            echo "::notice::Overwrite enabled, will rebuild"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel not found in release, will build: $WHEEL"
+            MATCHING=$(gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep "^${WHEEL_PREFIX}" | head -1)
+            if [ -n "$MATCHING" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "::notice::Wheel exists in release: $MATCHING"
+              gh release download "$RELEASE" -p "$MATCHING" -D dist
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "::notice::No wheel found matching: ${WHEEL_PREFIX}*"
+            fi
           fi
 
       - name: Setup CUDA
@@ -193,9 +197,9 @@ jobs:
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
+          WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
 
-          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "wheel_prefix=$WHEEL_PREFIX" >> $GITHUB_OUTPUT
           echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
           echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
 
@@ -205,21 +209,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          WHEEL_PREFIX="${{ steps.meta.outputs.wheel_prefix }}"
           RELEASE="${{ matrix.package }}-latest"
-          echo "Checking release $RELEASE for: $WHEEL"
+          echo "Checking release $RELEASE for: ${WHEEL_PREFIX}*.whl"
           mkdir -p dist
 
           if [ "${{ inputs.overwrite }}" = "true" ]; then
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Overwrite enabled, will rebuild: $WHEEL"
-          elif gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel exists in release, downloading: $WHEEL"
-            gh release download "$RELEASE" -p "$WHEEL" -D dist
+            echo "::notice::Overwrite enabled, will rebuild"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "::notice::Wheel not found in release, will build: $WHEEL"
+            MATCHING=$(gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep "^${WHEEL_PREFIX}" | head -1)
+            if [ -n "$MATCHING" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "::notice::Wheel exists in release: $MATCHING"
+              gh release download "$RELEASE" -p "$MATCHING" -D dist
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "::notice::No wheel found matching: ${WHEEL_PREFIX}*"
+            fi
           fi
 
       - name: Setup CUDA
