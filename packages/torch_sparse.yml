@@ -1,5 +1,5 @@
 name: torch_sparse
-source_repo: pyg-team/pytorch_sparse
+source_repo: rusty1s/pytorch_sparse
 source_tag: ""  # latest main (0.6.18 + PyTorch 2.8 support)
 
 patch_script: patches/torch_sparse.py
