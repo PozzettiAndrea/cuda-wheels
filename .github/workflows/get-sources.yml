@@ -54,6 +54,9 @@ jobs:
         run: |
           PACKAGE="${{ inputs.package }}"
 
+          # Move staging out of the working tree before switching branches
+          mv _staging /tmp/_staging
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -85,13 +88,9 @@ jobs:
             rm -rf "$PACKAGE"
           fi
 
-          # Copy staged sources into branch
-          if [ -d _staging ]; then
-            cp -r _staging/* .
-          fi
-
-          # Clean up staging dir (not part of the branch)
-          rm -rf _staging
+          # Copy staged sources from /tmp back into the branch
+          cp -r /tmp/_staging/* .
+          rm -rf /tmp/_staging
 
           # Commit and push
           git add -A
