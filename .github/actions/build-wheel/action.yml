@@ -126,7 +126,6 @@ runs:
             -w repaired/ \
             --exclude libcuda.so \
             --exclude libcuda.so.1 \
-            --exclude libcudart.so.12 \
             --exclude libtorch.so \
             --exclude libtorch_cpu.so \
             --exclude libtorch_cuda.so \
