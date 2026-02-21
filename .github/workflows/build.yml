@@ -11,6 +11,7 @@ on:
         options:
           - all
           - sageattention
+          - sageattn3
           - gsplat
           - nvdiffrast
           - torch_generic_nms
@@ -138,7 +139,7 @@ jobs:
           extra-deps: ${{ matrix.extra_deps }}
 
       - name: Add swap space
-        if: steps.check.outputs.exists != 'true' && matrix.package == 'sageattention'
+        if: steps.check.outputs.exists != 'true' && (matrix.package == 'sageattention' || matrix.package == 'sageattn3')
         run: |
           sudo fallocate -l 6G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile

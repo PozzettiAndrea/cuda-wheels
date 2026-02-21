@@ -60,10 +60,10 @@ print("Patched nvcc --threads=8 -> --threads=4")
 # the global NVCC_FLAGS with all arch gencode flags (sm_80, sm_86, etc.), causing
 # ptxas to fail with "wgmma.mma_async not supported on .target sm_80".
 # Give it a filtered flag list with only sm_90a.
-old_sm90_ext = '''            extra_compile_args={"cxx": CXX_FLAGS, "nvcc": NVCC_FLAGS},
-            extra_link_args=['-lcuda'],'''
-new_sm90_ext = '''            extra_compile_args={"cxx": CXX_FLAGS, "nvcc": [f for f in NVCC_FLAGS if "gencode" not in f and "compute_" not in f] + ["-gencode", "arch=compute_90a,code=sm_90a"]},
-            extra_link_args=['-lcuda'],'''
+old_sm90_ext = '''                extra_compile_args={"cxx": CXX_FLAGS, "nvcc": NVCC_FLAGS},
+                extra_link_args=['-lcuda'],'''
+new_sm90_ext = '''                extra_compile_args={"cxx": CXX_FLAGS, "nvcc": [f for f in NVCC_FLAGS if "gencode" not in f and "arch=" not in f] + ["-gencode", "arch=compute_90a,code=sm_90a"]},
+                extra_link_args=['-lcuda'],'''
 if old_sm90_ext in content:
     # Only replace the first occurrence (the _qattn_sm90 block)
     content = content.replace(old_sm90_ext, new_sm90_ext, 1)
