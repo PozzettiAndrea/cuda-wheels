@@ -1,0 +1,11 @@
+__pycache__/
+build/
+*.egg-info/
+*.so
+*.pyd
+.vs/
+eigen*/
+output/
+output*/
+data
+temp_*

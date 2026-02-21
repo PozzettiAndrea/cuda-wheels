@@ -1,0 +1,8 @@
+{
+  "package": "sageattention",
+  "source_repo": "https://github.com/thu-ml/SageAttention",
+  "source_tag": "v2.2.0",
+  "patch_script": "patches/sageattention.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:52.183739+00:00"
+}

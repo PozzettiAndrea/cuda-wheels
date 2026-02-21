@@ -1,0 +1,8 @@
+{
+  "package": "cubvh",
+  "source_repo": "https://github.com/ashawkey/cubvh",
+  "source_tag": "HEAD",
+  "patch_script": null,
+  "patched": false,
+  "updated_at": "2026-02-21T18:25:40.402437+00:00"
+}

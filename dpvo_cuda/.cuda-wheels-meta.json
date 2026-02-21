@@ -1,0 +1,8 @@
+{
+  "package": "dpvo_cuda",
+  "source_repo": "https://github.com/princeton-vl/DPVO",
+  "source_tag": "HEAD",
+  "patch_script": "patches/dpvo_cuda.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:41.799308+00:00"
+}

@@ -1,0 +1,8 @@
+{
+  "package": "cumesh",
+  "source_repo": "https://github.com/JeffreyXiang/CuMesh",
+  "source_tag": "HEAD",
+  "patch_script": "patches/cumesh.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:40.679233+00:00"
+}

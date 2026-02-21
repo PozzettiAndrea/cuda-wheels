@@ -1,0 +1,21 @@
+# Include standard project files
+include README.md
+include LICENSE.txt
+include pyproject.toml
+include setup.py
+
+# Include documentation
+recursive-include docs *
+
+# Include CUDA/C++ sources and Python files in the source package.
+recursive-include nvdiffrast *.py
+recursive-include csrc *.h *.inl *.cu *.cpp *.hpp
+
+# Exclude compiled files and caches
+global-exclude *~ *.py[cod] *.so
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.egg-info
+global-exclude build
+global-exclude dist

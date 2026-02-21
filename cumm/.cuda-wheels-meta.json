@@ -1,0 +1,8 @@
+{
+  "package": "cumm",
+  "source_repo": "https://github.com/FindDefinition/cumm",
+  "source_tag": "v0.8.2",
+  "patch_script": "patches/cumm.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:41.110312+00:00"
+}

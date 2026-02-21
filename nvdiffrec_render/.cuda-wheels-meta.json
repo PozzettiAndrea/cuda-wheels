@@ -1,0 +1,8 @@
+{
+  "package": "nvdiffrec_render",
+  "source_repo": "https://github.com/NVlabs/nvdiffrec",
+  "source_tag": "HEAD",
+  "patch_script": "patches/nvdiffrec_render.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:49.242252+00:00"
+}

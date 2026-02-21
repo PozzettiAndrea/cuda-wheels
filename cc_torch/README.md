@@ -1,0 +1,1 @@
+The `cc_torch` package in this directory is a GPU-based connected component algorithm (with 8-connectivity) on 2D images, adapted from https://github.com/zsef123/Connected_components_PyTorch. We further added area counting per connected component and batched inference across multiple samples.

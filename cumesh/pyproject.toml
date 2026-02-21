@@ -1,0 +1,23 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "torch",
+]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "cumesh"
+version = "0.0.1"
+description = "Cuda mesh utils"
+requires-python = ">=3.8"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Jianfeng Xiang", email = "belljig@outlook.com" }
+]
+dependencies = [
+    "torch>=2.4.0",
+    "tqdm",
+]

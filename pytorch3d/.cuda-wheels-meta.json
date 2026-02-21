@@ -1,0 +1,8 @@
+{
+  "package": "pytorch3d",
+  "source_repo": "https://github.com/facebookresearch/pytorch3d",
+  "source_tag": "v0.7.9",
+  "patch_script": "patches/pytorch3d.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:51.207528+00:00"
+}

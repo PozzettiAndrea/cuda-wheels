@@ -1,0 +1,8 @@
+{
+  "package": "nvdiffrast",
+  "source_repo": "https://github.com/NVlabs/nvdiffrast",
+  "source_tag": "v0.4.0",
+  "patch_script": null,
+  "patched": false,
+  "updated_at": "2026-02-21T18:25:48.591819+00:00"
+}

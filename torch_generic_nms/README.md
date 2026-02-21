@@ -1,0 +1,1 @@
+The `torch_generic_nms` module is adapted from [`torchvision.ops.nms`](https://docs.pytorch.org/vision/main/generated/torchvision.ops.nms.html#torchvision.ops.nms) to support using either a) Nx4 bounding boxes as input or b) NxN pairwise IoU matrix as input (e.g. for mask-based NMS).

@@ -1,0 +1,8 @@
+{
+  "package": "torch_cluster",
+  "source_repo": "https://github.com/rusty1s/pytorch_cluster",
+  "source_tag": "HEAD",
+  "patch_script": "patches/torch_cluster.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:54.056210+00:00"
+}

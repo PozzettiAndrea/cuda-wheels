@@ -1,0 +1,8 @@
+{
+  "package": "ovoxel",
+  "source_repo": "https://github.com/microsoft/TRELLIS.2",
+  "source_tag": "HEAD",
+  "patch_script": "patches/ovoxel.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:49.931160+00:00"
+}

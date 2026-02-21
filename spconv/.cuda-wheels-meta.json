@@ -1,0 +1,8 @@
+{
+  "package": "spconv",
+  "source_repo": "https://github.com/traveller59/spconv",
+  "source_tag": "v2.3.8",
+  "patch_script": "patches/spconv.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:53.805172+00:00"
+}

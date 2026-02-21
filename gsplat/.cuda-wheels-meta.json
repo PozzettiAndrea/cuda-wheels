@@ -1,0 +1,8 @@
+{
+  "package": "gsplat",
+  "source_repo": "https://github.com/nerfstudio-project/gsplat",
+  "source_tag": "v1.5.3",
+  "patch_script": "patches/gsplat.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:48.131270+00:00"
+}

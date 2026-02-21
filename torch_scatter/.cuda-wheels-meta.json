@@ -1,0 +1,8 @@
+{
+  "package": "torch_scatter",
+  "source_repo": "https://github.com/rusty1s/pytorch_scatter",
+  "source_tag": "HEAD",
+  "patch_script": null,
+  "patched": false,
+  "updated_at": "2026-02-21T18:25:54.515593+00:00"
+}

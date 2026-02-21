@@ -1,0 +1,8 @@
+{
+  "package": "torch_sparse",
+  "source_repo": "https://github.com/rusty1s/pytorch_sparse",
+  "source_tag": "HEAD",
+  "patch_script": "patches/torch_sparse.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:54.800244+00:00"
+}

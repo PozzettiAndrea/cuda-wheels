@@ -1,0 +1,8 @@
+{
+  "package": "flash_attn",
+  "source_repo": "https://github.com/Dao-AILab/flash-attention",
+  "source_tag": "v2.8.3",
+  "patch_script": "patches/flash_attn.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:47.019588+00:00"
+}

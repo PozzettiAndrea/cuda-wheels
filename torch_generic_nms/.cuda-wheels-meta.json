@@ -1,0 +1,8 @@
+{
+  "package": "torch_generic_nms",
+  "source_repo": "https://github.com/ronghanghu/torch_generic_nms",
+  "source_tag": "HEAD",
+  "patch_script": null,
+  "patched": false,
+  "updated_at": "2026-02-21T18:25:54.240619+00:00"
+}

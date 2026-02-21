@@ -1,0 +1,8 @@
+{
+  "package": "flexgemm",
+  "source_repo": "https://github.com/JeffreyXiang/FlexGEMM",
+  "source_tag": "HEAD",
+  "patch_script": "patches/flexgemm.py",
+  "patched": true,
+  "updated_at": "2026-02-21T18:25:47.425065+00:00"
+}
