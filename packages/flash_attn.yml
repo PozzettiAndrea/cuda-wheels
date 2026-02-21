@@ -7,7 +7,7 @@ version: "2.8.3"
 arch_list: "8.0 9.0"
 
 free_disk_space: true
-clone_recursive: true
+clone_recursive: false
 max_jobs: 1
 
 # Bridge TORCH_CUDA_ARCH_LIST → FLASH_ATTN_CUDA_ARCHS
