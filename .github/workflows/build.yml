@@ -1,5 +1,5 @@
 name: Build Wheels
-run-name: "Build ${{ inputs.package }} wheels"
+run-name: "Build ${{ inputs.package }} wheels${{ inputs.overwrite == true && ' (overwrite)' || '' }}"
 
 on:
   workflow_dispatch:
@@ -20,10 +20,14 @@ on:
           - cubvh
           - o_voxel
           - nvdiffrec_render
-          - lietorch
           - dpvo-cuda
           - pytorch3d
           - spconv
+      overwrite:
+        description: 'Rebuild and overwrite existing wheels'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   generate-matrix:
@@ -46,7 +50,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json
+          OVERWRITE_FLAG=""
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            OVERWRITE_FLAG="--overwrite"
+          fi
+          python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json $OVERWRITE_FLAG
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
   build-linux:
@@ -98,8 +106,10 @@ jobs:
           echo "Checking release $RELEASE for: $WHEEL"
           mkdir -p dist
 
-          # Check if wheel exists in release
-          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Overwrite enabled, will rebuild: $WHEEL"
+          elif gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "::notice::Wheel exists in release, downloading: $WHEEL"
             gh release download "$RELEASE" -p "$WHEEL" -D dist
@@ -190,8 +200,10 @@ jobs:
           echo "Checking release $RELEASE for: $WHEEL"
           mkdir -p dist
 
-          # Check if wheel exists in release
-          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Overwrite enabled, will rebuild: $WHEEL"
+          elif gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "::notice::Wheel exists in release, downloading: $WHEEL"
             gh release download "$RELEASE" -p "$WHEEL" -D dist

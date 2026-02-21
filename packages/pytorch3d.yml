@@ -4,6 +4,7 @@ source_tag: v0.7.9
 
 clone_recursive: true
 free_disk_space: true
+patch_script: patches/pytorch3d.py
 
 build_matrix:
   combinations:
