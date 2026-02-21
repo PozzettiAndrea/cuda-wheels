@@ -26,6 +26,9 @@ on:
           - cumm
           - spconv
           - flash_attn
+          - torch_cluster
+          - torch_scatter
+          - torch_sparse
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
