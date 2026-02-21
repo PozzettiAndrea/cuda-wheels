@@ -1,0 +1,19 @@
+name: dpvo-cuda
+source_repo: princeton-vl/DPVO
+version: "1.0.0"
+source_tag: ""
+
+free_disk_space: true
+patch_script: patches/dpvo_cuda.py
+
+build_matrix:
+  combinations:
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  platforms: ["linux", "windows"]
+
+extra_deps: "numpy"

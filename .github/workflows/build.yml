@@ -1,0 +1,327 @@
+name: Build Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to build (or "all")'
+        required: true
+        type: choice
+        options:
+          - all
+          - sageattention
+          - gsplat
+          - nvdiffrast
+          - torch_generic_nms
+          - cc_torch
+          - flex_gemm
+          - cumesh
+          - cubvh
+          - o_voxel
+          - nvdiffrec_render
+          - lietorch
+          - dpvo-cuda
+          - pytorch3d
+          - spconv
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate build matrix
+        id: generate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/generate_matrix.py --package "${{ inputs.package }}" --output matrix.json
+          echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+
+  build-linux:
+    name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
+    needs: generate-matrix
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Free disk space
+        if: matrix.free_disk_space == true
+        run: |
+          sudo rm -rf /usr/share/dotnet &
+          sudo rm -rf /usr/local/lib/android &
+          sudo rm -rf /opt/ghc &
+          sudo rm -rf /opt/hostedtoolcache/CodeQL &
+          sudo apt-get clean &
+          wait
+          df -h
+
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        run: |
+          # Version detection is done in generate_matrix.py - just use matrix values
+          PKG_NAME="${{ matrix.package }}"
+          PKG_VERSION="${{ matrix.version }}"
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-linux_x86_64.whl"
+
+          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if wheel exists in release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: $WHEEL"
+          mkdir -p dist
+
+          # Check if wheel exists in release
+          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel exists in release, downloading: $WHEEL"
+            gh release download "$RELEASE" -p "$WHEEL" -D dist
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel not found in release, will build: $WHEEL"
+          fi
+
+      - name: Setup CUDA
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: linux
+          installer-type: ${{ matrix.cuda_installer }}
+          extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup build environment
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-build-env
+        with:
+          python-version: ${{ matrix.python }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: linux
+          extra-deps: ${{ matrix.extra_deps }}
+
+      - name: Build wheel
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: linux
+          max-jobs: ${{ matrix.max_jobs }}
+          clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
+          path: dist/*.whl
+
+  build-windows:
+    name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }}
+    needs: generate-matrix
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        shell: bash
+        run: |
+          # Version detection is done in generate_matrix.py - just use matrix values
+          PKG_NAME="${{ matrix.package }}"
+          PKG_VERSION="${{ matrix.version }}"
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+          WHEEL="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-win_amd64.whl"
+
+          echo "wheel_filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if wheel exists in release
+        id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WHEEL="${{ steps.meta.outputs.wheel_filename }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: $WHEEL"
+          mkdir -p dist
+
+          # Check if wheel exists in release
+          if gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null | grep -qx "$WHEEL"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel exists in release, downloading: $WHEEL"
+            gh release download "$RELEASE" -p "$WHEEL" -D dist
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Wheel not found in release, will build: $WHEEL"
+          fi
+
+      - name: Setup CUDA
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: windows
+          installer-type: ${{ matrix.cuda_installer }}
+          extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup build environment
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-build-env
+        with:
+          python-version: ${{ matrix.python }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: windows
+          extra-deps: ${{ matrix.extra_deps }}
+
+      - name: Build wheel
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: windows
+          max-jobs: ${{ matrix.max_jobs }}
+          clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
+          path: dist/*.whl
+
+  release:
+    needs: [build-linux, build-windows]
+    if: always() && (needs.build-linux.result == 'success' || needs.build-windows.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create releases per package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Collect wheels and group by package
+          mkdir -p wheels
+          find artifacts -name "*.whl" -exec cp {} wheels/ \;
+
+          echo "Collected wheels:"
+          ls -la wheels/
+
+          # Extract unique package names from wheel filenames
+          # Wheel format: <package>-<version>+<suffix>-<python>-...
+          cd wheels
+          for whl in *.whl; do
+            if [ -f "$whl" ]; then
+              # Extract package name (everything before first -)
+              pkg=$(echo "$whl" | sed 's/-.*//')
+              echo "Found package: $pkg"
+              mkdir -p "../releases/$pkg"
+              cp "$whl" "../releases/$pkg/"
+            fi
+          done
+          cd ..
+
+          # Create a release for each package
+          for pkg_dir in releases/*/; do
+            pkg=$(basename "$pkg_dir")
+            echo "Creating release for: $pkg"
+
+            # Get version from first wheel filename
+            version=$(ls "$pkg_dir"/*.whl | head -1 | sed "s/.*${pkg}-//" | sed 's/+.*//')
+
+            NOTES="Pre-built ${pkg} wheels with CUDA support."$'\n\n'"**Install:**"$'\n'"\`\`\`bash"$'\n'"pip install ${pkg} --extra-index-url https://pozzettiandrea.github.io/cuda-wheels"$'\n'"\`\`\`"
+            gh release create "${pkg}-latest" \
+              --title "${pkg} CUDA Wheels" \
+              --notes "$NOTES" \
+              --latest=false \
+              "$pkg_dir"/*.whl \
+              2>/dev/null || \
+            gh release upload "${pkg}-latest" "$pkg_dir"/*.whl --clobber
+          done
+
+  update-index:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate PEP 503 index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/generate_index.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          force_orphan: true
