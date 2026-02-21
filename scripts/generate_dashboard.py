@@ -606,6 +606,12 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
     # Write package data as a separate JS file
     (output_dir / "packages.js").write_text(f"window.__WHEEL_DATA__ = {json.dumps(all_pkg_wheels)};\n")
 
+    # Write lightweight install data (just name + url, no contents/metadata)
+    install_data = {}
+    for pkg, wheels in all_pkg_wheels.items():
+        install_data[pkg] = [{"n": w["name"], "u": w["url"]} for w in wheels if w.get("url")]
+    (output_dir / "install-data.js").write_text(f"window.__INSTALL_DATA__ = {json.dumps(install_data, separators=(',', ':'))};\n")
+
     # Copy static assets
     static_dir = SCRIPT_DIR / "dashboard_static"
     for f in static_dir.iterdir():
