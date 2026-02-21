@@ -3,6 +3,7 @@ source_repo: traveller59/spconv
 source_tag: v2.3.8
 
 extra_deps: "pccm>=0.4.16 ccimport>=0.4.4 cumm"
+patch_script: patches/spconv.py
 
 build_matrix:
   combinations:
