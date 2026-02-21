@@ -17,7 +17,8 @@ function openModal(pkg) {
     var contentsBtn = w.contents
       ? '<button class="contents-btn" onclick="inspectWheel(\'' + pkg + '\',' + idx + ')">Inspect</button>'
       : '-';
-    return '<tr><td>' + nameCell + '</td><td>' + w.size + '</td><td>' + contentsBtn + '</td></tr>';
+    var buildTime = w.build_time || '-';
+    return '<tr><td>' + nameCell + '</td><td>' + w.size + '</td><td>' + buildTime + '</td><td>' + contentsBtn + '</td></tr>';
   }).join('');
   document.getElementById('modal').classList.add('active');
 }
