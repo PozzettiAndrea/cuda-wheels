@@ -92,6 +92,8 @@ runs:
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
         export MAX_JOBS=${{ inputs.max-jobs }}
+        # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
+        export FORCE_CUDA=1
         # Add CUDA stubs to library path for linking (libcuda.so)
         export LIBRARY_PATH=/usr/local/cuda-${{ inputs.cuda-version }}/lib64/stubs:${LIBRARY_PATH:-}
         # For cumm/spconv: set CUDA version for prebuilt mode
@@ -167,6 +169,8 @@ runs:
         $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
         $env:MAX_JOBS = "${{ inputs.max-jobs }}"
         $env:DISTUTILS_USE_SDK = "1"
+        # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
+        $env:FORCE_CUDA = "1"
         # For cumm/spconv: set CUDA version for prebuilt mode
         $env:CUMM_CUDA_VERSION = "${{ inputs.cuda-version }}"
         $env:CUMM_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
