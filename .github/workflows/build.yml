@@ -25,6 +25,7 @@ on:
           - pytorch3d
           - cumm
           - spconv
+          - flash_attn
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
