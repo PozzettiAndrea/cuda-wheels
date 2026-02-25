@@ -232,6 +232,14 @@ runs:
         New-Item -ItemType Directory -Force -Path $env:GITHUB_WORKSPACE\dist | Out-Null
         Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
 
+    - name: Fix wheel METADATA version
+      shell: bash
+      run: |
+        # The wheel filename includes the local version (e.g., +cu130torch29)
+        # but the internal METADATA still has the base version from pyproject.toml.
+        # Fix the METADATA to match the filename so pip/uv see consistent versions.
+        python $GITHUB_WORKSPACE/scripts/patch_wheel_version.py $GITHUB_WORKSPACE/dist
+
     - name: Set wheel-path output
       id: rename
       shell: bash
