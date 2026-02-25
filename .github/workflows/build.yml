@@ -29,6 +29,7 @@ on:
           - torch_cluster
           - torch_scatter
           - torch_sparse
+          - o_voxel_vb
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
