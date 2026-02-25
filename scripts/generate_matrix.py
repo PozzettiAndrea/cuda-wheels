@@ -154,8 +154,8 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
             pkg.get("source_tag", ""),
             pkg.get("build_subdir", "")
         )
-        # Use detected values, fall back to yaml config
-        pkg_name = detected_name or pkg["name"].replace("-", "_")
+        # YAML name is authoritative; only fall back to detected name if not set
+        pkg_name = pkg["name"].replace("-", "_")
         pkg_version = detected_version or pkg.get("version", "")
 
         if pkg_version:
