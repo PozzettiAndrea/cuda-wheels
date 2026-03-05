@@ -17,6 +17,7 @@ on:
           - torch_generic_nms
           - cc_torch
           - flex_gemm
+          - flex_gemm_ap
           - cumesh
           - cubvh
           - o_voxel
