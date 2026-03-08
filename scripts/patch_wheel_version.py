@@ -64,7 +64,7 @@ def fix_wheel(wheel_path: Path) -> bool:
             print(f"  WARNING: No METADATA found in {filename}, skipping")
             return False
 
-        content = metadata_path.read_text()
+        content = metadata_path.read_text(encoding="utf-8")
 
         # Check current version - skip if already correct
         m = re.search(r"^Version: (.+)$", content, re.MULTILINE)
@@ -82,7 +82,7 @@ def fix_wheel(wheel_path: Path) -> bool:
             content,
             flags=re.MULTILINE,
         )
-        metadata_path.write_text(content)
+        metadata_path.write_text(content, encoding="utf-8")
 
         # Rename dist-info directory to match new version
         old_name = dist_info.name
@@ -95,9 +95,9 @@ def fix_wheel(wheel_path: Path) -> bool:
         # Update RECORD file references
         record_path = dist_info / "RECORD"
         if record_path.exists():
-            record_content = record_path.read_text()
+            record_content = record_path.read_text(encoding="utf-8")
             record_content = record_content.replace(old_name, new_name)
-            record_path.write_text(record_content)
+            record_path.write_text(record_content, encoding="utf-8")
 
         # Repack wheel (overwrite original)
         with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
