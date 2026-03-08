@@ -23,6 +23,8 @@ content = content.replace('name="flex_gemm"', 'name="flex_gemm_vb"')
 # Replace package list entries
 content = content.replace('"flex_gemm"', '"flex_gemm_vb"')
 content = content.replace('"flex_gemm.', '"flex_gemm_vb.')
+# Replace source file paths (flex_gemm/kernels/cuda/...)
+content = content.replace('"flex_gemm/', '"flex_gemm_vb/')
 # Replace cache path
 content = content.replace('~/.flex_gemm', '~/.flex_gemm_vb')
 setup_file.write_text(content)
