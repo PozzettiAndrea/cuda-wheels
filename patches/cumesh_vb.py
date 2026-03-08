@@ -47,49 +47,17 @@ if src_dir.exists() and not dst_dir.exists():
     src_dir.rename(dst_dir)
     print("Renamed cumesh/ directory to cumesh_vb/")
 
-# --- 2. Fix GCC-only CXX_FLAGS for MSVC ---
+# --- 2. Fix CXX/NVCC flags for Windows ---
+# MSVC: -O3 -> /O2, -std=c++20 -> /std:c++17
+# nvcc on Windows: c++20 triggers cub header bugs in CUDA 12.4, downgrade to c++17
 content = setup_file.read_text()
-
-# Fix main extension cxx flags
-old_cxx_main = '''"cxx": ["-O3", "-std=c++20"],
-                "nvcc": ["-O3","-std=c++20"] + cc_flag,
-            }
-        ),
-        CUDAExtension(
-            name='cumesh_vb._cubvh','''
-new_cxx_main = '''"cxx": ["/O2", "/std:c++20"] if os.name == "nt" else ["-O3", "-std=c++20"],
-                "nvcc": ["-O3", "-std=c++20"] + cc_flag,
-            }
-        ),
-        CUDAExtension(
-            name='cumesh_vb._cubvh','''
-
-if old_cxx_main in content:
-    content = content.replace(old_cxx_main, new_cxx_main)
-    print("Patched main extension CXX_FLAGS for MSVC")
-
-# Fix cubvh extension cxx flags
-old_cxx_cubvh = '''"cxx": ["-O3", "-std=c++20"],
-                "nvcc": ["-O3","-std=c++20"] + cc_flag + ['''
-new_cxx_cubvh = '''"cxx": ["/O2", "/std:c++20"] if os.name == "nt" else ["-O3", "-std=c++20"],
-                "nvcc": ["-O3", "-std=c++20"] + cc_flag + ['''
-
-if old_cxx_cubvh in content:
-    content = content.replace(old_cxx_cubvh, new_cxx_cubvh)
-    print("Patched cubvh extension CXX_FLAGS for MSVC")
-
-# Fix xatlas extension cxx flags
-old_cxx_xatlas = '''"cxx": ["-O3", "-std=c++20"],
-            }
-        ),
-    ],'''
-new_cxx_xatlas = '''"cxx": ["/O2", "/std:c++20"] if os.name == "nt" else ["-O3", "-std=c++20"],
-            }
-        ),
-    ],'''
-
-if old_cxx_xatlas in content:
-    content = content.replace(old_cxx_xatlas, new_cxx_xatlas)
-    print("Patched xatlas extension CXX_FLAGS for MSVC")
-
+content = content.replace(
+    '"cxx": ["-O3", "-std=c++20"]',
+    '"cxx": ["/O2", "/std:c++17"] if os.name == "nt" else ["-O3", "-std=c++20"]',
+)
+content = content.replace(
+    '"nvcc": ["-O3","-std=c++20"]',
+    '"nvcc": ["-O3", "-std=c++17"] if os.name == "nt" else ["-O3", "-std=c++20"]',
+)
 setup_file.write_text(content)
+print("Patched CXX/NVCC flags for Windows (c++17, /O2)")
