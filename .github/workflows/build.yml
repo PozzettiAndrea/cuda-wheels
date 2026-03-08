@@ -31,6 +31,8 @@ on:
           - torch_scatter
           - torch_sparse
           - o_voxel_vb
+          - cumesh_vb
+          - flex_gemm_vb
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

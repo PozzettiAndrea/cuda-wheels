@@ -1,0 +1,81 @@
+name: flex_gemm_vb
+source_repo: visualbruno/FlexGEMM
+source_tag: ""
+
+clone_recursive: true
+free_disk_space: true
+patch_script: patches/flexgemm_vb.py
+extra_cuda_components: "cufft_dev nvtx"
+
+build_matrix:
+  combinations:
+    # ── cu124 (torch 2.4.0 – 2.6.0) ──
+    - cuda: "12.4"
+      pytorch: "2.4.0"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.4.1"
+      python_versions: ["3.10", "3.11", "3.12"]
+    - cuda: "12.4"
+      pytorch: "2.5.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.5.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.4"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    # ── cu126 (torch 2.6.0 – 2.10.0) ──
+    - cuda: "12.6"
+      pytorch: "2.6.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.7.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.6"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.6"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.6"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    # ── cu128 (torch 2.7.0 – 2.10.0) ──
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.7.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    # ── cu130 (torch 2.9.0 – 2.10.0) ──
+    - cuda: "13.0"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "13.0"
+      pytorch: "2.9.1"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "13.0"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  platforms: ["linux", "windows"]
+
+extra_deps: "numpy"
