@@ -126,7 +126,7 @@ def get_external_wheels(package_name: str) -> set:
 
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                  torch_short: str, python_short: str, platform: str) -> bool:
-    """Check if a wheel matching this combo exists (in our releases or external sources)."""
+    """Check if a wheel matching this combo exists in our releases."""
     version_pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-"
     if platform == "linux":
         return any(version_pattern in w and ("manylinux" in w or "linux_x86_64" in w)
@@ -168,7 +168,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         if not overwrite:
             # Normalize name: wheels/releases use underscores (PEP 427), configs may use hyphens
             wheel_pkg_name = pkg["name"].replace("-", "_")
-            existing_wheels = get_existing_wheels(wheel_pkg_name) | get_external_wheels(wheel_pkg_name)
+            existing_wheels = get_existing_wheels(wheel_pkg_name)
             if existing_wheels:
                 print(f"Found {len(existing_wheels)} existing wheels for {pkg['name']}")
         else:
