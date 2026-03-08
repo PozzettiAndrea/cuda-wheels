@@ -214,6 +214,10 @@ jobs:
       contents: read
 
     steps:
+      - name: Enable long paths
+        shell: powershell
+        run: git config --system core.longpaths true
+
       - uses: actions/checkout@v4
 
       - name: Compute wheel filename
