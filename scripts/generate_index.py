@@ -2,9 +2,13 @@
 """Generate PEP 503 compliant package index from GitHub releases + external wheels."""
 import os
 import json
+import re
 import shutil
 import urllib.request
 from pathlib import Path
+
+# Matches v1 torch naming: +cu128torch29-cp (no dot between major/minor)
+_V1_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)(\d+)(-cp)')
 
 
 def get_releases(repo: str, token: str = None) -> list:
@@ -37,12 +41,20 @@ def main():
                 continue
 
             # Extract package name (first part before -)
-            # Handle names like "sageattention-2.2.0+cu128torch28-cp312-..."
             pkg_name = name.split("-")[0].lower().replace("_", "-")
+
+            # For v1-named wheels (torch29), rewrite URL to point to v2 copy (torch2.9)
+            url = asset["browser_download_url"]
+            m = _V1_TORCH_RE.search(name)
+            if m:
+                v2_name = _V1_TORCH_RE.sub(
+                    lambda x: f"{x.group(1)}{x.group(2)}.{x.group(3)}{x.group(4)}", name
+                )
+                url = url.replace(name, v2_name)
 
             packages.setdefault(pkg_name, []).append({
                 "filename": name,
-                "url": asset["browser_download_url"],
+                "url": url,
             })
 
     # Create docs directory
@@ -76,7 +88,13 @@ def main():
         f.write("</body>\n</html>\n")
 
     # Generate per-package index (only for built packages, externals already have index.html)
+    # Root index keeps v1 filenames but URLs point to v2-named assets
     for pkg, wheels in packages.items():
+        # Only v1-named wheels for root index (URLs already rewritten to v2 above)
+        v1_wheels = [w for w in wheels if _V1_TORCH_RE.search(w["filename"])]
+        if not v1_wheels:
+            v1_wheels = wheels  # no v1/v2 distinction for this package
+
         pkg_dir = docs / pkg
         pkg_dir.mkdir(exist_ok=True)
 
@@ -85,8 +103,7 @@ def main():
             f.write(f"<html>\n<head><title>{pkg}</title></head>\n")
             f.write("<body>\n")
             f.write(f"<h1>{pkg}</h1>\n")
-            for wheel in sorted(wheels, key=lambda w: w["filename"]):
-                # PEP 503 requires href to be the download URL
+            for wheel in sorted(v1_wheels, key=lambda w: w["filename"]):
                 f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
             f.write("</body>\n</html>\n")
 
@@ -97,7 +114,13 @@ def main():
         print(f"External packages: {', '.join(sorted(external_packages))}")
     print(f"Total: {len(all_packages)} packages in index")
 
-    # Generate v2 index (built packages only, no external wheels)
+    # Generate v2 index (built packages only, v2-named wheels only)
+    v2_packages = {}
+    for pkg, wheels in packages.items():
+        v2_wheels = [w for w in wheels if not _V1_TORCH_RE.search(w["filename"])]
+        if v2_wheels:
+            v2_packages[pkg] = v2_wheels
+
     v2_docs = docs / "v2"
     v2_docs.mkdir(parents=True, exist_ok=True)
     with open(v2_docs / "index.html", "w") as f:
@@ -105,11 +128,11 @@ def main():
         f.write("<html>\n<head><title>CUDA Wheels v2</title></head>\n")
         f.write("<body>\n")
         f.write("<h1>CUDA Wheels v2</h1>\n")
-        for pkg in sorted(packages.keys()):
+        for pkg in sorted(v2_packages.keys()):
             f.write(f'<a href="{pkg}/">{pkg}</a><br>\n')
         f.write("</body>\n</html>\n")
 
-    for pkg, wheels in packages.items():
+    for pkg, wheels in v2_packages.items():
         pkg_dir = v2_docs / pkg
         pkg_dir.mkdir(exist_ok=True)
         with open(pkg_dir / "index.html", "w") as f:
@@ -121,7 +144,7 @@ def main():
                 f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
             f.write("</body>\n</html>\n")
 
-    print(f"Generated v2 index for {len(packages)} built packages")
+    print(f"Generated v2 index for {len(v2_packages)} built packages")
 
     # Generate dashboard (separate from PEP 503 index)
     try:
