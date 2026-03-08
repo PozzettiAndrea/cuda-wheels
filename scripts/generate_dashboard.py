@@ -7,6 +7,7 @@ import re
 import shutil
 import struct
 import urllib.request
+import yaml
 import zlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -507,6 +508,82 @@ def _ext_row(p):
     )
 
 
+# --- Missing wheels computation ---
+
+def _wheel_exists(wheel_names, cuda_short, torch_short, python_short, platform):
+    """Check if a wheel matching this combo exists. Handles v1 (torch24) and v2 (torch2.4) naming."""
+    torch_v1 = torch_short.replace(".", "")
+    patterns = [
+        f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-",
+        f"+cu{cuda_short}torch{torch_v1}-cp{python_short}-cp{python_short}-",
+    ]
+    if platform == "linux":
+        return any(p in w and ("manylinux" in w or "linux_x86_64" in w)
+                   for p in patterns for w in wheel_names)
+    else:
+        return any(p in w and "win_amd64" in w
+                   for p in patterns for w in wheel_names)
+
+
+def compute_missing_wheels(built_packages, packages_dir):
+    """Compare YAML-defined build matrix against actually built wheels."""
+    result = {}
+    for pkg_file in sorted(packages_dir.glob("*.yml")):
+        pkg = yaml.safe_load(pkg_file.read_text())
+        pkg_name = pkg["name"]
+
+        # Collect actual wheel filenames - try both name forms
+        lookup_names = [
+            pkg_name.lower().replace("_", "-"),
+            pkg_name.lower().replace("-", "_"),
+            pkg_name.lower(),
+        ]
+        wheel_names = set()
+        for ln in lookup_names:
+            for w in built_packages.get(ln, []):
+                wheel_names.add(w.get("display_name", ""))
+
+        build = pkg["build_matrix"]
+        platforms = build.get("platforms", ["linux", "windows"])
+
+        expected = 0
+        missing = []
+
+        if "combinations" in build:
+            combos = build["combinations"]
+        else:
+            combos = [{"cuda": c, "pytorch": p, "python_versions": build.get("python_versions", [])}
+                      for c in build.get("cuda_versions", [])
+                      for p in build.get("pytorch_versions", [])]
+
+        for combo in combos:
+            cuda = combo["cuda"]
+            pytorch = combo["pytorch"]
+            python_versions = combo.get("python_versions", build.get("python_versions", []))
+            cuda_short = cuda.replace(".", "")
+            torch_short = ".".join(pytorch.split(".")[:2])
+
+            for py_ver in python_versions:
+                py_short = py_ver.replace(".", "")
+                for platform in platforms:
+                    expected += 1
+                    if not _wheel_exists(wheel_names, cuda_short, torch_short, py_short, platform):
+                        missing.append({
+                            "cuda": cuda,
+                            "torch": pytorch,
+                            "python": py_ver,
+                            "platform": platform,
+                        })
+
+        result[pkg_name] = {
+            "expected": expected,
+            "built": expected - len(missing),
+            "missing": missing,
+        }
+
+    return result
+
+
 # --- Main generation ---
 
 def generate_dashboard(built_packages: dict, external_packages: dict, output_dir: Path,
@@ -563,6 +640,11 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
 
     total_wheels = sum(p["count"] for p in built_summaries) + sum(p["count"] for p in ext_summaries)
 
+    # Compute missing wheels
+    packages_dir = SCRIPT_DIR.parent / "packages"
+    missing_data = compute_missing_wheels(built_packages, packages_dir)
+    total_missing = sum(d["expected"] - d["built"] for d in missing_data.values())
+
     # Render rows
     built_rows = "\n".join(_built_row(p) for p in built_summaries)
     ext_rows = "\n".join(_ext_row(p) for p in ext_summaries)
@@ -578,6 +660,7 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
     html = html.replace("{{built_rows}}", built_rows)
     html = html.replace("{{ext_rows}}", ext_rows)
     html = html.replace("{{repo}}", repo)
+    html = html.replace("{{missing_count}}", str(total_missing))
 
     (output_dir / "index.html").write_text(html)
 
@@ -605,6 +688,9 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
 
     # Write package data as a separate JS file
     (output_dir / "packages.js").write_text(f"window.__WHEEL_DATA__ = {json.dumps(all_pkg_wheels)};\n")
+
+    # Write missing wheels data
+    (output_dir / "missing-data.js").write_text(f"window.__MISSING_DATA__ = {json.dumps(missing_data)};\n")
 
     # Write lightweight install data (just name + url, no contents/metadata)
     install_data = {}
