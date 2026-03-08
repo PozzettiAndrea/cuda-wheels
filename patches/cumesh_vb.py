@@ -1,9 +1,24 @@
 """Patch cumesh_vb (visualbruno fork) for wheel building:
-1. Rename package from cumesh to cumesh_vb to avoid conflicts
-2. Fix GCC-only CXX_FLAGS for Windows MSVC builds
+1. Fetch missing Eigen submodule (cubvh committed directly, not as git submodule)
+2. Rename package from cumesh to cumesh_vb to avoid conflicts
+3. Fix GCC-only CXX_FLAGS for Windows MSVC builds
 """
 import os
+import subprocess
 from pathlib import Path
+
+# --- 0. Fetch Eigen (nested submodule not auto-fetched) ---
+# visualbruno committed third_party/cubvh directly into the tree rather than
+# as a git submodule. The cubvh directory has its own .gitmodules pointing to
+# eigen, but since cubvh isn't a submodule, --recursive doesn't fetch it.
+eigen_dir = Path("third_party/cubvh/third_party/eigen")
+if not eigen_dir.exists() or not any(eigen_dir.iterdir()):
+    eigen_dir.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["git", "clone", "--depth", "1", "https://gitlab.com/libeigen/eigen.git", str(eigen_dir)],
+        check=True,
+    )
+    print(f"Cloned Eigen into {eigen_dir}")
 
 # --- 1. Rename package to cumesh_vb ---
 
