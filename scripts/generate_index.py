@@ -97,6 +97,32 @@ def main():
         print(f"External packages: {', '.join(sorted(external_packages))}")
     print(f"Total: {len(all_packages)} packages in index")
 
+    # Generate v2 index (built packages only, no external wheels)
+    v2_docs = docs / "v2"
+    v2_docs.mkdir(parents=True, exist_ok=True)
+    with open(v2_docs / "index.html", "w") as f:
+        f.write("<!DOCTYPE html>\n")
+        f.write("<html>\n<head><title>CUDA Wheels v2</title></head>\n")
+        f.write("<body>\n")
+        f.write("<h1>CUDA Wheels v2</h1>\n")
+        for pkg in sorted(packages.keys()):
+            f.write(f'<a href="{pkg}/">{pkg}</a><br>\n')
+        f.write("</body>\n</html>\n")
+
+    for pkg, wheels in packages.items():
+        pkg_dir = v2_docs / pkg
+        pkg_dir.mkdir(exist_ok=True)
+        with open(pkg_dir / "index.html", "w") as f:
+            f.write("<!DOCTYPE html>\n")
+            f.write(f"<html>\n<head><title>{pkg}</title></head>\n")
+            f.write("<body>\n")
+            f.write(f"<h1>{pkg}</h1>\n")
+            for wheel in sorted(wheels, key=lambda w: w["filename"]):
+                f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
+            f.write("</body>\n</html>\n")
+
+    print(f"Generated v2 index for {len(packages)} built packages")
+
     # Generate dashboard (separate from PEP 503 index)
     try:
         from generate_dashboard import generate_dashboard, parse_external_wheels, parse_wheel_filename, get_workflow_runs

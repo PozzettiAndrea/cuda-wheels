@@ -116,7 +116,7 @@ jobs:
           PKG_NAME="${{ matrix.package }}"
           PKG_VERSION="${{ matrix.version }}"
           CUDA_SHORT="${{ matrix.cuda_short }}"
-          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2)
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
           # Prefix without platform tag (auditwheel changes linux_x86_64 → manylinux_*)
           WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
@@ -222,7 +222,7 @@ jobs:
           PKG_NAME="${{ matrix.package }}"
           PKG_VERSION="${{ matrix.version }}"
           CUDA_SHORT="${{ matrix.cuda_short }}"
-          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2 | tr -d '.')
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2)
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
           WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
 

@@ -10,7 +10,7 @@ from pathlib import Path
 WHEEL_PATTERN = re.compile(
     r'^(?P<name>[a-zA-Z0-9_]+)-'
     r'(?P<version>[0-9][^-]*)'
-    r'\+cu(?P<cuda>\d+)torch(?P<torch>\d+)-'
+    r'\+cu(?P<cuda>\d+)torch(?P<torch>[\d.]+)-'
     r'cp(?P<py>\d+)-cp\d+-'
     r'(?P<platform>linux_x86_64|win_amd64)\.whl$'
 )

@@ -127,12 +127,18 @@ def get_external_wheels(package_name: str) -> set:
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                  torch_short: str, python_short: str, platform: str) -> bool:
     """Check if a wheel matching this combo exists in our releases."""
-    version_pattern = f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-"
+    # Check both v2 naming (torch2.9) and v1 naming (torch29)
+    torch_short_v1 = torch_short.replace(".", "")
+    patterns = [
+        f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-",
+        f"+cu{cuda_short}torch{torch_short_v1}-cp{python_short}-cp{python_short}-",
+    ]
     if platform == "linux":
-        return any(version_pattern in w and ("manylinux" in w or "linux_x86_64" in w)
-                   for w in existing_wheels)
+        return any(p in w and ("manylinux" in w or "linux_x86_64" in w)
+                   for p in patterns for w in existing_wheels)
     else:
-        return any(version_pattern in w and "win_amd64" in w for w in existing_wheels)
+        return any(p in w and "win_amd64" in w
+                   for p in patterns for w in existing_wheels)
 
 
 def generate_matrix(package_filter: str, overwrite: bool = False,
@@ -196,7 +202,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                 continue
 
             cuda_short = cuda.replace(".", "")
-            torch_short = pytorch.replace(".", "")[:2]  # 2.9.1 -> 29
+            torch_short = ".".join(pytorch.split(".")[:2])  # 2.9.1 -> 2.9
 
             for python_ver in python_versions:
                 python_short = python_ver.replace(".", "")

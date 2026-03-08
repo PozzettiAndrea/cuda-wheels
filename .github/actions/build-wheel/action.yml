@@ -190,7 +190,7 @@ runs:
         fi
         cd $BUILD_DIR/dist
         CUDA_SHORT="${{ inputs.cuda-short }}"
-        TORCH_MM=$(echo "${{ inputs.pytorch-version }}" | cut -d. -f1,2 | tr -d '.')
+        TORCH_MM=$(echo "${{ inputs.pytorch-version }}" | cut -d. -f1,2)
         for f in *.whl; do
           # Skip pure Python wheels (py3-none-any) - they don't have CUDA code
           if [[ "$f" == *"-py3-none-any.whl" ]]; then
@@ -216,7 +216,7 @@ runs:
         }
         cd "$buildDir\dist"
         $cudaShort = "${{ inputs.cuda-short }}"
-        $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join ''
+        $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join '.'
         Get-ChildItem *.whl | ForEach-Object {
           # Skip pure Python wheels (py3-none-any) - they don't have CUDA code
           if ($_.Name -like "*-py3-none-any.whl") {
