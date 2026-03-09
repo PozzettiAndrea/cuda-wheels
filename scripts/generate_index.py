@@ -8,8 +8,8 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import quote
 
-# Matches v1 torch naming: +cu128torch29-cp (no dot between major/minor)
-_V1_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)(\d+)(-cp)')
+# Matches v2 torch naming: +cu128torch2.9-cp (dot between major.minor)
+_V2_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)\.(\d+)(-cp)')
 
 
 def get_releases(repo: str, token: str = None) -> list:
@@ -44,17 +44,16 @@ def main():
             # Extract package name (first part before -)
             pkg_name = name.split("-")[0].lower().replace("_", "-")
 
-            # For v1-named wheels (torch29), rewrite URL to point to v2 copy (torch2.9)
             url = asset["browser_download_url"]
-            m = _V1_TORCH_RE.search(name)
-            if m:
-                v2_name = _V1_TORCH_RE.sub(
-                    lambda x: f"{x.group(1)}{x.group(2)}.{x.group(3)}{x.group(4)}", name
-                )
-                url = url.replace(quote(name, safe=""), quote(v2_name, safe=""))
+
+            # Generate v1 display name by stripping dot: torch2.9 → torch29
+            v1_name = _V2_TORCH_RE.sub(
+                lambda x: f"{x.group(1)}{x.group(2)}{x.group(3)}{x.group(4)}", name
+            )
 
             packages.setdefault(pkg_name, []).append({
-                "filename": name,
+                "filename": name,      # v2 (actual asset name)
+                "v1_filename": v1_name, # v1 (display name for root index)
                 "url": url,
             })
 
@@ -89,13 +88,8 @@ def main():
         f.write("</body>\n</html>\n")
 
     # Generate per-package index (only for built packages, externals already have index.html)
-    # Root index keeps v1 filenames but URLs point to v2-named assets
+    # Root index: v1 display names (torch29), hrefs point to v2 assets (torch2.9)
     for pkg, wheels in packages.items():
-        # Only v1-named wheels for root index (URLs already rewritten to v2 above)
-        v1_wheels = [w for w in wheels if _V1_TORCH_RE.search(w["filename"])]
-        if not v1_wheels:
-            v1_wheels = wheels  # no v1/v2 distinction for this package
-
         pkg_dir = docs / pkg
         pkg_dir.mkdir(exist_ok=True)
 
@@ -104,8 +98,8 @@ def main():
             f.write(f"<html>\n<head><title>{pkg}</title></head>\n")
             f.write("<body>\n")
             f.write(f"<h1>{pkg}</h1>\n")
-            for wheel in sorted(v1_wheels, key=lambda w: w["filename"]):
-                f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
+            for wheel in sorted(wheels, key=lambda w: w["v1_filename"]):
+                f.write(f'<a href="{wheel["url"]}">{wheel["v1_filename"]}</a><br>\n')
             f.write("</body>\n</html>\n")
 
     print(f"Generated index for {len(packages)} built packages:")
@@ -115,12 +109,8 @@ def main():
         print(f"External packages: {', '.join(sorted(external_packages))}")
     print(f"Total: {len(all_packages)} packages in index")
 
-    # Generate v2 index (built packages only, v2-named wheels only)
-    v2_packages = {}
-    for pkg, wheels in packages.items():
-        v2_wheels = [w for w in wheels if not _V1_TORCH_RE.search(w["filename"])]
-        if v2_wheels:
-            v2_packages[pkg] = v2_wheels
+    # Generate v2 index (built packages only, all wheels are v2-named now)
+    v2_packages = packages
 
     v2_docs = docs / "v2"
     v2_docs.mkdir(parents=True, exist_ok=True)
@@ -145,7 +135,7 @@ def main():
                 f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
             f.write("</body>\n</html>\n")
 
-    print(f"Generated v2 index for {len(v2_packages)} built packages")
+    print(f"Generated v2 index for {len(v2_packages)} packages")
 
     # Generate dashboard (separate from PEP 503 index)
     try:
