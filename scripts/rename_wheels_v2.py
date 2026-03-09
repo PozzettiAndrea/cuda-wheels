@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -121,7 +122,8 @@ def main():
     parser.add_argument("--package", default=None, help="Only process this package (e.g. flash_attn)")
     parser.add_argument("--repo", default="PozzettiAndrea/cuda-wheels")
     parser.add_argument("--delete-old", action="store_true", help="Delete old-named assets after uploading")
-    parser.add_argument("--threads", type=int, default=8, help="Number of parallel threads")
+    parser.add_argument("--threads", type=int, default=2, help="Number of parallel threads")
+    parser.add_argument("--delay", type=float, default=0.5, help="Seconds to wait between operations (rate limiting)")
     args = parser.parse_args()
 
     releases = get_releases(args.repo)
@@ -150,10 +152,12 @@ def main():
         print(f"{release}: {len(to_rename)}/{len(wheels)} to rename")
 
         if args.dry_run:
-            for asset, new_name in to_rename:
+            for i, (asset, new_name) in enumerate(to_rename, 1):
+                print(f"  [{i}/{len(to_rename)}] ", end="")
                 rename_asset(args.repo, release, asset, new_name, dry_run=True)
             total_renamed += len(to_rename)
         else:
+            done = 0
             with ThreadPoolExecutor(max_workers=args.threads) as pool:
                 futures = {
                     pool.submit(rename_asset, args.repo, release, asset, new_name,
@@ -161,11 +165,14 @@ def main():
                     for asset, new_name in to_rename
                 }
                 for future in as_completed(futures):
+                    done += 1
                     if future.result():
                         total_renamed += 1
+                        print(f"  [{done}/{len(to_rename)}] OK")
                     else:
                         total_failed += 1
-                        print(f"  ERROR: Failed on {futures[future]}", file=sys.stderr)
+                        print(f"  [{done}/{len(to_rename)}] ERROR: {futures[future]}", file=sys.stderr)
+                    time.sleep(args.delay)
 
     print(f"\nDone: {total_renamed} renamed, {total_failed} failed, {total_skipped} already v2")
 
