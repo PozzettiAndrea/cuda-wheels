@@ -6,6 +6,7 @@ import re
 import shutil
 import urllib.request
 from pathlib import Path
+from urllib.parse import quote
 
 # Matches v1 torch naming: +cu128torch29-cp (no dot between major/minor)
 _V1_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)(\d+)(-cp)')
@@ -50,7 +51,7 @@ def main():
                 v2_name = _V1_TORCH_RE.sub(
                     lambda x: f"{x.group(1)}{x.group(2)}.{x.group(3)}{x.group(4)}", name
                 )
-                url = url.replace(name, v2_name)
+                url = url.replace(quote(name, safe=""), quote(v2_name, safe=""))
 
             packages.setdefault(pkg_name, []).append({
                 "filename": name,
