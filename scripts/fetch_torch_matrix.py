@@ -186,6 +186,7 @@ def main():
 
     matrix = build_matrix()
 
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w") as f:
         json.dump(matrix, f, indent=2)
     print(f"Wrote {len(matrix['combos'])} combos to {args.output}", file=sys.stderr)
