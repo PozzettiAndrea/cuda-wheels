@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cuda-wheels — pip install</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+       background: #0d1117; color: #c9d1d9; padding: 2rem; font-size: 1rem; }
+h1 { color: #f0f6fc; margin-bottom: 0.5rem; font-size: 2rem; }
+.subtitle { color: #8b949e; margin-bottom: 2rem; font-size: 1.05rem; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.selectors { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; }
+.selector { display: flex; flex-direction: column; gap: 0.5rem; }
+.selector label { color: #8b949e; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.selector select { background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px;
+                    padding: 0.5rem 0.75rem; font-size: 1rem; font-family: inherit; cursor: pointer;
+                    min-width: 140px; }
+.selector select:focus { outline: none; border-color: #58a6ff; }
+.selector select option { background: #161b22; }
+.selector select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.packages-group { margin-bottom: 2rem; }
+.packages-group label { color: #8b949e; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;
+                         display: block; margin-bottom: 0.5rem; }
+.pkg-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pkg-chip { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 0.4rem 0.8rem;
+            font-size: 0.9rem; cursor: pointer; transition: all 0.15s; user-select: none; }
+.pkg-chip:hover { border-color: #58a6ff; }
+.pkg-chip.selected { background: #1f3a5f; border-color: #58a6ff; color: #f0f6fc; }
+.pkg-chip.unavailable { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+
+.output-section { margin-top: 1.5rem; }
+.output-section h2 { color: #f0f6fc; font-size: 1.2rem; margin-bottom: 0.75rem; }
+.command-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem 1.25rem;
+               font-family: "SF Mono", "Fira Code", "Consolas", monospace; font-size: 0.9rem;
+               line-height: 1.6; white-space: pre-wrap; word-break: break-all; position: relative;
+               min-height: 3rem; }
+.command-box .placeholder { color: #484f58; }
+.copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+            font-family: inherit; }
+.copy-btn:hover { background: #30363d; color: #f0f6fc; }
+.copy-btn.copied { color: #3fb950; border-color: #3fb950; }
+
+.warn { color: #d29922; font-size: 0.85rem; margin-top: 0.5rem; }
+footer { margin-top: 2rem; color: #484f58; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>cuda-wheels</h1>
+<p class="subtitle">Generate pip install commands for pre-built CUDA wheels</p>
+
+<div class="selectors">
+  <div class="selector">
+    <label>OS</label>
+    <select id="sel-os"><option value="">Select...</option></select>
+  </div>
+  <div class="selector">
+    <label>CUDA</label>
+    <select id="sel-cuda" disabled><option value="">Select OS first</option></select>
+  </div>
+  <div class="selector">
+    <label>PyTorch</label>
+    <select id="sel-torch" disabled><option value="">Select CUDA first</option></select>
+  </div>
+  <div class="selector">
+    <label>Python</label>
+    <select id="sel-python" disabled><option value="">Select PyTorch first</option></select>
+  </div>
+</div>
+
+<div class="packages-group">
+  <label>Packages</label>
+  <div class="pkg-chips" id="pkg-chips"></div>
+</div>
+
+<div class="output-section">
+  <h2>Install Command</h2>
+  <div class="command-box" id="command-box">
+    <span class="placeholder">Select your environment above, then click packages to install.</span>
+    <button class="copy-btn" id="copy-btn" style="display:none" onclick="copyCommand()">Copy</button>
+  </div>
+  <div class="warn" id="warn" style="display:none"></div>
+</div>
+
+<footer>
+  <p><a href="./">Dashboard</a> &middot; <a href="../">Package Index</a></p>
+</footer>
+
+<script src="install-data.js"></script>
+<script src="install.js"></script>
+</body>
+</html>

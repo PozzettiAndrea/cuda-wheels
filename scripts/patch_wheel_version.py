@@ -14,11 +14,14 @@ Examples:
     python patch_wheel_version.py my_package-0.2+cu130torch29-cp312-cp312-linux_x86_64.whl
 """
 
-import os
+import base64
+import csv
+import hashlib
+import io
 import re
 import sys
-import zipfile
 import tempfile
+import zipfile
 from pathlib import Path
 
 
@@ -27,12 +30,42 @@ def extract_version_from_filename(filename: str) -> tuple[str, str]:
 
     Returns (package_name, version) e.g. ('sageattention', '0.2+cu130torch29')
     """
-    # Wheel format: {name}-{version}-{python}-{abi}-{platform}.whl
-    # Name contains only [A-Za-z0-9_], version starts with a digit
     m = re.match(r"^([A-Za-z0-9_]+)-([^-]+)-(cp|py)", filename)
     if not m:
         raise ValueError(f"Could not parse wheel filename: {filename}")
     return m.group(1), m.group(2)
+
+
+def hash_content(data: bytes) -> tuple[str, int]:
+    """Return (sha256=urlsafe_b64_hash, size) for RECORD."""
+    digest = hashlib.sha256(data).digest()
+    b64 = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return f"sha256={b64}", len(data)
+
+
+def rebuild_record(tmpdir: Path, dist_info_name: str) -> None:
+    """Regenerate the RECORD file with correct hashes for all files."""
+    record_path = tmpdir / dist_info_name / "RECORD"
+    record_rel = f"{dist_info_name}/RECORD"
+
+    rows = []
+    for file in sorted(tmpdir.rglob("*")):
+        if not file.is_file():
+            continue
+        rel = str(file.relative_to(tmpdir))
+        if rel == record_rel:
+            # RECORD itself gets an empty hash
+            continue
+        digest, size = hash_content(file.read_bytes())
+        rows.append((rel, digest, str(size)))
+
+    # RECORD entry for itself: empty hash and size
+    rows.append((record_rel, "", ""))
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerows(rows)
+    record_path.write_text(buf.getvalue(), encoding="utf-8")
 
 
 def fix_wheel(wheel_path: Path) -> bool:
@@ -40,25 +73,21 @@ def fix_wheel(wheel_path: Path) -> bool:
     filename = wheel_path.name
     pkg_name, version = extract_version_from_filename(filename)
 
-    # Only need to fix if there's a local version identifier
     if "+" not in version:
         return False
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Extract wheel
         with zipfile.ZipFile(wheel_path, "r") as zf:
             zf.extractall(tmpdir)
 
-        # Find dist-info
         dist_info_dirs = list(tmpdir.glob("*.dist-info"))
         if not dist_info_dirs:
             print(f"  WARNING: No .dist-info found in {filename}, skipping")
             return False
         dist_info = dist_info_dirs[0]
 
-        # Read METADATA
         metadata_path = dist_info / "METADATA"
         if not metadata_path.exists():
             print(f"  WARNING: No METADATA found in {filename}, skipping")
@@ -66,7 +95,6 @@ def fix_wheel(wheel_path: Path) -> bool:
 
         content = metadata_path.read_text(encoding="utf-8")
 
-        # Check current version - skip if already correct
         m = re.search(r"^Version: (.+)$", content, re.MULTILINE)
         if m and m.group(1) == version:
             print(f"  {filename}: already correct ({version})")
@@ -92,14 +120,10 @@ def fix_wheel(wheel_path: Path) -> bool:
             dist_info.rename(new_dist_info)
             dist_info = new_dist_info
 
-        # Update RECORD file references
-        record_path = dist_info / "RECORD"
-        if record_path.exists():
-            record_content = record_path.read_text(encoding="utf-8")
-            record_content = record_content.replace(old_name, new_name)
-            record_path.write_text(record_content, encoding="utf-8")
+        # Rebuild RECORD with correct hashes
+        rebuild_record(tmpdir, dist_info.name)
 
-        # Repack wheel (overwrite original)
+        # Repack wheel
         with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for file in sorted(tmpdir.rglob("*")):
                 if file.is_file():

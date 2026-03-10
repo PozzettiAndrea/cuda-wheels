@@ -21,6 +21,31 @@ footer { margin-top: 2rem; color: #484f58; font-size: 0.9rem; }
 a { color: #58a6ff; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Tab bar */
+.tab-bar { display: flex; gap: 0; margin: 0 0 1.5rem; border-bottom: 2px solid #30363d; }
+.tab { background: none; border: none; color: #8b949e; padding: 0.75rem 1.5rem;
+       font-size: 1rem; cursor: pointer; border-bottom: 2px solid transparent;
+       margin-bottom: -2px; font-family: inherit; }
+.tab:hover { color: #c9d1d9; }
+.tab.active { color: #f0f6fc; border-bottom-color: #58a6ff; }
+
+/* Missing tab */
+.missing-filters { margin-bottom: 1rem; }
+.missing-filters select { background: #161b22; color: #c9d1d9; border: 1px solid #30363d;
+                           border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 1rem;
+                           font-family: inherit; }
+.missing-pkg { margin-bottom: 2rem; }
+.missing-pkg h3 { color: #f0f6fc; margin-bottom: 0.5rem; font-size: 1.1rem; }
+.missing-summary { color: #8b949e; font-size: 0.9rem; margin-bottom: 0.75rem; }
+.missing-summary .complete { color: #3fb950; font-weight: 600; }
+.matrix-wrap { overflow-x: auto; margin-bottom: 1rem; }
+.matrix-table { font-size: 0.8rem; width: auto; }
+.matrix-table th { padding: 0.4rem 0.6rem; font-size: 0.75rem; white-space: nowrap; text-transform: none; }
+.matrix-table td { padding: 0.3rem 0.6rem; text-align: center; }
+.matrix-table .row-header { text-align: left; white-space: nowrap; font-weight: 600; color: #c9d1d9; }
+.cell-ok { color: #3fb950; font-size: 1rem; }
+.cell-miss { color: #f85149; font-size: 1rem; }
+
 /* Modals */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                   background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; }
@@ -42,6 +67,14 @@ a:hover { text-decoration: underline; }
 .contents-btn { background: #21262d; border: 1px solid #30363d; color: #58a6ff;
                  padding: 0.2rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
 .contents-btn:hover { background: #30363d; }
+
+/* Metadata section in inspect modal */
+#contents-metadata { padding: 0.75rem 1.5rem; border-bottom: 1px solid #30363d; }
+.metadata-table { width: 100%; background: transparent; border: none; margin: 0; }
+.metadata-table td { padding: 0.25rem 0.5rem; border: none; font-size: 0.85rem; }
+.metadata-table tr:hover td { background: transparent; }
+.meta-key { color: #8b949e; white-space: nowrap; width: 1%; font-weight: 600; }
+.meta-warn { color: #f85149; font-weight: 600; }
 
 /* Loading bar */
 .loading-bar { padding: 1rem 1.5rem; }
