@@ -3,8 +3,8 @@ source_repo: thu-ml/SageAttention
 source_tag: v2.2.0
 
 # SageAttention only supports SM >= 8.0 — qattn CUDA kernels use SM80+ intrinsics.
-# Without this, the default arch_list includes 7.0/7.5 which fail to compile.
-arch_list: "8.0 8.6 8.9 9.0"
+# Without this, the default arch_list includes 7.0 which fails to compile.
+arch_list: "8.0 9.0"
 
 # Optional: free disk space before build (default: false)
 # Needed because PyTorch 2.8.0 uv cache is 3.3GB + CUDA toolkit
@@ -50,41 +50,41 @@ build_matrix:
     - cuda: "12.8"
       pytorch: "2.7.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "12.8"
       pytorch: "2.8.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "12.8"
       pytorch: "2.9.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "12.8"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     # ── cu129 (torch 2.8.0 – 2.10.0, Blackwell archs) ──
     - cuda: "12.9"
       pytorch: "2.8.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "12.9"
       pytorch: "2.9.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "12.9"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     # ── cu130 (torch 2.9.0 – 2.10.0, Blackwell archs) ──
     - cuda: "13.0"
       pytorch: "2.9.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
     - cuda: "13.0"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-      arch_list: "8.0 8.6 8.9 9.0 10.0 12.0"
+      arch_list: "8.0 9.0 10.0 12.0"
   platforms: ["linux", "windows"]
 
 extra_deps: ""

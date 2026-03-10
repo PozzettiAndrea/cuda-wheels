@@ -11,7 +11,7 @@ setup_file = Path("setup.py")
 content = setup_file.read_text()
 
 # Fix TORCH_CUDA_ARCH_LIST parser: upstream only handles comma/semicolon
-# separators but PyTorch convention uses spaces (e.g. "7.0 7.5 8.0 8.6 8.9 9.0").
+# separators but PyTorch convention uses spaces (e.g. "7.0 8.0 9.0").
 # Without this, HAS_SM80/89/90 are never set and qattn CUDA kernels are skipped.
 old_parser = '    for item in arch_list_env.replace(",", ";").split(";"):'
 new_parser = '    for item in arch_list_env.replace(",", " ").replace(";", " ").split():'

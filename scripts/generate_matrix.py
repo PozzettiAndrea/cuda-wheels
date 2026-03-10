@@ -55,9 +55,9 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     """
     Auto-compute the CUDA arch_list based on CUDA and PyTorch versions.
 
-    Base architectures:
-    - 7.0, 7.5: Volta/Turing (V100, RTX 20xx) - dropped in CUDA 13.0
-    - 8.0, 8.6, 8.9: Ampere/Ada (A100, RTX 30xx, RTX 40xx)
+    Base architectures (one per major family — forward-compatible within family):
+    - 7.0: Volta/Turing (V100, RTX 20xx) — sm_70 covers sm_75 - dropped in CUDA 13.0
+    - 8.0: Ampere/Ada (A100, RTX 30xx, RTX 40xx) — sm_80 covers sm_86/sm_89
     - 9.0: Hopper (H100)
 
     Blackwell architectures (conditionally added):
@@ -71,10 +71,11 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     pytorch_major, pytorch_minor = map(int, pytorch_version.split(".")[:2])
 
     # CUDA 13.0+ dropped sm_70/sm_75 support
+    # sm_80 binary is forward-compatible with sm_86/sm_89, so no need for separate targets
     if cuda_major >= 13:
-        archs = ["8.0", "8.6", "8.9", "9.0"]
+        archs = ["8.0", "9.0"]
     else:
-        archs = ["7.0", "7.5", "8.0", "8.6", "8.9", "9.0"]
+        archs = ["7.0", "8.0", "9.0"]
 
     # Blackwell support requires PyTorch 2.6+
     pytorch_supports_blackwell = (pytorch_major, pytorch_minor) >= (2, 6)
