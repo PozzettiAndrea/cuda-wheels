@@ -17,6 +17,18 @@ REPO = "PozzettiAndrea/cuda-wheels"
 PACKAGES_DIR = Path(__file__).parent.parent / "packages"
 PATCH_VERSIONS = {"2.4.1", "2.5.1", "2.7.1", "2.9.1"}
 
+# (cuda_short, torch_short, python_short, platform) combos where upstream
+# PyTorch never published a wheel — exclude from expected counts.
+PHANTOM_COMBOS = {
+    ("124", "2.5", "313", "windows"),   # no torch 2.5+cu124 cp313 win
+    # cu129 torch 2.10 is linux-only upstream
+    ("129", "2.10", "310", "windows"),
+    ("129", "2.10", "311", "windows"),
+    ("129", "2.10", "312", "windows"),
+    ("129", "2.10", "313", "windows"),
+    ("129", "2.10", "314", "windows"),
+}
+
 # Parse wheel filename: extract cuda, torch, python, os
 # e.g. torch_cluster-1.6.3+cu124torch2.4-cp310-cp310-manylinux...whl
 _WHL_RE = re.compile(
@@ -73,6 +85,9 @@ def load_expected(yml_path):
         for py in combo["python_versions"]:
             for plat in platforms:
                 expected.add((cu, tv, py_short(py), plat))
+
+    # Remove combos that don't exist upstream
+    expected -= PHANTOM_COMBOS
 
     # Derive release tag from package name (hyphens → underscores to match GH tags)
     tag_name = name.replace("-", "_")
