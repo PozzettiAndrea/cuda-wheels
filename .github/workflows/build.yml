@@ -36,6 +36,7 @@ on:
           - detectron2
           - pyg_lib
           - torch_spline_conv
+          - drtk
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
