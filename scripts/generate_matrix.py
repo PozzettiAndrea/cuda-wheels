@@ -13,6 +13,18 @@ try:
 except ImportError:
     import tomli as tomllib  # Python < 3.11 fallback
 
+# Combos where upstream PyTorch has no Windows wheel — skip these in matrix generation.
+# Format: (cuda_short, torch_major_minor, python_short, platform)
+PHANTOM_COMBOS = {
+    ("124", "2.5", "313", "windows"),   # no torch 2.5+cu124 cp313 win
+    # cu129 torch 2.10 is linux-only upstream
+    ("129", "2.10", "310", "windows"),
+    ("129", "2.10", "311", "windows"),
+    ("129", "2.10", "312", "windows"),
+    ("129", "2.10", "313", "windows"),
+    ("129", "2.10", "314", "windows"),
+}
+
 
 def fetch_package_info(repo: str, tag: str, subdir: str = "") -> tuple[Optional[str], Optional[str]]:
     """
@@ -210,6 +222,9 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
 
                 for platform in build["platforms"]:
                     if platform_filter != "all" and platform != platform_filter:
+                        continue
+                    # Skip phantom combos (no upstream torch wheel)
+                    if (cuda_short, torch_short, python_short, platform) in PHANTOM_COMBOS:
                         continue
                     # Skip if wheel already exists
                     if wheel_exists(existing_wheels, pkg["name"], cuda_short,
