@@ -1,0 +1,31 @@
+name: drtk
+source_repo: facebookresearch/DRTK
+source_tag: c5a3e523435b4daa37572c0653d6686531c787b2
+
+free_disk_space: true
+
+build_matrix:
+  combinations:
+    # ── cu128 (torch 2.7.0 – 2.10.0) ──
+    - cuda: "12.8"
+      pytorch: "2.7.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+    - cuda: "12.8"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    # ── cu130 (torch 2.9.0 – 2.10.0) ──
+    - cuda: "13.0"
+      pytorch: "2.9.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "13.0"
+      pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  platforms: ["linux"]
+
+extra_deps: "numpy"
