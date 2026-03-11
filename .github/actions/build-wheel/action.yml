@@ -122,12 +122,14 @@ runs:
             continue
           fi
           # Bundle external shared libs into the wheel
-          # Exclude: driver libs (must come from host), PyTorch libs (installed separately)
+          # Exclude: driver libs (must come from host), PyTorch libs (installed separately),
+          # CUDA runtime (provided by PyTorch or the CUDA toolkit)
           if auditwheel repair "$whl" \
             --plat manylinux_2_35_x86_64 \
             -w repaired/ \
             --exclude libcuda.so \
             --exclude libcuda.so.1 \
+            --exclude libcudart.so \
             --exclude libtorch.so \
             --exclude libtorch_cpu.so \
             --exclude libtorch_cuda.so \
