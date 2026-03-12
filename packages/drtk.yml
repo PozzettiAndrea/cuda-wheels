@@ -65,4 +65,5 @@ build_matrix:
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
   platforms: ["linux", "windows"]
 
+patch_script: patches/drtk.py
 extra_deps: "numpy"
