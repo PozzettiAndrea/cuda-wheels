@@ -31,6 +31,17 @@ elif "/MT" in content:
 else:
     print("WARNING: /MT not found in setup.py — source may have changed")
 
+# Downgrade CUDA -std=c++20 to c++17 — nvcc's C++20 parser misparses
+# PyTorch template expressions like .to<List<Elem>>() in ivalue_inl.h
+if '"-std=c++20"' in content:
+    content = content.replace('"-std=c++20"', '"-std=c++17"')
+    print("Patched setup.py: -std=c++20 → -std=c++17 (nvcc C++20 breaks PyTorch headers)")
+elif "-std=c++20" in content:
+    content = content.replace("-std=c++20", "-std=c++17")
+    print("Patched setup.py: -std=c++20 → -std=c++17 (nvcc C++20 breaks PyTorch headers)")
+else:
+    print("INFO: -std=c++20 not found in setup.py (already c++17 or unset)")
+
 setup_file.write_text(content)
 
 # Re-enable half/bfloat16 operators in all .cu files.
