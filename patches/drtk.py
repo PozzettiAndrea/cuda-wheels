@@ -1,7 +1,7 @@
 """Patch DRTK for Windows MSVC compilation.
 
 1. Remove /GR- flag — disables RTTI, but PyTorch headers require it
-   (dynamic_cast / dynamic_pointer_cast → C2280 errors without RTTI).
+   (dynamic_cast / dynamic_pointer_cast -> C2280 errors without RTTI).
 2. Replace /MT with /MD — DRTK uses static CRT (/MT) but nvcc compiles
    .cu files with /MD (dynamic CRT), causing LNK2038 mismatch.
 """
@@ -35,10 +35,10 @@ else:
 # PyTorch template expressions like .to<List<Elem>>() in ivalue_inl.h
 if '"-std=c++20"' in content:
     content = content.replace('"-std=c++20"', '"-std=c++17"')
-    print("Patched setup.py: -std=c++20 → -std=c++17 (nvcc C++20 breaks PyTorch headers)")
+    print("Patched setup.py: -std=c++20 -> -std=c++17 (nvcc C++20 breaks PyTorch headers)")
 elif "-std=c++20" in content:
     content = content.replace("-std=c++20", "-std=c++17")
-    print("Patched setup.py: -std=c++20 → -std=c++17 (nvcc C++20 breaks PyTorch headers)")
+    print("Patched setup.py: -std=c++20 -> -std=c++17 (nvcc C++20 breaks PyTorch headers)")
 else:
     print("INFO: -std=c++20 not found in setup.py (already c++17 or unset)")
 
