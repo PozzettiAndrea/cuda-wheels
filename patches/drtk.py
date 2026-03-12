@@ -32,3 +32,27 @@ else:
     print("WARNING: /MT not found in setup.py — source may have changed")
 
 setup_file.write_text(content)
+
+# Fix CUDA 12.4 CUB + __half operator conflict in interpolate_kernel.cu
+# PyTorch adds -D__CUDA_NO_HALF_OPERATORS__ etc. on the command line, but
+# CUB's dispatch_histogram.cuh and agent_sub_warp_merge_sort.cuh need __half
+# comparison operators.  #undef at the top of the file overrides the -D flags.
+interp_cu = Path("src/interpolate/interpolate_kernel.cu")
+if interp_cu.exists():
+    cu_content = interp_cu.read_text()
+    undef_block = (
+        "// -- cuda-wheels patch: re-enable half operators for CUB compat --\n"
+        "#undef __CUDA_NO_HALF_OPERATORS__\n"
+        "#undef __CUDA_NO_HALF2_OPERATORS__\n"
+        "#undef __CUDA_NO_HALF_CONVERSIONS__\n"
+        "#undef __CUDA_NO_BFLOAT16_CONVERSIONS__\n"
+        "// -- end patch --\n\n"
+    )
+    if "__CUDA_NO_HALF_OPERATORS__" not in cu_content:
+        # undefs not already present
+        interp_cu.write_text(undef_block + cu_content)
+        print("Patched interpolate_kernel.cu: #undef half operator macros for CUB compat")
+    else:
+        print("interpolate_kernel.cu already has half operator handling")
+else:
+    print("WARNING: interpolate_kernel.cu not found — source structure may have changed")
