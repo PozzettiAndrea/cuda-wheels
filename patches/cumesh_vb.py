@@ -57,7 +57,7 @@ content = content.replace(
 )
 content = content.replace(
     '"nvcc": ["-O3","-std=c++20"]',
-    '"nvcc": ["-O3", "-std=c++17"] if os.name == "nt" else ["-O3", "-std=c++20"]',
+    '"nvcc": ["-O3", "-std=c++17", "--extended-lambda"] if os.name == "nt" else ["-O3", "-std=c++20"]',
 )
 setup_file.write_text(content)
 print("Patched CXX/NVCC flags for Windows (c++17, /O2)")
