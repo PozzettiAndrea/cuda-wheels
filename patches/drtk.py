@@ -33,26 +33,22 @@ else:
 
 setup_file.write_text(content)
 
-# Fix CUDA 12.4 CUB + __half operator conflict in interpolate_kernel.cu
-# PyTorch adds -D__CUDA_NO_HALF_OPERATORS__ etc. on the command line, but
-# CUB's dispatch_histogram.cuh and agent_sub_warp_merge_sort.cuh need __half
-# comparison operators.  #undef at the top of the file overrides the -D flags.
-interp_cu = Path("src/interpolate/interpolate_kernel.cu")
-if interp_cu.exists():
-    cu_content = interp_cu.read_text()
-    undef_block = (
-        "// -- cuda-wheels patch: re-enable half operators for CUB compat --\n"
-        "#undef __CUDA_NO_HALF_OPERATORS__\n"
-        "#undef __CUDA_NO_HALF2_OPERATORS__\n"
-        "#undef __CUDA_NO_HALF_CONVERSIONS__\n"
-        "#undef __CUDA_NO_BFLOAT16_CONVERSIONS__\n"
-        "// -- end patch --\n\n"
-    )
+# Re-enable half/bfloat16 operators in all .cu files.
+# PyTorch adds -D__CUDA_NO_HALF_OPERATORS__ etc. on the command line, which
+# breaks CUB headers (dispatch_histogram.cuh, agent_sub_warp_merge_sort.cuh)
+# and disables native half-precision ops.  #undef at the top overrides the -D.
+UNDEF_BLOCK = (
+    "// -- cuda-wheels patch: re-enable half/bfloat16 operators --\n"
+    "#undef __CUDA_NO_HALF_OPERATORS__\n"
+    "#undef __CUDA_NO_HALF2_OPERATORS__\n"
+    "#undef __CUDA_NO_HALF_CONVERSIONS__\n"
+    "#undef __CUDA_NO_BFLOAT16_CONVERSIONS__\n"
+    "// -- end patch --\n\n"
+)
+patched_cu = 0
+for cu_file in Path("src").rglob("*.cu"):
+    cu_content = cu_file.read_text()
     if "__CUDA_NO_HALF_OPERATORS__" not in cu_content:
-        # undefs not already present
-        interp_cu.write_text(undef_block + cu_content)
-        print("Patched interpolate_kernel.cu: #undef half operator macros for CUB compat")
-    else:
-        print("interpolate_kernel.cu already has half operator handling")
-else:
-    print("WARNING: interpolate_kernel.cu not found — source structure may have changed")
+        cu_file.write_text(UNDEF_BLOCK + cu_content)
+        patched_cu += 1
+print(f"Patched {patched_cu} .cu files: #undef half/bfloat16 operator macros")
