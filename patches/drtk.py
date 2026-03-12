@@ -1,7 +1,9 @@
 """Patch DRTK for Windows MSVC compilation.
 
-Remove /GR- flag which disables RTTI — PyTorch headers require RTTI
-(dynamic_cast / dynamic_pointer_cast) and fail with C2280 errors without it.
+1. Remove /GR- flag — disables RTTI, but PyTorch headers require it
+   (dynamic_cast / dynamic_pointer_cast → C2280 errors without RTTI).
+2. Replace /MT with /MD — DRTK uses static CRT (/MT) but nvcc compiles
+   .cu files with /MD (dynamic CRT), causing LNK2038 mismatch.
 """
 from pathlib import Path
 
@@ -17,5 +19,16 @@ elif "/GR-" in content:
     print("Patched setup.py: removed /GR- (RTTI required by PyTorch)")
 else:
     print("WARNING: /GR- not found in setup.py — source may have changed")
+
+# Replace /MT (static CRT) with /MD (dynamic CRT) — nvcc uses /MD,
+# mixing /MT and /MD causes linker error LNK2038
+if '"/MT"' in content:
+    content = content.replace('"/MT"', '"/MD"')
+    print("Patched setup.py: replaced /MT with /MD (CRT must match nvcc's /MD)")
+elif "/MT" in content:
+    content = content.replace("/MT", "/MD")
+    print("Patched setup.py: replaced /MT with /MD (CRT must match nvcc's /MD)")
+else:
+    print("WARNING: /MT not found in setup.py — source may have changed")
 
 setup_file.write_text(content)
