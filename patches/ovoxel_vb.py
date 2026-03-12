@@ -75,13 +75,24 @@ def _batched_unsigned_distance(bvh, positions, batch_size=500000, return_uvw=Fal
 
 '''
 
+    # Replace bare flex_gemm/cumesh imports with try/except fallbacks
+    # so the wheel works whether the _vb or non-vb variants are installed
+    content = content.replace(
+        'from flex_gemm.ops.grid_sample import grid_sample_3d',
+        'try:\n    from flex_gemm_vb.ops.grid_sample import grid_sample_3d\nexcept ImportError:\n    from flex_gemm.ops.grid_sample import grid_sample_3d',
+    )
+    content = content.replace(
+        'import cumesh\n',
+        'try:\n    import cumesh_vb as cumesh\nexcept ImportError:\n    import cumesh\n',
+    )
+
     content = re.sub(r'(import cumesh\n)', r'\1' + batched_func, content)
     content = content.replace(
         '_, face_id, uvw = bvh.unsigned_distance(valid_pos, return_uvw=True)',
         '_, face_id, uvw = _batched_unsigned_distance(bvh, valid_pos, return_uvw=True)'
     )
     postprocess.write_text(content)
-    print("Patched postprocess.py for batched BVH queries")
+    print("Patched postprocess.py for batched BVH queries and flexible imports")
 
 # --- 3. Fix size_t narrowing for MSVC ---
 for f in ["o-voxel/src/io/filter_neighbor.cpp", "o-voxel/src/io/filter_parent.cpp"]:

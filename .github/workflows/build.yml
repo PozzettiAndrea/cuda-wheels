@@ -31,6 +31,7 @@ on:
           - torch_scatter
           - torch_sparse
           - o_voxel_vb
+          - o_voxel_vb_ap
           - cumesh_vb
           - flex_gemm_vb
           - detectron2
