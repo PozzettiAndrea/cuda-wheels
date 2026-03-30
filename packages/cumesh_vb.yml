@@ -36,6 +36,9 @@ build_matrix:
     - cuda: "12.6"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.6"
+      pytorch: "2.11.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     # ── cu128 (torch 2.7.0 – 2.10.0) ──
     - cuda: "12.8"
       pytorch: "2.7.0"
@@ -48,6 +51,9 @@ build_matrix:
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     - cuda: "12.8"
       pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.8"
+      pytorch: "2.11.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     # ── cu129 (torch 2.8.0 – 2.10.0) ──
     - cuda: "12.9"
@@ -65,5 +71,8 @@ build_matrix:
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     - cuda: "13.0"
       pytorch: "2.10.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "13.0"
+      pytorch: "2.11.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
   platforms: ["linux", "windows"]
