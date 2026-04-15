@@ -1,4 +1,4 @@
-name: dpvo-cuda
+name: dpvo_cuda
 source_repo: princeton-vl/DPVO
 version: "1.0.0"
 source_tag: ""

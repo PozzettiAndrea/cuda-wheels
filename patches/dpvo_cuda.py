@@ -24,7 +24,7 @@ print("Eigen headers installed successfully")
 # Rename package to dpvo-cuda
 setup_py = Path("setup.py")
 content = setup_py.read_text()
-content = content.replace("name='dpvo'", "name='dpvo-cuda'")
+content = content.replace("name='dpvo'", "name='dpvo_cuda'")
 content = content.replace("packages=find_packages()", "packages=[]")
 setup_py.write_text(content)
 
