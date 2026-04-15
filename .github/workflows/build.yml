@@ -22,7 +22,7 @@ on:
           - cubvh
           - o_voxel
           - nvdiffrec_render
-          - dpvo-cuda
+          - dpvo_cuda
           - pytorch3d
           - cumm
           - spconv
