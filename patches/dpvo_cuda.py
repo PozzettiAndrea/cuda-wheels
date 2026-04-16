@@ -25,7 +25,9 @@ print("Eigen headers installed successfully")
 setup_py = Path("setup.py")
 content = setup_py.read_text()
 content = content.replace("name='dpvo'", "name='dpvo_cuda'")
-content = content.replace("packages=find_packages()", "packages=[]")
+# Keep packages=find_packages() so the dpvo/ package ships and the
+# compiled ext_modules (cuda_corr, cuda_ba, lietorch_backends) get bundled
+# into the wheel. Without this the wheel is essentially empty.
 setup_py.write_text(content)
 
 print("setup.py patched: renamed to dpvo-cuda")
