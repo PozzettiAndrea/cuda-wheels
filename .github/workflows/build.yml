@@ -1,5 +1,5 @@
 name: Build Wheels
-run-name: "Build ${{ inputs.package }} wheels${{ inputs.overwrite == true && ' (overwrite)' || '' }}"
+run-name: "Build ${{ inputs.package }} wheels${{ inputs.overwrite == true && ' (overwrite)' || '' }}${{ inputs.runner == 'self-hosted' && ' [self-hosted]' || '' }}${{ inputs.max_jobs != '0' && format(' max_jobs={0}', inputs.max_jobs) || '' }}"
 
 on:
   workflow_dispatch:
@@ -61,8 +61,22 @@ on:
           - "12.4"
           - "12.6"
           - "12.8"
+          - "12.9"
           - "13.0"
         default: all
+      runner:
+        description: 'Runner type'
+        required: false
+        type: choice
+        options:
+          - github
+          - self-hosted
+        default: github
+      max_jobs:
+        description: 'Max parallel compilation jobs (0 = use package default)'
+        required: false
+        type: string
+        default: '0'
 
 jobs:
   generate-matrix:
@@ -95,7 +109,7 @@ jobs:
   build-linux:
     name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux }}
@@ -163,13 +177,27 @@ jobs:
           fi
 
       - name: Setup CUDA
-        if: steps.check.outputs.exists != 'true'
+        if: steps.check.outputs.exists != 'true' && inputs.runner != 'self-hosted'
         uses: ./.github/actions/setup-cuda
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: linux
           installer-type: ${{ matrix.cuda_installer }}
           extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup CUDA env (self-hosted)
+        if: steps.check.outputs.exists != 'true' && inputs.runner == 'self-hosted'
+        shell: bash
+        run: |
+          CUDA_VER="${{ matrix.cuda }}"
+          if [ -d "/usr/local/cuda-${CUDA_VER}" ]; then
+            echo "CUDA_HOME=/usr/local/cuda-${CUDA_VER}" >> $GITHUB_ENV
+            echo "/usr/local/cuda-${CUDA_VER}/bin" >> $GITHUB_PATH
+          elif [ -d "/usr/local/cuda" ]; then
+            echo "CUDA_HOME=/usr/local/cuda" >> $GITHUB_ENV
+            echo "/usr/local/cuda/bin" >> $GITHUB_PATH
+          fi
+          nvcc --version || echo "WARNING: nvcc not found"
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
@@ -201,7 +229,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: linux
-          max-jobs: ${{ matrix.max_jobs }}
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
@@ -215,7 +243,7 @@ jobs:
   build-windows:
     name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
-    runs-on: windows-2022
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows","cuda"]') || 'windows-2022' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows }}
@@ -272,13 +300,25 @@ jobs:
           fi
 
       - name: Setup CUDA
-        if: steps.check.outputs.exists != 'true'
+        if: steps.check.outputs.exists != 'true' && inputs.runner != 'self-hosted'
         uses: ./.github/actions/setup-cuda
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: windows
           installer-type: ${{ matrix.cuda_installer }}
           extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup CUDA env (self-hosted)
+        if: steps.check.outputs.exists != 'true' && inputs.runner == 'self-hosted'
+        shell: bash
+        run: |
+          CUDA_VER="${{ matrix.cuda }}"
+          CUDA_PATH="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA_VER}"
+          if [ -d "$CUDA_PATH" ]; then
+            echo "CUDA_HOME=${CUDA_PATH}" >> $GITHUB_ENV
+            echo "${CUDA_PATH}/bin" >> $GITHUB_PATH
+          fi
+          nvcc --version || echo "WARNING: nvcc not found"
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
@@ -302,7 +342,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: windows
-          max-jobs: ${{ matrix.max_jobs }}
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
