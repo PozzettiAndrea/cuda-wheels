@@ -102,13 +102,13 @@ runs:
         # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
         export CUMM_DISABLE_JIT=1
         export SPCONV_DISABLE_JIT=1
-        pip wheel . --no-build-isolation --no-deps -v -w dist
+        python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Repair wheel (Linux)
       if: inputs.platform == 'linux'
       shell: bash
       run: |
-        pip install auditwheel patchelf
+        python -m pip install auditwheel patchelf
         BUILD_DIR="source"
         if [ -n "${{ inputs.build-subdir }}" ]; then
           BUILD_DIR="source/${{ inputs.build-subdir }}"
@@ -179,7 +179,7 @@ runs:
         # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
         $env:CUMM_DISABLE_JIT = "1"
         $env:SPCONV_DISABLE_JIT = "1"
-        pip wheel . --no-build-isolation --no-deps -v -w dist
+        python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       if: inputs.platform == 'linux'

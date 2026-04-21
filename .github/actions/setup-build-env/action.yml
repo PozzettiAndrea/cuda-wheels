@@ -45,7 +45,7 @@ runs:
       if: inputs.platform == 'linux'
       shell: bash
       run: |
-        pip install uv
+        python -m pip install uv
         uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
         uv pip install --system wheel setuptools ninja numpy triton packaging ${{ inputs.extra-deps }}
 
@@ -72,7 +72,7 @@ runs:
       if: inputs.platform == 'windows'
       shell: bash
       run: |
-        pip install uv
+        python -m pip install uv
         uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
         uv pip install --system wheel setuptools ninja numpy packaging ${{ inputs.extra-deps }}
 
