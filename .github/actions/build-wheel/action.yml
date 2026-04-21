@@ -44,6 +44,10 @@ inputs:
     description: 'Subdirectory to build from (for monorepos)'
     required: false
     default: ''
+  nvcc-flags:
+    description: 'Extra flags to pass to nvcc via NVCC_APPEND_FLAGS (e.g. -diag-suppress 221)'
+    required: false
+    default: ''
 
 outputs:
   wheel-path:
@@ -102,6 +106,10 @@ runs:
         # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
         export CUMM_DISABLE_JIT=1
         export SPCONV_DISABLE_JIT=1
+        # Per-package nvcc flags (e.g. warning suppression)
+        if [ -n "${{ inputs.nvcc-flags }}" ]; then
+          export NVCC_APPEND_FLAGS="${{ inputs.nvcc-flags }}"
+        fi
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Repair wheel (Linux)
@@ -179,6 +187,10 @@ runs:
         # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
         $env:CUMM_DISABLE_JIT = "1"
         $env:SPCONV_DISABLE_JIT = "1"
+        # Per-package nvcc flags (e.g. warning suppression)
+        if ("${{ inputs.nvcc-flags }}" -ne "") {
+          $env:NVCC_APPEND_FLAGS = "${{ inputs.nvcc-flags }}"
+        }
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)

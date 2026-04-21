@@ -252,6 +252,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "build_subdir": pkg.get("build_subdir", ""),
                         "cuda_installer": pkg.get("cuda_installer", "network"),
                         "extra_cuda_components": pkg.get("extra_cuda_components", ""),
+                        "nvcc_flags": pkg.get("nvcc_flags", ""),
                     })
 
     if skipped > 0:

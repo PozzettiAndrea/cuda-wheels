@@ -219,6 +219,7 @@ jobs:
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
+          nvcc-flags: ${{ matrix.nvcc_flags }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -320,6 +321,7 @@ jobs:
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
+          nvcc-flags: ${{ matrix.nvcc_flags }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
