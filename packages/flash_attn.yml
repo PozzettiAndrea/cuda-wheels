@@ -16,7 +16,7 @@ patch_script: patches/flash_attn.py
 extra_deps: "psutil"
 
 # Suppress noisy nvcc warnings (float overflow #221 repeats 1000s of times with full template stacks)
-nvcc_flags: "-Xcudafe --brief_diagnostics=true -diag-suppress 221"
+nvcc_flags: "-diag-suppress 221"
 
 build_matrix:
   combinations:
