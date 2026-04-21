@@ -177,27 +177,13 @@ jobs:
           fi
 
       - name: Setup CUDA
-        if: steps.check.outputs.exists != 'true' && inputs.runner != 'self-hosted'
+        if: steps.check.outputs.exists != 'true'
         uses: ./.github/actions/setup-cuda
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: linux
           installer-type: ${{ matrix.cuda_installer }}
           extra-components: ${{ matrix.extra_cuda_components }}
-
-      - name: Setup CUDA env (self-hosted)
-        if: steps.check.outputs.exists != 'true' && inputs.runner == 'self-hosted'
-        shell: bash
-        run: |
-          CUDA_VER="${{ matrix.cuda }}"
-          if [ -d "/usr/local/cuda-${CUDA_VER}" ]; then
-            echo "CUDA_HOME=/usr/local/cuda-${CUDA_VER}" >> $GITHUB_ENV
-            echo "/usr/local/cuda-${CUDA_VER}/bin" >> $GITHUB_PATH
-          elif [ -d "/usr/local/cuda" ]; then
-            echo "CUDA_HOME=/usr/local/cuda" >> $GITHUB_ENV
-            echo "/usr/local/cuda/bin" >> $GITHUB_PATH
-          fi
-          nvcc --version || echo "WARNING: nvcc not found"
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
@@ -300,25 +286,13 @@ jobs:
           fi
 
       - name: Setup CUDA
-        if: steps.check.outputs.exists != 'true' && inputs.runner != 'self-hosted'
+        if: steps.check.outputs.exists != 'true'
         uses: ./.github/actions/setup-cuda
         with:
           cuda-version: ${{ matrix.cuda }}
           platform: windows
           installer-type: ${{ matrix.cuda_installer }}
           extra-components: ${{ matrix.extra_cuda_components }}
-
-      - name: Setup CUDA env (self-hosted)
-        if: steps.check.outputs.exists != 'true' && inputs.runner == 'self-hosted'
-        shell: bash
-        run: |
-          CUDA_VER="${{ matrix.cuda }}"
-          CUDA_PATH="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA_VER}"
-          if [ -d "$CUDA_PATH" ]; then
-            echo "CUDA_HOME=${CUDA_PATH}" >> $GITHUB_ENV
-            echo "${CUDA_PATH}/bin" >> $GITHUB_PATH
-          fi
-          nvcc --version || echo "WARNING: nvcc not found"
 
       - name: Setup build environment
         if: steps.check.outputs.exists != 'true'
