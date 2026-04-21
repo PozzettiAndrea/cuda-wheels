@@ -95,7 +95,9 @@ runs:
         cd $BUILD_DIR
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
-        export MAX_JOBS=${{ inputs.max-jobs }}
+        if [ -n "${{ inputs.max-jobs }}" ]; then
+          export MAX_JOBS=${{ inputs.max-jobs }}
+        fi
         # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
         export FORCE_CUDA=1
         # Add CUDA stubs to library path for linking (libcuda.so)
@@ -177,7 +179,9 @@ runs:
         }
         cd $buildDir
         $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
-        $env:MAX_JOBS = "${{ inputs.max-jobs }}"
+        if ("${{ inputs.max-jobs }}" -ne "") {
+          $env:MAX_JOBS = "${{ inputs.max-jobs }}"
+        }
         $env:DISTUTILS_USE_SDK = "1"
         # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
         $env:FORCE_CUDA = "1"

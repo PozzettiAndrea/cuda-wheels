@@ -215,7 +215,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: linux
-          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || '' }}
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
@@ -317,7 +317,7 @@ jobs:
           cuda-short: ${{ matrix.cuda_short }}
           pytorch-version: ${{ matrix.pytorch }}
           platform: windows
-          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || '' }}
           clone-recursive: ${{ matrix.clone_recursive }}
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
