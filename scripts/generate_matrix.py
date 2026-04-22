@@ -86,6 +86,9 @@ def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
     # sm_80 binary is forward-compatible with sm_86/sm_89, so no need for separate targets
     if cuda_major >= 13:
         archs = ["8.0", "9.0"]
+    elif (cuda_major, cuda_minor) == (12, 4):
+        # cu124: include Pascal (sm_50/sm_60) — PyTorch cu124 ships these
+        archs = ["5.0", "6.0", "7.0", "8.0", "9.0"]
     else:
         archs = ["7.0", "8.0", "9.0"]
 
