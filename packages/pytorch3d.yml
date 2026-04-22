@@ -63,6 +63,9 @@ build_matrix:
     - cuda: "12.9"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    - cuda: "12.9"
+      pytorch: "2.11.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     # ── cu130 (torch 2.9.0 – 2.10.0) ──
     - cuda: "13.0"
       pytorch: "2.9.0"
