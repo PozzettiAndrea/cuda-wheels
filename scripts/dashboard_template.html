@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cuda-wheels dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>cuda-wheels</h1>
+<p class="subtitle">Pre-built CUDA Python wheels for ML/3D packages</p>
+
+<div class="stats">
+  <div class="stat"><div class="stat-value">{{total_packages}}</div><div class="stat-label">packages</div></div>
+  <div class="stat"><div class="stat-value">{{total_wheels}}</div><div class="stat-label">wheels</div></div>
+  <div class="stat"><div class="stat-value">{{built_count}}</div><div class="stat-label">built by CI</div></div>
+  <div class="stat"><div class="stat-value">{{external_count}}</div><div class="stat-label">external</div></div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" data-tab="built">Built by CI ({{built_count}})</button>
+  <button class="tab" data-tab="external">External ({{external_count}})</button>
+  <button class="tab" data-tab="missing">Missing ({{missing_count}})</button>
+</div>
+
+<div class="tab-content" id="tab-built">
+  <table>
+  <thead>
+  <tr><th>Package</th><th>Versions</th><th># Wheels</th><th>Builds</th><th>Release</th></tr>
+  </thead>
+  <tbody>
+  {{built_rows}}
+  </tbody>
+  </table>
+</div>
+
+<div class="tab-content" id="tab-external" style="display:none">
+  <table>
+  <thead>
+  <tr><th>Package</th><th>Versions</th><th># Wheels</th><th>Source</th></tr>
+  </thead>
+  <tbody>
+  {{ext_rows}}
+  </tbody>
+  </table>
+</div>
+
+<div class="tab-content" id="tab-missing" style="display:none">
+  <div class="missing-filters">
+    <select id="missing-pkg-filter">
+      <option value="">All packages</option>
+    </select>
+  </div>
+  <div id="missing-tables"></div>
+</div>
+
+<!-- Wheel list modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Wheels</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table>
+        <thead><tr><th>Wheel</th><th>Size</th><th>Build Time</th><th>Contents</th></tr></thead>
+        <tbody id="modal-wheels"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Wheel contents modal -->
+<div class="modal-overlay" id="contents-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="contents-title">Contents</h3>
+      <button class="modal-close" onclick="closeContentsModal()">&times;</button>
+    </div>
+    <div id="contents-metadata" style="display:none"></div>
+    <div id="contents-loading" class="loading-bar" style="display:none">
+      <div class="loading-text">Downloading wheel...</div>
+      <div class="loading-track"><div class="loading-fill" id="loading-fill"></div></div>
+    </div>
+    <div class="modal-body">
+      <table>
+        <thead><tr><th>File</th><th>Size</th></tr></thead>
+        <tbody id="contents-files"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><a href="https://github.com/{{repo}}">GitHub</a> &middot; <a href="../">Package Index</a> &middot; <a href="install.html">Install Helper</a></p>
+</footer>
+
+<script src="missing-data.js"></script>
+<script src="packages.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

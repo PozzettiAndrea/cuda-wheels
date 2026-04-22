@@ -1,0 +1,55 @@
+name: Inspect All Wheels
+run-name: "Inspect all wheels (built + external)"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL &
+          sudo apt-get clean &
+          wait
+          df -h /
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pkginfo
+
+      - name: Run full inspection
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/inspect_all_wheels.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-inspection
+          path: |
+            inspection_report.json
+            inspection_report.md
+
+      - name: Deploy inspection page to gh-pages
+        run: |
+          git fetch origin gh-pages:gh-pages
+          git checkout gh-pages
+          rm -rf inspection
+          cp -r inspection_page inspection
+          git add inspection/
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -m "Update wheel inspection report" || echo "No changes"
+          git push origin gh-pages

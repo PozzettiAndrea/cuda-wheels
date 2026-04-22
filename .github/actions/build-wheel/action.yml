@@ -1,0 +1,285 @@
+name: 'Build Wheel'
+description: 'Clone source, apply patches, build wheel, rename with CUDA+PyTorch suffix'
+
+inputs:
+  source-repo:
+    description: 'Source repository (e.g., thu-ml/SageAttention)'
+    required: true
+  source-tag:
+    description: 'Git tag or branch to checkout'
+    required: false
+    default: ''
+  pre-build-script:
+    description: 'Script to run before building (patches, etc.)'
+    required: false
+    default: ''
+  arch-list:
+    description: 'CUDA architectures to build for (auto-computed by generate_matrix.py)'
+    required: true
+  cuda-version:
+    description: 'Full CUDA version (e.g., 12.4)'
+    required: true
+  cuda-short:
+    description: 'Short CUDA version (e.g., 124)'
+    required: true
+  pytorch-version:
+    description: 'PyTorch version (e.g., 2.4.0)'
+    required: true
+  platform:
+    description: 'Platform (linux or windows)'
+    required: true
+  max-jobs:
+    description: 'Max parallel compilation jobs'
+    required: false
+    default: '1'
+  clone-recursive:
+    description: 'Clone with --recursive for submodules'
+    required: false
+    default: 'false'
+  patch-script:
+    description: 'Path to patch script (Python file) to run before building'
+    required: false
+    default: ''
+  build-subdir:
+    description: 'Subdirectory to build from (for monorepos)'
+    required: false
+    default: ''
+  nvcc-flags:
+    description: 'Extra flags to pass to nvcc via NVCC_APPEND_FLAGS (e.g. -diag-suppress 221)'
+    required: false
+    default: ''
+
+outputs:
+  wheel-path:
+    description: 'Path to the built wheel'
+    value: ${{ steps.rename.outputs.wheel-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone source
+      shell: bash
+      run: |
+        RECURSIVE_FLAG=""
+        if [ "${{ inputs.clone-recursive }}" == "true" ]; then
+          RECURSIVE_FLAG="--recursive"
+        fi
+        git clone $RECURSIVE_FLAG https://github.com/${{ inputs.source-repo }}.git source
+        cd source
+        if [ -n "${{ inputs.source-tag }}" ]; then
+          git checkout ${{ inputs.source-tag }}
+        fi
+
+    - name: Apply patch script
+      if: inputs.patch-script != ''
+      shell: bash
+      run: |
+        cd source
+        python $GITHUB_WORKSPACE/${{ inputs.patch-script }}
+
+    - name: Pre-build script
+      if: inputs.pre-build-script != ''
+      shell: bash
+      run: |
+        cd source
+        ${{ inputs.pre-build-script }}
+
+    - name: Build wheel (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        cd $BUILD_DIR
+        export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
+        export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
+        if [ -n "${{ inputs.max-jobs }}" ]; then
+          export MAX_JOBS=${{ inputs.max-jobs }}
+        fi
+        # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
+        export FORCE_CUDA=1
+        # Add CUDA stubs to library path for linking (libcuda.so)
+        export LIBRARY_PATH=/usr/local/cuda-${{ inputs.cuda-version }}/lib64/stubs:${LIBRARY_PATH:-}
+        # For cumm/spconv: set CUDA version for prebuilt mode
+        export CUMM_CUDA_VERSION="${{ inputs.cuda-version }}"
+        export CUMM_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
+        # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
+        export CUMM_DISABLE_JIT=1
+        export SPCONV_DISABLE_JIT=1
+        # Auto-tune NVCC_THREADS based on available RAM (each cicc ~4GB)
+        if [ -z "$NVCC_THREADS" ]; then
+          FREE_GB=$(free -g | awk '/Mem:/{print $7}')
+          if [ "$FREE_GB" -lt 20 ]; then export NVCC_THREADS=1
+          elif [ "$FREE_GB" -lt 40 ]; then export NVCC_THREADS=2
+          else export NVCC_THREADS=4; fi
+          echo "Auto-set NVCC_THREADS=$NVCC_THREADS (${FREE_GB}GB free RAM)"
+        fi
+        # Per-package nvcc flags (e.g. warning suppression)
+        if [ -n "${{ inputs.nvcc-flags }}" ]; then
+          export NVCC_APPEND_FLAGS="${{ inputs.nvcc-flags }}"
+        fi
+        python -m pip wheel . --no-build-isolation --no-deps -v -w dist
+
+    - name: Repair wheel (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        python -m pip install auditwheel patchelf
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        # Add CUDA toolkit libs so auditwheel can find and bundle them (e.g. libnvrtc-builtins.so)
+        export LD_LIBRARY_PATH=/usr/local/cuda-${{ inputs.cuda-version }}/lib64:${LD_LIBRARY_PATH:-}
+        cd $BUILD_DIR/dist
+        for whl in *.whl; do
+          # Skip pure Python wheels
+          if [[ "$whl" == *"-py3-none-any.whl" ]]; then
+            continue
+          fi
+          # Bundle external shared libs into the wheel
+          # Exclude: driver libs (must come from host), PyTorch libs (installed separately),
+          # CUDA runtime (provided by PyTorch or the CUDA toolkit)
+          if auditwheel repair "$whl" \
+            --plat manylinux_2_35_x86_64 \
+            -w repaired/ \
+            --exclude libcuda.so \
+            --exclude libcuda.so.1 \
+            --exclude libcudart.so \
+            --exclude libtorch.so \
+            --exclude libtorch_cpu.so \
+            --exclude libtorch_cuda.so \
+            --exclude libtorch_python.so \
+            --exclude libc10.so \
+            --exclude libc10_cuda.so; then
+            rm "$whl"
+          else
+            echo "::warning::auditwheel repair failed for $whl, using original"
+          fi
+        done
+        if [ -d repaired ] && ls repaired/*.whl 1>/dev/null 2>&1; then
+          mv repaired/*.whl .
+          rm -rf repaired/
+        fi
+
+    - name: Setup MSVC (Windows)
+      if: inputs.platform == 'windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build wheel (Windows)
+      if: inputs.platform == 'windows'
+      shell: powershell
+      run: |
+        # Ensure ninja is in PATH (pip Scripts directory)
+        $pythonPath = (python -c "import sys; print(sys.prefix)")
+        $scriptsPath = "$pythonPath\Scripts"
+        $env:PATH = "$scriptsPath;$env:PATH"
+
+        # Verify ninja is available
+        Write-Host "Checking ninja..."
+        ninja --version
+
+        $buildDir = "source"
+        if ("${{ inputs.build-subdir }}" -ne "") {
+          $buildDir = "source/${{ inputs.build-subdir }}"
+        }
+        cd $buildDir
+        $env:TORCH_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
+        if ("${{ inputs.max-jobs }}" -ne "") {
+          $env:MAX_JOBS = "${{ inputs.max-jobs }}"
+        }
+        $env:DISTUTILS_USE_SDK = "1"
+        # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)
+        $env:FORCE_CUDA = "1"
+        # For cumm/spconv: set CUDA version for prebuilt mode
+        $env:CUMM_CUDA_VERSION = "${{ inputs.cuda-version }}"
+        $env:CUMM_CUDA_ARCH_LIST = "${{ inputs.arch-list }}"
+        # For cumm/spconv: disable JIT to force ahead-of-time CUDA compilation
+        $env:CUMM_DISABLE_JIT = "1"
+        $env:SPCONV_DISABLE_JIT = "1"
+        # Auto-tune NVCC_THREADS based on available RAM (each cicc ~4GB)
+        if (-not $env:NVCC_THREADS) {
+          $freeGB = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB)
+          if ($freeGB -lt 20) { $env:NVCC_THREADS = "1" }
+          elseif ($freeGB -lt 40) { $env:NVCC_THREADS = "2" }
+          else { $env:NVCC_THREADS = "4" }
+          Write-Host "Auto-set NVCC_THREADS=$($env:NVCC_THREADS) (${freeGB}GB free RAM)"
+        }
+        # Per-package nvcc flags (e.g. warning suppression)
+        if ("${{ inputs.nvcc-flags }}" -ne "") {
+          $env:NVCC_APPEND_FLAGS = "${{ inputs.nvcc-flags }}"
+        }
+        python -m pip wheel . --no-build-isolation --no-deps -v -w dist
+
+    - name: Rename wheel with CUDA+PyTorch suffix (Linux)
+      if: inputs.platform == 'linux'
+      id: rename-linux
+      shell: bash
+      run: |
+        BUILD_DIR="source"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}"
+        fi
+        cd $BUILD_DIR/dist
+        CUDA_SHORT="${{ inputs.cuda-short }}"
+        TORCH_MM=$(echo "${{ inputs.pytorch-version }}" | cut -d. -f1,2)
+        for f in *.whl; do
+          # Skip pure Python wheels (py3-none-any) - they don't have CUDA code
+          if [[ "$f" == *"-py3-none-any.whl" ]]; then
+            echo "WARNING: Built pure Python wheel $f - CUDA compilation may have failed"
+            newname="$f"
+          else
+            newname=$(echo "$f" | sed "s/-cp/+cu${CUDA_SHORT}torch${TORCH_MM}-cp/")
+            mv "$f" "$newname"
+          fi
+          echo "wheel-path=$BUILD_DIR/dist/$newname" >> $GITHUB_OUTPUT
+        done
+        mkdir -p $GITHUB_WORKSPACE/dist
+        cp *.whl $GITHUB_WORKSPACE/dist/
+
+    - name: Rename wheel with CUDA+PyTorch suffix (Windows)
+      if: inputs.platform == 'windows'
+      id: rename-windows
+      shell: powershell
+      run: |
+        $buildDir = "source"
+        if ("${{ inputs.build-subdir }}" -ne "") {
+          $buildDir = "source/${{ inputs.build-subdir }}"
+        }
+        cd "$buildDir\dist"
+        $cudaShort = "${{ inputs.cuda-short }}"
+        $torchMM = "${{ inputs.pytorch-version }}".Split('.')[0..1] -join '.'
+        Get-ChildItem *.whl | ForEach-Object {
+          # Skip pure Python wheels (py3-none-any) - they don't have CUDA code
+          if ($_.Name -like "*-py3-none-any.whl") {
+            Write-Host "WARNING: Built pure Python wheel $($_.Name) - CUDA compilation may have failed"
+            $newName = $_.Name
+          } else {
+            # Only replace first occurrence of -cp (use regex with explicit pattern)
+            $newName = $_.Name -replace '^([^-]+-[^-]+)-cp', "`$1+cu${cudaShort}torch${torchMM}-cp"
+            Rename-Item $_.FullName $newName
+          }
+          echo "wheel-path=$buildDir/dist/$newName" >> $env:GITHUB_OUTPUT
+        }
+        New-Item -ItemType Directory -Force -Path $env:GITHUB_WORKSPACE\dist | Out-Null
+        Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
+
+    - name: Fix wheel METADATA version
+      shell: bash
+      run: |
+        # The wheel filename includes the local version (e.g., +cu130torch29)
+        # but the internal METADATA still has the base version from pyproject.toml.
+        # Fix the METADATA to match the filename so pip/uv see consistent versions.
+        python $GITHUB_WORKSPACE/scripts/patch_wheel_version.py $GITHUB_WORKSPACE/dist
+
+    - name: Set wheel-path output
+      id: rename
+      shell: bash
+      run: |
+        if [ "${{ inputs.platform }}" == "linux" ]; then
+          echo "wheel-path=${{ steps.rename-linux.outputs.wheel-path }}" >> $GITHUB_OUTPUT
+        else
+          echo "wheel-path=${{ steps.rename-windows.outputs.wheel-path }}" >> $GITHUB_OUTPUT
+        fi

@@ -1,0 +1,163 @@
+name: Get Patched Sources
+run-name: "Fetch sources: ${{ inputs.package }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to fetch sources for (or "all")'
+        required: true
+        type: choice
+        options:
+          - all
+          - cc_torch
+          - cubvh
+          - cumesh
+          - cumm
+          - dpvo_cuda
+          - flash_attn
+          - flexgemm
+          - gsplat
+          - nvdiffrast
+          - nvdiffrec_render
+          - ovoxel
+          - pytorch3d
+          - sageattention
+          - sageattn3
+          - spconv
+          - torch_cluster
+          - torch_generic_nms
+          - torch_scatter
+          - torch_sparse
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Fetch and patch sources
+        run: python scripts/fetch_patched_sources.py --package "${{ inputs.package }}" --output-dir _staging
+
+      - name: Commit to patched-sources branch
+        run: |
+          PACKAGE="${{ inputs.package }}"
+
+          # Move staging out of the working tree before switching branches
+          mv _staging /tmp/_staging
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Check if patched-sources branch exists on remote
+          if git ls-remote --heads origin patched-sources | grep -q patched-sources; then
+            git fetch origin patched-sources
+            git checkout patched-sources
+          else
+            # Create orphan branch (no history from main)
+            git checkout --orphan patched-sources
+            git rm -rf . 2>/dev/null || true
+            echo "# Patched Sources" > README.md
+            echo "" >> README.md
+            echo "This branch contains the source code for each package after patches are applied." >> README.md
+            echo "It is maintained automatically by GitHub Actions — do not push to this branch manually." >> README.md
+            echo "" >> README.md
+            echo "Each subdirectory corresponds to a package in \`packages/*.yml\`." >> README.md
+            echo "A \`.cuda-wheels-meta.json\` file in each directory records the source repo, tag, and patch status." >> README.md
+            git add README.md
+            git commit -m "Initialize patched-sources branch"
+            git push origin patched-sources
+          fi
+
+          # Update sources — remove only the package(s) being refreshed
+          if [ "$PACKAGE" = "all" ]; then
+            # Remove all package dirs but keep README.md and .git
+            find . -maxdepth 1 -mindepth 1 ! -name '.git' ! -name 'README.md' -exec rm -rf {} +
+          else
+            rm -rf "$PACKAGE"
+          fi
+
+          # Copy staged sources from /tmp back into the branch
+          cp -r /tmp/_staging/* .
+          rm -rf /tmp/_staging
+
+          # Commit and push
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            if [ "$PACKAGE" = "all" ]; then
+              MSG="Update all patched sources"
+            else
+              MSG="Update patched source: $PACKAGE"
+            fi
+            git commit -m "$MSG"
+            git push origin patched-sources
+          fi
+
+      - name: Setup branch protection
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a ruleset that prevents anyone except Actions from pushing
+          # This is idempotent — if the ruleset already exists, this is a no-op
+          REPO="${{ github.repository }}"
+
+          # Check if our ruleset already exists
+          EXISTING=$(gh api "repos/$REPO/rulesets" --jq '.[] | select(.name == "patched-sources-protection") | .id' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            echo "Branch protection ruleset already exists (id: $EXISTING)"
+            exit 0
+          fi
+
+          # Create ruleset: block pushes to patched-sources for everyone
+          # GitHub Actions bypass this via the GITHUB_TOKEN with contents:write
+          echo "Creating branch protection ruleset..."
+          gh api "repos/$REPO/rulesets" \
+            --method POST \
+            --input - <<'EOF' || echo "WARNING: Could not create ruleset (may need admin permissions). Please protect the patched-sources branch manually in Settings > Rules > Rulesets."
+          {
+            "name": "patched-sources-protection",
+            "target": "branch",
+            "enforcement": "active",
+            "conditions": {
+              "ref_name": {
+                "include": ["refs/heads/patched-sources"],
+                "exclude": []
+              }
+            },
+            "bypass_actors": [
+              {
+                "actor_id": 5,
+                "actor_type": "RepositoryRole",
+                "bypass_mode": "always"
+              }
+            ],
+            "rules": [
+              { "type": "non_fast_forward" },
+              {
+                "type": "pull_request",
+                "parameters": {
+                  "required_approving_review_count": 1,
+                  "dismiss_stale_reviews_on_push": false,
+                  "require_code_owner_review": false,
+                  "require_last_push_approval": false,
+                  "required_review_thread_resolution": false,
+                  "automatic_copilot_code_review_enabled": false
+                }
+              }
+            ]
+          }
+          EOF

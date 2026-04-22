@@ -1,0 +1,38 @@
+name: Update Index
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  update-index:
+    runs-on: ubuntu-22.04
+    environment: deploy-index
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate PEP 503 index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/generate_index.py
+
+      - name: Generate full build matrix page
+        run: python scripts/fetch_torch_matrix.py --output docs/matrix/matrix.json --html docs/matrix
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          force_orphan: true
