@@ -240,7 +240,7 @@ jobs:
     steps:
 
       - name: Runner identity (debug)
-        shell: pwsh
+        shell: powershell
         run: |
           echo "runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=$env:COMPUTERNAME user=$(whoami)"
           echo "--- whoami /groups ---"
