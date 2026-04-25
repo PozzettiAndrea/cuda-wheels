@@ -230,7 +230,7 @@ jobs:
   build-windows:
     name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
-    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows","cuda"]') || 'windows-2022' }}
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows }}
