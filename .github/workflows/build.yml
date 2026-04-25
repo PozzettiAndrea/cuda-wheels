@@ -238,6 +238,14 @@ jobs:
       contents: read
 
     steps:
+
+      - name: Runner identity (debug)
+        shell: pwsh
+        run: |
+          echo "runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=$env:COMPUTERNAME user=$(whoami)"
+          echo "--- whoami /groups ---"
+          whoami /groups | Select-String -Pattern "docker|admin|users|service|network" -CaseSensitive:$false
+          echo "--- end debug ---"
       - name: Enable long paths
         shell: powershell
         run: git config --system core.longpaths true
