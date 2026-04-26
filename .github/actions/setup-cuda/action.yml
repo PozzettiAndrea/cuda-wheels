@@ -93,20 +93,8 @@ runs:
         sudo ln -sf /usr/local/cuda-${{ inputs.cuda-version }} /usr/local/cuda
 
     # ============== WINDOWS ==============
-    - name: Detect pre-installed CUDA (Windows)
-      if: inputs.platform == 'windows'
-      id: cuda-preinstalled-windows
-      shell: cmd
-      run: |
-        if exist "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}\bin\nvcc.exe" (
-          echo present=true>>%GITHUB_OUTPUT%
-          echo Found pre-installed CUDA v${{ inputs.cuda-version }} on runner
-        ) else (
-          echo present=false>>%GITHUB_OUTPUT%
-        )
-
     - name: Restore CUDA cache (Windows)
-      if: inputs.platform == 'windows' && steps.cuda-preinstalled-windows.outputs.present != 'true'
+      if: inputs.platform == 'windows'
       id: cuda-cache-windows
       uses: actions/cache/restore@v4
       with:
@@ -114,8 +102,8 @@ runs:
         key: cuda-${{ inputs.cuda-version }}-windows-v3
 
     - name: Install CUDA toolkit (Windows)
-      if: inputs.platform == 'windows' && steps.cuda-preinstalled-windows.outputs.present != 'true' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
-      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"'
+      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
+      shell: powershell
       run: |
         $cudaVersion = "${{ inputs.cuda-version }}"
         $installerType = "${{ inputs.installer-type }}"
@@ -181,34 +169,13 @@ runs:
         $args = @("-s", "-n") + $components
         $process = Start-Process -FilePath "cuda_installer.exe" -ArgumentList $args -Wait -PassThru
         if ($process.ExitCode -ne 0) {
-          Write-Host "===== CUDA installer failed (exit $($process.ExitCode)) - dumping NVIDIA logs ====="
-          $logRoots = @(
-            "$env:ProgramData\NVIDIA Corporation\NVIDIA Installer2",
-            "$env:TEMP\NVIDIA Setup Cache",
-            "$env:LOCALAPPDATA\Temp\NVIDIA Setup Cache"
-          )
-          foreach ($root in $logRoots) {
-            if (Test-Path $root) {
-              Get-ChildItem -Path $root -Filter "*.log" -Recurse -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending |
-                Select-Object -First 3 |
-                ForEach-Object {
-                  Write-Host "----- $($_.FullName) -----"
-                  Get-Content $_.FullName -Tail 80 -ErrorAction SilentlyContinue
-                }
-            }
-          }
-          if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            Write-Host "NOTE: this runner is not elevated. CUDA installer requires admin to write under 'C:\Program Files\NVIDIA GPU Computing Toolkit\'."
-            Write-Host "      Pre-install CUDA $cudaVersion on the runner host once (as admin); the workflow will detect it via the 'Detect pre-installed CUDA' step and skip the install."
-          }
           throw "CUDA installer failed with exit code: $($process.ExitCode)"
         }
         Write-Host "CUDA installed successfully"
 
     - name: Verify CUDA installation (Windows)
       if: inputs.platform == 'windows'
-      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
+      shell: powershell
       run: |
         $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
         $nvccPath = "$cudaPath\bin\nvcc.exe"
@@ -226,7 +193,7 @@ runs:
         & $nvccPath --version
 
     - name: Save CUDA cache (Windows)
-      if: inputs.platform == 'windows' && steps.cuda-preinstalled-windows.outputs.present != 'true' && steps.cuda-cache-windows.outputs.cache-hit != 'true' && (inputs.cuda-version == '12.4' || inputs.cuda-version == '12.8')
+      if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true' && (inputs.cuda-version == '12.4' || inputs.cuda-version == '12.8')
       uses: actions/cache/save@v4
       with:
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}
@@ -234,7 +201,7 @@ runs:
 
     - name: Set CUDA environment (Windows)
       if: inputs.platform == 'windows'
-      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
+      shell: powershell
       run: |
         $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
         echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

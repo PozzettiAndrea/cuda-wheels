@@ -27,57 +27,7 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Detect pre-installed Python (Windows)
-      if: inputs.platform == 'windows'
-      id: py-preinstalled-windows
-      shell: cmd
-      run: |
-        rem Try common install paths and the py launcher. First match wins.
-        rem Sets py-dir output (the directory containing python.exe) when found.
-        setlocal enabledelayedexpansion
-        set "PYVER=${{ inputs.python-version }}"
-        set "PYNODOT=!PYVER:.=!"
-        set "FOUND="
-        for %%P in (
-          "C:\Program Files\Python!PYNODOT!\python.exe"
-          "C:\Python!PYNODOT!\python.exe"
-          "%LOCALAPPDATA%\Programs\Python\Python!PYNODOT!\python.exe"
-          "%PROGRAMFILES%\Python!PYNODOT!\python.exe"
-        ) do (
-          if exist %%P (
-            set "FOUND=%%~dpP"
-            goto :found
-          )
-        )
-        rem Fallback: py launcher
-        where py >nul 2>&1
-        if !errorlevel! equ 0 (
-          for /f "delims=" %%D in ('py -!PYVER! -c "import sys, os; print(os.path.dirname(sys.executable))" 2^>nul') do (
-            if not "%%D"=="" set "FOUND=%%D\"
-          )
-        )
-        :found
-        if defined FOUND (
-          rem Strip trailing backslash for cleanliness
-          set "FOUND=!FOUND:~0,-1!"
-          echo present=true>>%GITHUB_OUTPUT%
-          echo py-dir=!FOUND!>>%GITHUB_OUTPUT%
-          echo Found pre-installed Python !PYVER! at !FOUND!
-        ) else (
-          echo present=false>>%GITHUB_OUTPUT%
-          echo No pre-installed Python !PYVER! found
-        )
-        endlocal
-
-    - name: Add pre-installed Python to PATH (Windows)
-      if: inputs.platform == 'windows' && steps.py-preinstalled-windows.outputs.present == 'true'
-      shell: cmd
-      run: |
-        echo ${{ steps.py-preinstalled-windows.outputs.py-dir }}>>"%GITHUB_PATH%"
-        echo ${{ steps.py-preinstalled-windows.outputs.py-dir }}\Scripts>>"%GITHUB_PATH%"
-
     - name: Setup Python ${{ inputs.python-version }}
-      if: inputs.platform != 'windows' || steps.py-preinstalled-windows.outputs.present != 'true'
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}

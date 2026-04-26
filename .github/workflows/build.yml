@@ -65,12 +65,12 @@ on:
           - "13.0"
         default: all
       pytorch:
-        description: 'PyTorch version filter -- full (e.g. "2.11.0") or major.minor (e.g. "2.11"), or "all"'
+        description: 'PyTorch version filter — full (e.g. "2.11.0") or major.minor (e.g. "2.11"), or "all"'
         required: false
         type: string
         default: 'all'
       python:
-        description: 'Python version filter -- e.g. "3.12", or "all"'
+        description: 'Python version filter — e.g. "3.12", or "all"'
         required: false
         type: string
         default: 'all'
@@ -153,7 +153,7 @@ jobs:
           CUDA_SHORT="${{ matrix.cuda_short }}"
           TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2)
           PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
-          # Prefix without platform tag (auditwheel changes linux_x86_64 -> manylinux_*)
+          # Prefix without platform tag (auditwheel changes linux_x86_64 → manylinux_*)
           WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
 
           echo "wheel_prefix=$WHEEL_PREFIX" >> $GITHUB_OUTPUT
@@ -250,34 +250,15 @@ jobs:
     steps:
 
       - name: Runner identity (debug)
-        shell: cmd
+        shell: powershell
         run: |
-          echo runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=%COMPUTERNAME% user=%USERNAME%
-          echo --- whoami /groups ---
-          whoami /groups | findstr /I "docker admin users service network"
-          echo --- end debug ---
-      - name: Ensure Git Bash on PATH (self-hosted)
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\bin\bash.exe" (
-            echo C:\Program Files\Git\bin>>"%GITHUB_PATH%"
-            echo Added C:\Program Files\Git\bin to GITHUB_PATH
-          ) else (
-            echo bash.exe not found at C:\Program Files\Git\bin
-            exit /b 1
-          )
-      - name: Relax PowerShell ExecutionPolicy for runner user
-        shell: cmd
-        run: |
-          rem Third-party actions (setup-python, etc.) run their own .ps1 scripts
-          rem without an explicit -ExecutionPolicy flag, so they hit the host's
-          rem default Restricted policy. Set CurrentUser scope to Bypass once
-          rem so subsequent steps and actions can load their own scripts.
-          rem Scoped to the runner agent's user only; no admin needed.
-          powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force; Get-ExecutionPolicy -List"
+          echo "runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=$env:COMPUTERNAME user=$(whoami)"
+          echo "--- whoami /groups ---"
+          whoami /groups | Select-String -Pattern "docker|admin|users|service|network" -CaseSensitive:$false
+          echo "--- end debug ---"
       - name: Enable long paths
-        shell: cmd
-        run: git config --global core.longpaths true
+        shell: powershell
+        run: git config --system core.longpaths true
 
       - uses: actions/checkout@v4
 
