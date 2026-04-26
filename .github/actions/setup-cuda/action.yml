@@ -181,7 +181,7 @@ runs:
         $args = @("-s", "-n") + $components
         $process = Start-Process -FilePath "cuda_installer.exe" -ArgumentList $args -Wait -PassThru
         if ($process.ExitCode -ne 0) {
-          Write-Host "===== CUDA installer failed (exit $($process.ExitCode)) — dumping NVIDIA logs ====="
+          Write-Host "===== CUDA installer failed (exit $($process.ExitCode)) - dumping NVIDIA logs ====="
           $logRoots = @(
             "$env:ProgramData\NVIDIA Corporation\NVIDIA Installer2",
             "$env:TEMP\NVIDIA Setup Cache",
