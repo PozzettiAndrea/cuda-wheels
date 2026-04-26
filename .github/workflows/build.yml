@@ -258,7 +258,7 @@ jobs:
           echo --- end debug ---
       - name: Enable long paths
         shell: cmd
-        run: git config --system core.longpaths true
+        run: git config --global core.longpaths true
 
       - uses: actions/checkout@v4
 
