@@ -103,7 +103,7 @@ runs:
 
     - name: Install CUDA toolkit (Windows)
       if: inputs.platform == 'windows' && steps.cuda-cache-windows.outputs.cache-hit != 'true'
-      shell: powershell
+      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
       run: |
         $cudaVersion = "${{ inputs.cuda-version }}"
         $installerType = "${{ inputs.installer-type }}"
@@ -175,7 +175,7 @@ runs:
 
     - name: Verify CUDA installation (Windows)
       if: inputs.platform == 'windows'
-      shell: powershell
+      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
       run: |
         $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
         $nvccPath = "$cudaPath\bin\nvcc.exe"
@@ -201,7 +201,7 @@ runs:
 
     - name: Set CUDA environment (Windows)
       if: inputs.platform == 'windows'
-      shell: powershell
+      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
       run: |
         $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-version }}"
         echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

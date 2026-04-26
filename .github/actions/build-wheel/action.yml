@@ -170,7 +170,7 @@ runs:
 
     - name: Build wheel (Windows)
       if: inputs.platform == 'windows'
-      shell: powershell
+      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
       run: |
         # Ensure ninja is in PATH (pip Scripts directory)
         $pythonPath = (python -c "import sys; print(sys.prefix)")
@@ -242,7 +242,7 @@ runs:
     - name: Rename wheel with CUDA+PyTorch suffix (Windows)
       if: inputs.platform == 'windows'
       id: rename-windows
-      shell: powershell
+      shell: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "& ''{0}''"' 
       run: |
         $buildDir = "source"
         if ("${{ inputs.build-subdir }}" -ne "") {
