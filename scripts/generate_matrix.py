@@ -164,7 +164,8 @@ def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
 
 
 def generate_matrix(package_filter: str, overwrite: bool = False,
-                    platform_filter: str = "all", cuda_filter: str = "all") -> list:
+                    platform_filter: str = "all", cuda_filter: str = "all",
+                    pytorch_filter: str = "all", python_filter: str = "all") -> list:
     """Generate build matrix from package configs, excluding existing wheels."""
     packages_dir = Path(__file__).parent.parent / "packages"
     matrix = []
@@ -222,12 +223,19 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         for cuda, pytorch, python_versions, combo_arch_list in combos:
             if cuda_filter != "all" and cuda != cuda_filter:
                 continue
+            # pytorch_filter accepts either full ("2.11.0") or major.minor ("2.11")
+            if pytorch_filter != "all":
+                torch_mm = ".".join(pytorch.split(".")[:2])
+                if pytorch != pytorch_filter and torch_mm != pytorch_filter:
+                    continue
 
             cuda_short = cuda.replace(".", "")
             torch_short = ".".join(pytorch.split(".")[:2])  # 2.9.1 -> 2.9
 
             for python_ver in python_versions:
                 python_short = python_ver.replace(".", "")
+                if python_filter != "all" and python_ver != python_filter:
+                    continue
 
                 for platform in build["platforms"]:
                     if platform_filter != "all" and platform != platform_filter:
@@ -277,10 +285,13 @@ def main():
     parser.add_argument("--overwrite", action="store_true", help="Ignore existing wheels and rebuild all")
     parser.add_argument("--platform", default="all", help="Platform filter: all, linux, windows")
     parser.add_argument("--cuda", default="all", help="CUDA version filter: all, 12.4, 12.6, 12.8, 13.0")
+    parser.add_argument("--pytorch", default="all", help="PyTorch version filter (full like 2.11.0 or major.minor like 2.11), or 'all'")
+    parser.add_argument("--python", default="all", help="Python version filter like 3.12, or 'all'")
     args = parser.parse_args()
 
     matrix = generate_matrix(args.package, overwrite=args.overwrite,
-                            platform_filter=args.platform, cuda_filter=args.cuda)
+                            platform_filter=args.platform, cuda_filter=args.cuda,
+                            pytorch_filter=args.pytorch, python_filter=args.python)
 
     # Split by platform
     linux_jobs = [j for j in matrix if j["platform"] == "linux"]

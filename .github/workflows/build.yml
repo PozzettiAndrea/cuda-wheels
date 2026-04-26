@@ -1,5 +1,5 @@
 name: Build Wheels
-run-name: "Build ${{ inputs.package }} wheels${{ inputs.overwrite == true && ' (overwrite)' || '' }}${{ inputs.runner == 'self-hosted' && ' [self-hosted]' || '' }}${{ inputs.max_jobs != '0' && format(' max_jobs={0}', inputs.max_jobs) || '' }}"
+run-name: "Build ${{ inputs.package }} wheels${{ inputs.platform != 'all' && format(' [{0}]', inputs.platform) || '' }}${{ inputs.cuda != 'all' && format(' cu{0}', inputs.cuda) || '' }}${{ inputs.pytorch != 'all' && inputs.pytorch != '' && format(' torch{0}', inputs.pytorch) || '' }}${{ inputs.python != 'all' && inputs.python != '' && format(' py{0}', inputs.python) || '' }}${{ inputs.overwrite == true && ' (overwrite)' || '' }}${{ inputs.runner == 'self-hosted' && ' [self-hosted]' || '' }}${{ inputs.max_jobs != '0' && format(' max_jobs={0}', inputs.max_jobs) || '' }}"
 
 on:
   workflow_dispatch:
@@ -64,6 +64,16 @@ on:
           - "12.9"
           - "13.0"
         default: all
+      pytorch:
+        description: 'PyTorch version filter — full (e.g. "2.11.0") or major.minor (e.g. "2.11"), or "all"'
+        required: false
+        type: string
+        default: 'all'
+      python:
+        description: 'Python version filter — e.g. "3.12", or "all"'
+        required: false
+        type: string
+        default: 'all'
       runner:
         description: 'Runner type'
         required: false
@@ -103,7 +113,7 @@ jobs:
           if [ "${{ inputs.overwrite }}" = "true" ]; then
             OVERWRITE_FLAG="--overwrite"
           fi
-          python scripts/generate_matrix.py --package "${{ inputs.package }}" --platform "${{ inputs.platform || 'all' }}" --cuda "${{ inputs.cuda || 'all' }}" --output matrix.json $OVERWRITE_FLAG
+          python scripts/generate_matrix.py --package "${{ inputs.package }}" --platform "${{ inputs.platform || 'all' }}" --cuda "${{ inputs.cuda || 'all' }}" --pytorch "${{ inputs.pytorch || 'all' }}" --python "${{ inputs.python || 'all' }}" --output matrix.json $OVERWRITE_FLAG
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
   build-linux:
