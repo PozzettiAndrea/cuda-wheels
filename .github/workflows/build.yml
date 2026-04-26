@@ -240,14 +240,14 @@ jobs:
     steps:
 
       - name: Runner identity (debug)
-        shell: powershell
+        shell: cmd
         run: |
-          echo "runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=$env:COMPUTERNAME user=$(whoami)"
-          echo "--- whoami /groups ---"
-          whoami /groups | Select-String -Pattern "docker|admin|users|service|network" -CaseSensitive:$false
-          echo "--- end debug ---"
+          echo runner.name=${{ runner.name }} runner.os=${{ runner.os }} hostname=%COMPUTERNAME% user=%USERNAME%
+          echo --- whoami /groups ---
+          whoami /groups | findstr /I "docker admin users service network"
+          echo --- end debug ---
       - name: Enable long paths
-        shell: powershell
+        shell: cmd
         run: git config --system core.longpaths true
 
       - uses: actions/checkout@v4
