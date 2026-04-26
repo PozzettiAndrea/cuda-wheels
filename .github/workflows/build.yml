@@ -256,6 +256,16 @@ jobs:
           echo --- whoami /groups ---
           whoami /groups | findstr /I "docker admin users service network"
           echo --- end debug ---
+      - name: Ensure Git Bash on PATH (self-hosted)
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\bin\bash.exe" (
+            echo C:\Program Files\Git\bin>>"%GITHUB_PATH%"
+            echo Added C:\Program Files\Git\bin to GITHUB_PATH
+          ) else (
+            echo bash.exe not found at C:\Program Files\Git\bin
+            exit /b 1
+          )
       - name: Enable long paths
         shell: cmd
         run: git config --global core.longpaths true
