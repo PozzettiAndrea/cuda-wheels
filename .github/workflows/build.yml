@@ -266,6 +266,15 @@ jobs:
             echo bash.exe not found at C:\Program Files\Git\bin
             exit /b 1
           )
+      - name: Relax PowerShell ExecutionPolicy for runner user
+        shell: cmd
+        run: |
+          rem Third-party actions (setup-python, etc.) run their own .ps1 scripts
+          rem without an explicit -ExecutionPolicy flag, so they hit the host's
+          rem default Restricted policy. Set CurrentUser scope to Bypass once
+          rem so subsequent steps and actions can load their own scripts.
+          rem Scoped to the runner agent's user only; no admin needed.
+          powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force; Get-ExecutionPolicy -List"
       - name: Enable long paths
         shell: cmd
         run: git config --global core.longpaths true
