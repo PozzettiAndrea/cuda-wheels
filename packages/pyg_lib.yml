@@ -5,6 +5,8 @@ version: "0.5.0"
 
 clone_recursive: true
 
+patch_script: patches/pyg_lib.py
+
 build_matrix:
   combinations:
     # ── cu124 (torch 2.4.0 – 2.6.0) ──
