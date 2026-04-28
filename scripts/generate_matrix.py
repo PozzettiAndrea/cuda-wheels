@@ -207,20 +207,21 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
 
         # Support both old format (cuda_versions × pytorch_versions) and new format (combinations)
         if "combinations" in build:
-            # New format: combinations with optional per-combination python_versions and arch_list
+            # New format: combinations with optional per-combination python_versions, arch_list, and source_tag
             combos = []
             for c in build["combinations"]:
                 python_vers = c.get("python_versions", build.get("python_versions", []))
                 combo_arch_list = c.get("arch_list")  # Per-combination arch_list
-                combos.append((c["cuda"], c["pytorch"], python_vers, combo_arch_list))
+                combo_source_tag = c.get("source_tag")  # Per-combination source_tag override
+                combos.append((c["cuda"], c["pytorch"], python_vers, combo_arch_list, combo_source_tag))
         else:
             # Old format: cartesian product
             python_vers = build["python_versions"]
-            combos = [(cuda, pytorch, python_vers, None)
+            combos = [(cuda, pytorch, python_vers, None, None)
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
 
-        for cuda, pytorch, python_versions, combo_arch_list in combos:
+        for cuda, pytorch, python_versions, combo_arch_list, combo_source_tag in combos:
             if cuda_filter != "all" and cuda != cuda_filter:
                 continue
             # pytorch_filter accepts either full ("2.11.0") or major.minor ("2.11")
@@ -253,7 +254,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "package": pkg_name,
                         "version": pkg_version,
                         "source_repo": pkg["source_repo"],
-                        "source_tag": pkg.get("source_tag", ""),
+                        "source_tag": combo_source_tag or pkg.get("source_tag", ""),
                         "cuda": cuda,
                         "cuda_short": cuda_short,
                         "pytorch": pytorch,

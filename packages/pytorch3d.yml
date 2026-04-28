@@ -66,14 +66,20 @@ build_matrix:
     - cuda: "12.9"
       pytorch: "2.11.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    # ── cu130 (torch 2.9.0 – 2.10.0) ──
+    # ── cu130 (torch 2.9.0 – 2.11.0) ──
+    # Pin to upstream commit f5f6b78 (Dec 2025) which adds CUDA 13.0 support
+    # for pulsar/pycuda. v0.7.9 predates the fix and fails to link on cu130.
+    # See facebookresearch/pytorch3d#2011.
     - cuda: "13.0"
       pytorch: "2.9.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      source_tag: f5f6b78
     - cuda: "13.0"
       pytorch: "2.10.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      source_tag: f5f6b78
     - cuda: "13.0"
       pytorch: "2.11.0"
       python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      source_tag: f5f6b78
   platforms: ["linux", "windows"]
