@@ -68,6 +68,12 @@ runs:
         cd source
         if [ -n "${{ inputs.source-tag }}" ]; then
           git checkout ${{ inputs.source-tag }}
+          # Re-sync submodules to the gitlinks recorded at the tag —
+          # `git clone --recursive` initialized them at the default branch's
+          # HEAD, which can be far ahead of what the tagged release pinned.
+          if [ "${{ inputs.clone-recursive }}" == "true" ]; then
+            git submodule update --init --recursive
+          fi
         fi
 
     - name: Apply patch script
