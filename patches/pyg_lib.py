@@ -42,6 +42,18 @@ set_property(
 CUDA_NEW_LINK = """# nvToolsExt (patched: empty INTERFACE so downstream links are no-ops)
 add_library(torch::nvtoolsext INTERFACE IMPORTED)"""
 
+# torch 2.5 / 2.6 wraps the nvToolsExt fallback inside an NVTX3-detection
+# if/else. When NVTX3 isn't found, the else branch creates the broken
+# torch::nvtoolsext linked to CUDA::nvToolsExt. Replace just the else body
+# with empty stubs so configure succeeds either way.
+CUDA_OLD_NVTX3_FALLBACK = """  message(WARNING "Cannot find NVTX3, find old NVTX instead")
+  add_library(torch::nvtoolsext INTERFACE IMPORTED)
+  set_property(TARGET torch::nvtoolsext PROPERTY INTERFACE_LINK_LIBRARIES CUDA::nvToolsExt)"""
+
+CUDA_NEW_NVTX3_FALLBACK = """  # patched: NVTX3 not found, create empty stubs (CUDA>=12.5 dropped legacy nvToolsExt)
+  add_library(torch::nvtx3 INTERFACE IMPORTED)
+  add_library(torch::nvtoolsext INTERFACE IMPORTED)"""
+
 
 def patch_cuda_cmake(path: Path) -> bool:
     text = path.read_text()
@@ -50,6 +62,8 @@ def patch_cuda_cmake(path: Path) -> bool:
         text = text.replace(CUDA_OLD_FATAL, CUDA_NEW_FATAL, 1)
     if CUDA_OLD_LINK in text:
         text = text.replace(CUDA_OLD_LINK, CUDA_NEW_LINK, 1)
+    if CUDA_OLD_NVTX3_FALLBACK in text:
+        text = text.replace(CUDA_OLD_NVTX3_FALLBACK, CUDA_NEW_NVTX3_FALLBACK, 1)
     if text != original:
         path.write_text(text)
         return True
