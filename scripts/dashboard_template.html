@@ -14,12 +14,10 @@
   <div class="stat"><div class="stat-value">{{total_packages}}</div><div class="stat-label">packages</div></div>
   <div class="stat"><div class="stat-value">{{total_wheels}}</div><div class="stat-label">wheels</div></div>
   <div class="stat"><div class="stat-value">{{built_count}}</div><div class="stat-label">built by CI</div></div>
-  <div class="stat"><div class="stat-value">{{external_count}}</div><div class="stat-label">external</div></div>
 </div>
 
 <div class="tab-bar">
   <button class="tab active" data-tab="built">Built by CI ({{built_count}})</button>
-  <button class="tab" data-tab="external">External ({{external_count}})</button>
   <button class="tab" data-tab="missing">Missing ({{missing_count}})</button>
 </div>
 
@@ -30,17 +28,6 @@
   </thead>
   <tbody>
   {{built_rows}}
-  </tbody>
-  </table>
-</div>
-
-<div class="tab-content" id="tab-external" style="display:none">
-  <table>
-  <thead>
-  <tr><th>Package</th><th>Versions</th><th># Wheels</th><th>Source</th></tr>
-  </thead>
-  <tbody>
-  {{ext_rows}}
   </tbody>
   </table>
 </div>

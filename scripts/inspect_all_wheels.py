@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect ALL wheels (built releases + external HTML indices).
+"""Inspect all wheels in the built GitHub releases.
 
 Downloads each wheel, extracts metadata, groups into clusters,
 deletes after inspection. Disk usage stays under 1GB.
@@ -167,35 +167,6 @@ def collect_built_wheels() -> list:
     return wheels
 
 
-def collect_external_wheels() -> list:
-    """Collect wheel URLs from external_wheels/ HTML index files."""
-    external_dir = Path("external_wheels")
-    if not external_dir.is_dir():
-        return []
-
-    link_pattern = re.compile(r'href="([^"]+)"[^>]*>([^<]+\.whl)</a>', re.IGNORECASE)
-    wheels = []
-
-    for pkg_dir in sorted(external_dir.iterdir()):
-        if not pkg_dir.is_dir():
-            continue
-        index_file = pkg_dir / "index.html"
-        if not index_file.exists():
-            continue
-
-        html = index_file.read_text()
-        for match in link_pattern.finditer(html):
-            url, display = match.group(1), match.group(2)
-            wheels.append({
-                "filename": display,
-                "url": url,
-                "source_type": "external",
-                "release": pkg_dir.name,
-            })
-
-    return wheels
-
-
 # ---------------------------------------------------------------------------
 # Clustering
 # ---------------------------------------------------------------------------
@@ -219,11 +190,7 @@ def cluster_key(file_info: dict, wheel_info: dict) -> str:
 
 def main():
     print("Collecting wheel URLs...")
-    built = collect_built_wheels()
-    external = collect_external_wheels()
-    all_wheels = built + external
-    print(f"  Built: {len(built)} wheels")
-    print(f"  External: {len(external)} wheels")
+    all_wheels = collect_built_wheels()
     print(f"  Total: {len(all_wheels)} wheels")
 
     # Group by package for progress reporting

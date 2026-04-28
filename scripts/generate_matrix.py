@@ -128,24 +128,6 @@ def get_existing_wheels(package_name: str) -> set:
     return set()
 
 
-def get_external_wheels(package_name: str) -> set:
-    """Parse external wheel filenames from external_wheels/{pkg}/index.html."""
-    import re
-    external_dir = Path(__file__).parent.parent / "external_wheels"
-    # Try both underscore and hyphen variants (PEP 503 normalization)
-    names = [package_name, package_name.replace("_", "-")]
-    for name in names:
-        index_file = external_dir / name / "index.html"
-        if index_file.exists():
-            content = index_file.read_text()
-            # Extract wheel filenames from <a> tag text
-            wheels = set(re.findall(r'>([^<]+\.whl)<', content))
-            if wheels:
-                print(f"Found {len(wheels)} external wheels for {package_name}")
-            return wheels
-    return set()
-
-
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                  torch_short: str, python_short: str, platform: str) -> bool:
     """Check if a wheel matching this combo exists in our releases."""

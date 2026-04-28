@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Generate PEP 503 compliant package index from GitHub releases + external wheels."""
+"""Generate PEP 503 compliant package index from GitHub releases."""
 import os
 import json
 import re
-import shutil
 import urllib.request
 from pathlib import Path
-from urllib.parse import quote
 
 # Matches v2 torch naming: +cu128torch2.9-cp (dot between major.minor)
 _V2_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)\.(\d+)(-cp)')
@@ -61,21 +59,7 @@ def main():
     docs = Path("docs")
     docs.mkdir(exist_ok=True)
 
-    # Copy external_wheels/ into docs/ (pre-built index.html files for external packages)
-    external_dir = Path("external_wheels")
-    external_packages = set()
-    if external_dir.is_dir():
-        for pkg_dir in sorted(external_dir.iterdir()):
-            if pkg_dir.is_dir() and (pkg_dir / "index.html").exists():
-                dest = docs / pkg_dir.name
-                if dest.exists():
-                    shutil.rmtree(dest)
-                shutil.copytree(pkg_dir, dest)
-                external_packages.add(pkg_dir.name)
-        print(f"Copied {len(external_packages)} external packages: {', '.join(sorted(external_packages))}")
-
-    # Merge all package names for root index
-    all_packages = sorted(set(packages.keys()) | external_packages)
+    all_packages = sorted(packages.keys())
 
     # Generate root index
     with open(docs / "index.html", "w") as f:
@@ -87,7 +71,7 @@ def main():
             f.write(f'<a href="{pkg}/">{pkg}</a><br>\n')
         f.write("</body>\n</html>\n")
 
-    # Generate per-package index (only for built packages, externals already have index.html)
+    # Generate per-package index.
     # Root index: v1 display names (torch29), hrefs point to v2 assets (torch2.9)
     for pkg, wheels in packages.items():
         pkg_dir = docs / pkg
@@ -105,8 +89,6 @@ def main():
     print(f"Generated index for {len(packages)} built packages:")
     for pkg, wheels in packages.items():
         print(f"  - {pkg}: {len(wheels)} wheels")
-    if external_packages:
-        print(f"External packages: {', '.join(sorted(external_packages))}")
     print(f"Total: {len(all_packages)} packages in index")
 
     # Generate v2 index (built packages only, all wheels are v2-named now)
@@ -139,7 +121,7 @@ def main():
 
     # Generate dashboard (separate from PEP 503 index)
     try:
-        from generate_dashboard import generate_dashboard, parse_external_wheels, parse_wheel_filename, get_workflow_runs
+        from generate_dashboard import generate_dashboard, parse_wheel_filename, get_workflow_runs
 
         built_for_dashboard = {}
         release_urls = {}
@@ -165,8 +147,7 @@ def main():
         total_runs = sum(len(v) for v in workflow_runs.values())
         print(f"  {total_runs} runs across {len(workflow_runs)} packages")
 
-        ext_for_dashboard = parse_external_wheels(external_dir)
-        generate_dashboard(built_for_dashboard, ext_for_dashboard, docs / "dashboard",
+        generate_dashboard(built_for_dashboard, docs / "dashboard",
                            release_urls=release_urls, workflow_runs=workflow_runs, repo=repo,
                            token=token)
     except Exception as e:

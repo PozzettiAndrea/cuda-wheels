@@ -407,45 +407,6 @@ def parse_wheel_filename(filename: str) -> dict:
     return info
 
 
-def parse_external_wheels(external_dir: Path) -> dict:
-    """Parse external_wheels/ HTML index files for wheel info."""
-    packages = {}
-    if not external_dir.is_dir():
-        return packages
-
-    link_pattern = re.compile(r'href="([^"]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
-    source_pattern = re.compile(r'<p>.*?<a href="([^"]+)"[^>]*>([^<]+)</a>', re.IGNORECASE)
-
-    for pkg_dir in sorted(external_dir.iterdir()):
-        if not pkg_dir.is_dir():
-            continue
-        index_file = pkg_dir / "index.html"
-        if not index_file.exists():
-            continue
-
-        html = index_file.read_text()
-
-        source_url = None
-        source_match = source_pattern.search(html)
-        if source_match:
-            source_url = source_match.group(1)
-
-        wheels = []
-        for match in link_pattern.finditer(html):
-            url, display = match.group(1), match.group(2)
-            if display.endswith(".whl"):
-                info = parse_wheel_filename(display)
-                if info:
-                    info["url"] = url
-                    info["source"] = "external"
-                    info["display_name"] = display
-                    wheels.append(info)
-        if wheels:
-            packages[pkg_dir.name] = {"wheels": wheels, "source_url": source_url}
-
-    return packages
-
-
 # --- HTML rendering helpers ---
 
 def _format_size(size_bytes):
@@ -492,18 +453,6 @@ def _built_row(p):
         f'<td><a href="#pkg={p["name"]}" class="wheel-count">{p["count"]}</a></td>'
         f'<td class="runs-cell">{runs_html}</td>'
         f'<td>{release_link}</td>'
-        f'</tr>'
-    )
-
-
-def _ext_row(p):
-    source_link = f'<a href="{p["source_url"]}">Source</a>' if p.get("source_url") else "-"
-    return (
-        f'<tr>'
-        f'<td><strong>{p["name"]}</strong></td>'
-        f'<td>{", ".join(p["versions"])}</td>'
-        f'<td><a href="#pkg={p["name"]}" class="wheel-count">{p["count"]}</a></td>'
-        f'<td>{source_link}</td>'
         f'</tr>'
     )
 
@@ -586,7 +535,7 @@ def compute_missing_wheels(built_packages, packages_dir):
 
 # --- Main generation ---
 
-def generate_dashboard(built_packages: dict, external_packages: dict, output_dir: Path,
+def generate_dashboard(built_packages: dict, output_dir: Path,
                        release_urls: dict = None, workflow_runs: dict = None,
                        repo: str = "PozzettiAndrea/cuda-wheels", token: str = None):
     """Generate dashboard HTML from template + static assets."""
@@ -617,28 +566,7 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
             "runs": workflow_runs.get(name, []),
         })
 
-    ext_summaries = []
-    for name in sorted(external_packages.keys()):
-        data = external_packages[name]
-        wheels = data["wheels"]
-        versions = sorted(set(w.get("version", "?").split("+")[0] for w in wheels))
-        wheel_list = []
-        for w in sorted(wheels, key=lambda x: x.get("display_name", "")):
-            wheel_list.append({
-                "name": w.get("display_name", ""),
-                "url": w.get("url", ""),
-                "size": _format_size(w.get("size")),
-                "raw_size": w.get("size"),
-            })
-        all_pkg_wheels[name] = wheel_list
-        ext_summaries.append({
-            "name": name,
-            "count": len(wheels),
-            "versions": versions,
-            "source_url": data.get("source_url"),
-        })
-
-    total_wheels = sum(p["count"] for p in built_summaries) + sum(p["count"] for p in ext_summaries)
+    total_wheels = sum(p["count"] for p in built_summaries)
 
     # Compute missing wheels
     packages_dir = SCRIPT_DIR.parent / "packages"
@@ -647,18 +575,15 @@ def generate_dashboard(built_packages: dict, external_packages: dict, output_dir
 
     # Render rows
     built_rows = "\n".join(_built_row(p) for p in built_summaries)
-    ext_rows = "\n".join(_ext_row(p) for p in ext_summaries)
 
     # Read template
     template = (SCRIPT_DIR / "dashboard_template.html").read_text()
 
     # Substitute placeholders
-    html = template.replace("{{total_packages}}", str(len(built_summaries) + len(ext_summaries)))
+    html = template.replace("{{total_packages}}", str(len(built_summaries)))
     html = html.replace("{{total_wheels}}", str(total_wheels))
     html = html.replace("{{built_count}}", str(len(built_summaries)))
-    html = html.replace("{{external_count}}", str(len(ext_summaries)))
     html = html.replace("{{built_rows}}", built_rows)
-    html = html.replace("{{ext_rows}}", ext_rows)
     html = html.replace("{{repo}}", repo)
     html = html.replace("{{missing_count}}", str(total_missing))
 
@@ -740,11 +665,8 @@ def main():
     total_runs = sum(len(v) for v in workflow_runs.values())
     print(f"  {total_runs} runs across {len(workflow_runs)} packages")
 
-    # Collect external wheels
-    external_packages = parse_external_wheels(Path("external_wheels"))
-
     # Generate dashboard
-    generate_dashboard(built_packages, external_packages, Path("docs") / "dashboard",
+    generate_dashboard(built_packages, Path("docs") / "dashboard",
                        release_urls=release_urls, workflow_runs=workflow_runs, repo=repo,
                        token=token)
 

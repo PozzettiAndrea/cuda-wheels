@@ -25,22 +25,13 @@ Pre-built CUDA Python wheels for ML/3D packages that are painful to compile from
 | torch_scatter | [pyg-team/pytorch_scatter](https://github.com/pyg-team/pytorch_scatter) |
 | torch_sparse | [pyg-team/pytorch_sparse](https://github.com/pyg-team/pytorch_sparse) |
 
-## External Packages (curated links)
-
-| Package | Source |
-|---------|--------|
-| flash-attn | [mjun0812/flash-attention-prebuild-wheels](https://github.com/mjun0812/flash-attention-prebuild-wheels) |
-| detectron2 | [MiroPsota/torch_packages_builder](https://github.com/MiroPsota/torch_packages_builder) |
-| pyg-lib | [pyg-team/pyg-lib](https://github.com/pyg-team/pyg-lib) |
-| torch-spline-conv | [pyg-team/pytorch_spline_conv](https://github.com/pyg-team/pytorch_spline_conv) |
-
 ## Usage
 
 Used by [comfy-env](https://github.com/PozzettiAndrea/comfy-env) to automatically resolve and install CUDA packages for ComfyUI custom nodes.
 
 ## Adding a package
 
-See [packages/README.md](packages/README.md) for build config format. For external wheels, add an `index.html` to `external_wheels/<package>/`.
+See [packages/README.md](packages/README.md) for build config format.
 
 ## License
 
