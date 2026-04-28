@@ -6,6 +6,7 @@ version: "0.5.0"
 clone_recursive: true
 
 patch_script: patches/pyg_lib.py
+extra_cuda_components: "nvtx"
 
 build_matrix:
   combinations:
