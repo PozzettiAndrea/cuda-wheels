@@ -176,3 +176,34 @@ if old_binding in bind_content:
     print("Patched cumm/tensorview_bind.py: added default Context arg to zero_whole_storage_")
 else:
     print("WARNING: Could not find zero_whole_storage_ binding to patch")
+
+# ─── 5. Fix NVRTC include path resolution in constants.py ───
+# cumm's constants.py picks the first existing `include/` directory from
+# [site-packages/include, cumm/include]. Other packages (Eigen, embreex)
+# create site-packages/include/, so cumm picks that instead of its own
+# cumm/include/ which has tensorview headers. NVRTC then fails with
+# "could not open source file tensorview/core/all.h".
+# Fix: check for the actual header file, not just directory existence.
+const_py = Path("cumm/constants.py")
+const_content = const_py.read_text()
+old_resolve = """TENSORVIEW_INCLUDE_PATH = _TENSORVIEW_INCLUDE_PATHS[0]
+if not TENSORVIEW_INCLUDE_PATH.exists():
+    for p in _TENSORVIEW_INCLUDE_PATHS[1:]:
+        if p.exists():
+            TENSORVIEW_INCLUDE_PATH = p
+
+assert TENSORVIEW_INCLUDE_PATH.exists()"""
+new_resolve = """_HEADER_SENTINEL = Path("tensorview") / "core" / "all.h"
+TENSORVIEW_INCLUDE_PATH = None
+for p in _TENSORVIEW_INCLUDE_PATHS:
+    if (p / _HEADER_SENTINEL).exists():
+        TENSORVIEW_INCLUDE_PATH = p
+        break
+
+assert TENSORVIEW_INCLUDE_PATH is not None and TENSORVIEW_INCLUDE_PATH.exists()"""
+if old_resolve in const_content:
+    const_content = const_content.replace(old_resolve, new_resolve)
+    const_py.write_text(const_content)
+    print("Patched cumm/constants.py: fixed NVRTC include path resolution")
+else:
+    print("WARNING: Could not find include path resolution block in constants.py")
