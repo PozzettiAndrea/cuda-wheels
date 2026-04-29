@@ -69,48 +69,74 @@ def fetch_package_info(repo: str, tag: str, subdir: str = "") -> tuple[Optional[
     return name, version
 
 
-def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
+# Loaded once; provides standard combinations + arch_list_by_cuda + per-build defaults
+# inherited by package YAMLs that don't override them.
+_DEFAULTS_FILE = Path(__file__).parent.parent / "packages" / "_defaults.yml"
+DEFAULTS = yaml.safe_load(_DEFAULTS_FILE.read_text())
+
+# Fetcher: pulls TORCH_CUDA_ARCH_LIST from PyTorch's actual build_cuda.sh per
+# release tag. Disk-cached so no repeated GitHub hits across matrix runs.
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).parent))
+from fetch_pytorch_arch_lists import fetch as _fetch_pytorch_archs  # noqa: E402
+
+
+def _info_to_torch_list(info: dict) -> str:
+    """Convert {'sass':[sm_X,...], 'ptx':[sm_X,...]} -> 'X.Y;X.Y;X.Y+PTX'.
+
+    Per build_cuda.sh convention, every entry in `ptx` is also in `sass`
+    (nvcc emits both arch=compute_X,code=sm_X and arch=compute_X,code=compute_X
+    for +PTX-suffixed list entries). So we walk sass and tag with +PTX where
+    the same sm appears in ptx.
     """
-    Auto-compute the CUDA arch_list based on CUDA and PyTorch versions.
+    ptx_set = set(info.get("ptx", []))
+    tokens = []
+    for sm in info.get("sass", []):
+        n = int(sm.removeprefix("sm_").rstrip("a"))
+        suffix = "a" if sm.endswith("a") else ""
+        token = f"{n // 10}.{n % 10}{suffix}"
+        if sm in ptx_set:
+            token += "+PTX"
+        tokens.append(token)
+    return ";".join(tokens)
 
-    Base architectures (one per major family — forward-compatible within family):
-    - 7.0: Volta/Turing (V100, RTX 20xx) — sm_70 covers sm_75 - dropped in CUDA 13.0
-    - 8.0: Ampere/Ada (A100, RTX 30xx, RTX 40xx) — sm_80 covers sm_86/sm_89
-    - 9.0: Hopper (H100)
 
-    Blackwell architectures (conditionally added):
-    - 10.0: B200 (requires PyTorch 2.6+ and CUDA 12.8+)
-    - 12.0: RTX 50xx (requires PyTorch 2.6+ and CUDA 12.8+)
-
-    Note: CUDA 13.0+ dropped support for sm_70/sm_75 (Volta/Turing)
+def resolve_arch_list(pkg: dict, cuda_version: str,
+                      combo_arch_list: Optional[str] = None,
+                      pytorch_version: Optional[str] = None) -> str:
     """
-    # Parse versions
-    cuda_major, cuda_minor = map(int, cuda_version.split(".")[:2])
-    pytorch_major, pytorch_minor = map(int, pytorch_version.split(".")[:2])
+    Resolve the TORCH_CUDA_ARCH_LIST for a (package, cuda, torch) tuple.
 
-    # CUDA 13.0+ dropped sm_70/sm_75 support
-    # sm_80 binary is forward-compatible with sm_86/sm_89, so no need for separate targets
-    if cuda_major >= 13:
-        archs = ["8.0", "9.0"]
-    elif (cuda_major, cuda_minor) == (12, 4):
-        # cu124: include Pascal (sm_50/sm_60) — PyTorch cu124 ships these
-        archs = ["5.0", "6.0", "7.0", "8.0", "9.0"]
-    else:
-        archs = ["7.0", "8.0", "9.0"]
+    Priority (highest first):
+      1. per-combo arch_list (passed in from the combinations table)
+      2. pkg.arch_list_by_cuda[cuda] (per-CUDA package override)
+      3. pkg.arch_list (static package-wide override — used by flash_attn / sage / pyg_lib)
+      4. PyTorch's build_cuda.sh truth for this (cuda, torch_minor) — fetched + disk-cached
+      5. _defaults.arch_list_by_cuda[cuda] (final fallback if fetch fails)
+    """
+    if combo_arch_list:
+        return combo_arch_list
+    pkg_by_cuda = pkg.get("arch_list_by_cuda")
+    if pkg_by_cuda and cuda_version in pkg_by_cuda:
+        return pkg_by_cuda[cuda_version]
+    if pkg.get("arch_list"):
+        return pkg["arch_list"]
 
-    # Blackwell support requires PyTorch 2.6+
-    pytorch_supports_blackwell = (pytorch_major, pytorch_minor) >= (2, 6)
+    # Pull from PyTorch's authoritative build_cuda.sh for this (cuda, torch).
+    # build_cuda.sh is bumped at the minor branch level, so v2.7.0 and v2.7.1
+    # share an entry — but we still pass the full tag so the cache key is
+    # consistent with PyPI scrape data.
+    if pytorch_version:
+        info = _fetch_pytorch_archs(f"v{pytorch_version}", cuda_version)
+        if info:
+            return _info_to_torch_list(info)
 
-    if pytorch_supports_blackwell:
-        # sm_100 (B200) - needs CUDA 12.8+
-        if (cuda_major, cuda_minor) >= (12, 8):
-            archs.append("10.0")
-
-        # sm_120 (RTX 50xx) - needs CUDA 12.8+
-        if (cuda_major, cuda_minor) >= (12, 8):
-            archs.append("12.0")
-
-    return " ".join(archs)
+    if cuda_version in DEFAULTS["arch_list_by_cuda"]:
+        return DEFAULTS["arch_list_by_cuda"][cuda_version]
+    raise KeyError(
+        f"No arch_list resolved for cuda={cuda_version} pkg={pkg.get('name')}; "
+        f"add a pkg.arch_list, or fix _defaults.arch_list_by_cuda fallback."
+    )
 
 
 def get_existing_wheels(package_name: str) -> set:
@@ -154,6 +180,9 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
     skipped = 0
 
     for pkg_file in packages_dir.glob("*.yml"):
+        # Skip files starting with underscore (e.g. _defaults.yml — inherited config, not a package)
+        if pkg_file.name.startswith("_"):
+            continue
         pkg = yaml.safe_load(pkg_file.read_text())
 
         if package_filter != "all" and pkg["name"] != package_filter:
@@ -185,23 +214,36 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         else:
             print(f"Overwrite enabled, skipping existing wheel check for {pkg['name']}")
 
-        build = pkg["build_matrix"]
+        build = pkg.get("build_matrix") or {}
 
-        # Support both old format (cuda_versions × pytorch_versions) and new format (combinations)
+        # Resolve combinations: package's own override > _defaults.combinations.
+        # Resolve platforms similarly.
         if "combinations" in build:
-            # New format: combinations with optional per-combination python_versions, arch_list, and source_tag
+            combos_src = build["combinations"]
+            default_python_vers = build.get("python_versions", [])
             combos = []
-            for c in build["combinations"]:
-                python_vers = c.get("python_versions", build.get("python_versions", []))
-                combo_arch_list = c.get("arch_list")  # Per-combination arch_list
-                combo_source_tag = c.get("source_tag")  # Per-combination source_tag override
+            for c in combos_src:
+                python_vers = c.get("python_versions", default_python_vers)
+                combo_arch_list = c.get("arch_list")
+                combo_source_tag = c.get("source_tag")
                 combos.append((c["cuda"], c["pytorch"], python_vers, combo_arch_list, combo_source_tag))
-        else:
-            # Old format: cartesian product
+        elif "cuda_versions" in build and "pytorch_versions" in build:
+            # Legacy cartesian-product form
             python_vers = build["python_versions"]
             combos = [(cuda, pytorch, python_vers, None, None)
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
+        else:
+            # Inherit standard combinations from packages/_defaults.yml
+            combos = []
+            for c in DEFAULTS["combinations"]:
+                combos.append((c["cuda"], c["pytorch"], c["python_versions"],
+                               c.get("arch_list"), c.get("source_tag")))
+
+        platforms = build.get("platforms") or DEFAULTS.get("platforms", ["linux"])
+        # Inject platforms back into build dict so existing code below reads it uniformly
+        build = dict(build)
+        build["platforms"] = platforms
 
         for cuda, pytorch, python_versions, combo_arch_list, combo_source_tag in combos:
             if cuda_filter != "all" and cuda != cuda_filter:
@@ -232,6 +274,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         skipped += 1
                         continue
 
+                    defaults = DEFAULTS.get("defaults", {})
                     matrix.append({
                         "package": pkg_name,
                         "version": pkg_version,
@@ -242,12 +285,12 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "pytorch": pytorch,
                         "python": python_ver,
                         "platform": platform,
-                        "arch_list": combo_arch_list or pkg.get("arch_list") or get_default_arch_list(cuda, pytorch),
+                        "arch_list": resolve_arch_list(pkg, cuda, combo_arch_list, pytorch),
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
-                        "free_disk_space": pkg.get("free_disk_space", False),
-                        "max_jobs": pkg.get("max_jobs", 1),
-                        "clone_recursive": pkg.get("clone_recursive", False),
+                        "free_disk_space": pkg.get("free_disk_space", defaults.get("free_disk_space", False)),
+                        "max_jobs": pkg.get("max_jobs", defaults.get("max_jobs", 0)),
+                        "clone_recursive": pkg.get("clone_recursive", defaults.get("clone_recursive", False)),
                         "patch_script": pkg.get("patch_script", ""),
                         "build_subdir": pkg.get("build_subdir", ""),
                         "cuda_installer": pkg.get("cuda_installer", "network"),

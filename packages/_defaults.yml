@@ -1,0 +1,103 @@
+# Inherited by every package YAML unless explicitly overridden.
+# - `combinations` and `platforms` are used when a package YAML doesn't define
+#   its own `build_matrix.combinations` / `build_matrix.platforms`.
+# - `arch_list_by_cuda` is the standard arch list per CUDA toolkit version,
+#   transcribed from pytorch/.ci/manywheel/build_cuda.sh. A package that
+#   doesn't override falls through to this table.
+# - Resolution order at build time:
+#     per-combo arch_list  >  pkg.arch_list_by_cuda[cuda]  >
+#     pkg.arch_list  >  _defaults.arch_list_by_cuda[cuda]
+
+combinations:
+  # ── cu124 (torch 2.4.0 – 2.6.0) ──
+  - cuda: "12.4"
+    pytorch: "2.4.0"
+    python_versions: ["3.10", "3.11", "3.12"]
+  - cuda: "12.4"
+    pytorch: "2.5.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.4"
+    pytorch: "2.6.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  # ── cu126 (torch 2.6.0 – 2.11.0) ──
+  - cuda: "12.6"
+    pytorch: "2.6.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.6"
+    pytorch: "2.7.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.6"
+    pytorch: "2.8.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.6"
+    pytorch: "2.9.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.6"
+    pytorch: "2.10.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.6"
+    pytorch: "2.11.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  # ── cu128 (torch 2.7.0 – 2.11.0, Blackwell archs) ──
+  - cuda: "12.8"
+    pytorch: "2.7.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.8"
+    pytorch: "2.8.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.8"
+    pytorch: "2.9.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.8"
+    pytorch: "2.10.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.8"
+    pytorch: "2.11.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  # ── cu129 (torch 2.8.0 – 2.11.0) ──
+  - cuda: "12.9"
+    pytorch: "2.8.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13"]
+  - cuda: "12.9"
+    pytorch: "2.9.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.9"
+    pytorch: "2.10.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "12.9"
+    pytorch: "2.11.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  # ── cu130 (torch 2.9.0 – 2.11.0) ──
+  - cuda: "13.0"
+    pytorch: "2.9.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "13.0"
+    pytorch: "2.10.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  - cuda: "13.0"
+    pytorch: "2.11.0"
+    python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+platforms: ["linux", "windows"]
+
+# Standard arch list per CUDA version. Mirrors PyTorch's official build script
+# at pytorch/.ci/manywheel/build_cuda.sh as of 2026-04-29.
+#
+# Forward-compat notes:
+#   sm_75 SASS runs on Turing only.
+#   sm_86 SASS forward-compat with sm_87/sm_89 (Ampere/Ada share SM ISA).
+#   sm_90 SASS covers Hopper.
+#   sm_100 SASS covers datacenter Blackwell (B100/B200/B300).
+#   sm_120+PTX JIT-covers consumer Blackwell + DGX Spark + future SKUs.
+arch_list_by_cuda:
+  "12.4": "5.0;6.0;7.0;7.5;8.0;8.6;9.0"
+  "12.6": "5.0;6.0;7.0;7.5;8.0;8.6;9.0"
+  "12.8": "7.5;8.0;8.6;9.0;10.0"
+  "12.9": "7.5;8.0;8.6;9.0;10.0"
+  "13.0": "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+
+# Default per-package settings inherited unless overridden.
+defaults:
+  max_jobs: 0           # 0 = ninja unlimited parallelism (homelab runners have RAM)
+  clone_recursive: false
+  free_disk_space: true
