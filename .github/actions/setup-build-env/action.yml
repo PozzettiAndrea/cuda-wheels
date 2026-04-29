@@ -46,7 +46,7 @@ runs:
       shell: bash
       run: |
         python -m pip install uv
-        uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
+        uv pip install --system --reinstall torch==${{ inputs.pytorch-version }}+cu${{ inputs.cuda-short }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
         uv pip install --system wheel setuptools ninja numpy triton packaging ${{ inputs.extra-deps }}
 
     - name: Save uv cache (Linux)
@@ -73,7 +73,7 @@ runs:
       shell: bash
       run: |
         python -m pip install uv
-        uv pip install --system torch==${{ inputs.pytorch-version }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
+        uv pip install --system --reinstall torch==${{ inputs.pytorch-version }}+cu${{ inputs.cuda-short }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
         uv pip install --system wheel setuptools ninja numpy packaging ${{ inputs.extra-deps }}
 
     - name: Patch PyTorch header for Windows MSVC bug

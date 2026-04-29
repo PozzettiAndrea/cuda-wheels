@@ -140,17 +140,18 @@ def parse_wheel_name(name: str) -> Optional[dict]:
 # ── binary arch extraction ──
 
 
-def extract_archs_from_wheel(wheel_path: str) -> set:
+def extract_archs_from_wheel(wheel_path: str):
     """Open wheel (zip), find .so/.pyd files, extract compiled CUDA archs.
 
-    Three detection methods (in priority order):
-    1. Cubin ELF headers (EM_CUDA=190) — ground truth, works for all packages
-    2. Thrust/CUB namespace mangling — reliable for packages using Thrust
-    3. Direct sm_XX strings — fallback, may include noise from bundled torch libs
+    Returns a dict {"sass": set(sm_XX), "ptx": set(sm_XX)}:
+    - SASS comes from cubin ELF headers (EM_CUDA=190) embedded in fatbin.
+    - PTX comes from `.target sm_XX` directives in PTX sections of fatbin.
 
-    Method 1 is preferred. Methods 2/3 are only used if method 1 finds nothing.
+    A wheel may ship SASS-only, PTX-only, or both. The two sets are kept
+    separate so the audit can show coverage breakdown per cell.
     """
-    cubin_archs = set()
+    sass_archs = set()
+    ptx_archs = set()
     thrust_archs = set()
     try:
         with zipfile.ZipFile(wheel_path, "r") as zf:
@@ -204,14 +205,15 @@ def extract_archs_from_wheel(wheel_path: str) -> set:
                                     # Old format: SM version in byte0
                                     sm = byte0  # 70, 75, 80, 86, 89, 90, etc.
                                 if 50 <= sm <= 130:
-                                    cubin_archs.add(f"sm_{sm}")
+                                    sass_archs.add(f"sm_{sm}")
                         pos = idx + 1
 
-                    # Method 1b: PTX .target directives (for packages using PTX instead of SASS)
+                    # Method 1b: PTX .target directives — these are PTX (text)
+                    # sections of the fatbin, separate from SASS cubin ELFs.
                     for m in re.findall(rb"\.target\s+sm_(\d+)", data):
                         sm = int(m.decode())
                         if 50 <= sm <= 130:
-                            cubin_archs.add(f"sm_{sm}")
+                            ptx_archs.add(f"sm_{sm}")
 
                     # Method 2: Thrust/CUB namespace mangling
                     for m in re.finditer(rb"THRUST_\d+_([\d_]+)_NS", data):
@@ -227,8 +229,10 @@ def extract_archs_from_wheel(wheel_path: str) -> set:
     except zipfile.BadZipFile:
         pass
 
-    # Prefer cubin method (ground truth), fall back to thrust
-    return cubin_archs if cubin_archs else thrust_archs
+    # If we found nothing via SASS or PTX, fall back to thrust mangling for SASS.
+    if not sass_archs and not ptx_archs and thrust_archs:
+        sass_archs = thrust_archs
+    return {"sass": sass_archs, "ptx": ptx_archs}
 
 
 # ── GitHub API ──
@@ -313,16 +317,7 @@ def main():
 
         wheels.append(parsed)
 
-    # Deduplicate: same archs regardless of Python version, so keep one per (pkg, cuda, torch, platform)
-    seen = set()
-    deduped = []
-    for w in wheels:
-        key = (w["package"], w["cuda"], w["torch_short"], w["platform"])
-        if key not in seen:
-            seen.add(key)
-            deduped.append(w)
-    print(f"Found {len(wheels)} total wheels, {len(deduped)} unique (pkg, cuda, torch, platform) combos")
-    wheels = deduped
+    print(f"Found {len(wheels)} wheels to audit")
 
     if args.dry_run:
         for w in wheels:
@@ -374,8 +369,14 @@ def main():
                 })
                 continue
 
-            # Extract archs
-            actual = extract_archs_from_wheel(dest)
+            # Extract archs (SASS + PTX separately)
+            extracted = extract_archs_from_wheel(dest)
+            actual_sass = extracted["sass"]
+            actual_ptx = extracted["ptx"]
+            # Combined set is used for backwards-compatible mismatch logic;
+            # the audit cares whether ANY representation (SASS or PTX) covers
+            # the expected arch family.
+            actual = actual_sass | actual_ptx
 
             # Delete immediately
             os.unlink(dest)
@@ -425,8 +426,14 @@ def main():
                 "package": pkg_name,
                 "cuda": wheel["cuda"],
                 "pytorch": wheel["torch_short"],
+                "pytorch_full": pytorch_full,
+                "python": "cp" + wheel["python"],
+                "platform": wheel["platform"],
+                "size": wheel["size"],
                 "expected": expected_sorted,
                 "actual": actual_sorted,
+                "actual_sass": sorted(actual_sass),
+                "actual_ptx": sorted(actual_ptx),
                 "match": match,
                 "missing_exact": sorted(missing_exact) if missing_exact else [],
             })
