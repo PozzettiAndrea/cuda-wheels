@@ -40,6 +40,7 @@ if not cccl_dest.exists() and cuda_include.exists():
                     "builtin_types.h", "host_defines.h", "device_types.h",
                     "surface_types.h", "texture_types.h", "channel_descriptor.h",
                     "device_launch_parameters.h", "library_types.h",
+                    "cooperative_groups.h", "cooperative_groups/**/*",
                     "sm_20_intrinsics.h", "sm_20_intrinsics.hpp",
                     "sm_32_intrinsics.h", "sm_32_intrinsics.hpp",
                     "sm_35_intrinsics.h",
