@@ -2,6 +2,7 @@
 """Generate build matrix from package YAML configs, excluding existing wheels."""
 import argparse
 import json
+import re
 import subprocess
 import urllib.request
 import yaml
@@ -81,6 +82,37 @@ _sys.path.insert(0, str(Path(__file__).parent))
 from fetch_pytorch_arch_lists import fetch as _fetch_pytorch_archs  # noqa: E402
 
 
+def _ensure_ptx_on_highest_base(arch_list_str: str) -> str:
+    """Ensure the highest non-`a` token in the arch list has a `+PTX` suffix.
+
+    Our build policy: every wheel always ships a PTX tail at the highest
+    base arch, so it stays JIT-compatible with future GPUs even after PyTorch
+    rotates `+PTX` away from a maturing toolchain. Belt-and-suspenders to the
+    YAMLs — if a future combo is added without `+PTX`, this normalizes it.
+
+    Tokens are space- or semicolon-separated (both formats observed).
+    Preserves the existing separator. Idempotent.
+    """
+    if not arch_list_str or not arch_list_str.strip():
+        return arch_list_str
+    sep = ";" if ";" in arch_list_str else " "
+    tokens = [t for t in re.split(r"[;\s]+", arch_list_str.strip()) if t]
+    best_idx, best_val = -1, -1.0
+    for i, tok in enumerate(tokens):
+        bare = tok.replace("+PTX", "")
+        if bare.endswith("a"):
+            continue
+        try:
+            val = float(bare)
+        except ValueError:
+            continue
+        if val > best_val:
+            best_val, best_idx = val, i
+    if best_idx >= 0 and "+PTX" not in tokens[best_idx]:
+        tokens[best_idx] = tokens[best_idx] + "+PTX"
+    return sep.join(tokens)
+
+
 def _info_to_torch_list(info: dict) -> str:
     """Convert {'sass':[sm_X,...], 'ptx':[sm_X,...]} -> 'X.Y;X.Y;X.Y+PTX'.
 
@@ -114,22 +146,27 @@ def resolve_arch_list(pkg: dict, cuda_version: str,
       3. pkg.arch_list (static package-wide override)
       4. default_arch_list — the matching combo's arch_list in _defaults.yml
       5. fetch PyTorch's build_cuda.sh on the fly (network fallback)
-    """
-    if combo_arch_list:
-        return combo_arch_list
-    pkg_by_cuda = pkg.get("arch_list_by_cuda")
-    if pkg_by_cuda and cuda_version in pkg_by_cuda:
-        return pkg_by_cuda[cuda_version]
-    if pkg.get("arch_list"):
-        return pkg["arch_list"]
-    if default_arch_list:
-        return default_arch_list
 
-    # Network fallback: only reached if _defaults.yml lacks a matching combo.
-    if pytorch_version:
+    Final post-processing: every result is normalized to ensure the highest
+    non-`a` token has a `+PTX` suffix (forward-compat tail for future GPUs).
+    """
+    raw = None
+    if combo_arch_list:
+        raw = combo_arch_list
+    elif pkg.get("arch_list_by_cuda") and cuda_version in pkg["arch_list_by_cuda"]:
+        raw = pkg["arch_list_by_cuda"][cuda_version]
+    elif pkg.get("arch_list"):
+        raw = pkg["arch_list"]
+    elif default_arch_list:
+        raw = default_arch_list
+    elif pytorch_version:
+        # Network fallback: only reached if _defaults.yml lacks a matching combo.
         info = _fetch_pytorch_archs(f"v{pytorch_version}", cuda_version)
         if info:
-            return _info_to_torch_list(info)
+            raw = _info_to_torch_list(info)
+
+    if raw is not None:
+        return _ensure_ptx_on_highest_base(raw)
 
     raise KeyError(
         f"No arch_list resolved for cuda={cuda_version} pytorch={pytorch_version} "

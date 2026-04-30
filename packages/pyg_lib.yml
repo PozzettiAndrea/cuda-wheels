@@ -4,4 +4,4 @@ source_tag: 0.5.0
 version: 0.5.0
 patch_script: patches/pyg_lib.py
 clone_recursive: true
-arch_list: 6.0;7.0;8.0;9.0
+arch_list: 6.0;7.0;8.0;9.0+PTX

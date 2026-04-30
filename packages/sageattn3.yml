@@ -4,7 +4,7 @@ source_tag: v2.2.0
 version: 1.0.0
 build_subdir: sageattention3_blackwell
 patch_script: patches/sageattn3.py
-arch_list: 10.0 12.0
+arch_list: 10.0 12.0+PTX
 build_matrix:
   combinations:
   - cuda: '12.8'

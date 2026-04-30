@@ -3,8 +3,8 @@ source_repo: thu-ml/SageAttention
 source_tag: v2.2.0
 patch_script: patches/sageattention.py
 arch_list_by_cuda:
-  '12.4': 8.0 9.0
-  '12.6': 8.0 9.0
-  '12.8': 8.0 9.0 10.0 12.0
-  '12.9': 8.0 9.0 10.0 12.0
-  '13.0': 8.0 9.0 10.0 12.0
+  '12.4': 8.0 9.0+PTX
+  '12.6': 8.0 9.0+PTX
+  '12.8': 8.0 9.0 10.0 12.0+PTX
+  '12.9': 8.0 9.0 10.0 12.0+PTX
+  '13.0': 8.0 9.0 10.0 12.0+PTX
