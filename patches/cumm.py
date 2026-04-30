@@ -260,18 +260,38 @@ for _hdr in ["half.h", "bfloat16.h", "tf32.h", "float8.h"]:
     _patched_ns += 1
 print(f"Patched {_patched_ns} dtype headers: fixed NVRTC namespace syntax (C++17 -> C++14)")
 
-# ─── 7. Fix NVRTC "std has no member abs" in conv params codegen ───
-# cumm/conv/params.py emits std::abs() into NVRTC kernels, but NVRTC's
-# std namespace doesn't include abs (it's in <cstdlib>). Shape products
-# are always non-negative so abs is unnecessary — remove it.
-_params_py = Path("cumm/conv/params.py")
-_params_content = _params_py.read_text()
-_old_abs = 'code.raw("std::abs(" + " * ".join(lines) + ") <= std::numeric_limits<int>::max()")'
-_new_abs = 'code.raw("(" + " * ".join(lines) + ") <= std::numeric_limits<int>::max()")'
-if _old_abs in _params_content:
-    _params_content = _params_content.replace(_old_abs, _new_abs)
-    _params_py.write_text(_params_content)
-    print("Patched cumm/conv/params.py: removed std::abs from NVRTC codegen")
+# ─── 7. Fix NVRTC missing std::abs/min/max in nvrtc_std.h ───
+# NVRTC's std namespace (via cuda::std) doesn't include abs, min, max.
+# spconv/cumm codegen emits std::abs(), std::min(), std::max() in NVRTC
+# kernels. Fix: add shims to nvrtc_std.h so they're available.
+_nvrtc_std = Path("include") / "tensorview" / "core" / "nvrtc_std.h"
+if _nvrtc_std.exists():
+    _nvrtc_content = _nvrtc_std.read_text()
+    _shims = '''
+// Shims for std::abs, std::min, std::max — not provided by cuda::std/libcudacxx.
+// These are normally in <cstdlib>/<algorithm> which NVRTC doesn't have.
+#if defined(__CUDACC_RTC__)
+namespace std {
+    template<typename T>
+    __device__ inline T abs(T x) { return x < T(0) ? -x : x; }
+    template<typename T>
+    __device__ inline const T& min(const T& a, const T& b) { return a < b ? a : b; }
+    template<typename T>
+    __device__ inline const T& max(const T& a, const T& b) { return a > b ? a : b; }
+}
+#endif
+'''
+    if "std::abs" not in _nvrtc_content:
+        # Insert before the final #endif
+        _nvrtc_content = _nvrtc_content.rstrip()
+        # Find the last #endif and insert before it
+        _last_endif = _nvrtc_content.rfind("#endif")
+        if _last_endif != -1:
+            _nvrtc_content = _nvrtc_content[:_last_endif] + _shims + "\n" + _nvrtc_content[_last_endif:]
+            _nvrtc_std.write_text(_nvrtc_content)
+            print("Patched nvrtc_std.h: added std::abs/min/max shims")
+    else:
+        print("nvrtc_std.h already has std::abs, skipping")
 
 # ─── 6. Fix NVRTC "qualified name is not allowed" in dtype headers ───
 # Under __CUDACC_RTC__, CUDA_NAMESPACE_STD expands to cuda::std.
