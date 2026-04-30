@@ -32,27 +32,18 @@ if not cccl_dest.exists() and cuda_include.exists():
         src = cuda_include / subdir
         if src.exists():
             shutil.copytree(str(src), str(cccl_dest / subdir), dirs_exist_ok=True)
-    # Also copy CUDA runtime headers (cuda.h, cuda_fp16.h, etc.) so NVRTC
-    # works on Windows without a system CUDA install. These are platform-
-    # independent text headers (~2.5MB).
-    import glob
-    for pattern in ["cuda*.h", "cuda*.hpp", "driver_types.h", "vector_types.h",
-                    "builtin_types.h", "host_defines.h", "device_types.h",
-                    "surface_types.h", "texture_types.h", "channel_descriptor.h",
-                    "device_launch_parameters.h", "library_types.h",
-                    "cooperative_groups.h", "cooperative_groups/**/*",
-                    "sm_20_intrinsics.h", "sm_20_intrinsics.hpp",
-                    "sm_32_intrinsics.h", "sm_32_intrinsics.hpp",
-                    "sm_35_intrinsics.h",
-                    "device_atomic_functions.h", "device_atomic_functions.hpp",
-                    "math_functions.h", "math_constants.h",
-                    "crt/*.h"]:
-        for f in glob.glob(str(cuda_include / pattern)):
-            f = Path(f)
-            dest_file = cccl_dest / f.relative_to(cuda_include)
-            dest_file.parent.mkdir(parents=True, exist_ok=True)
-            if not dest_file.exists():
-                shutil.copy2(str(f), str(dest_file))
+    # Also copy ALL CUDA runtime headers so NVRTC works on Windows without
+    # a system CUDA install. Cherry-picking individual headers is fragile —
+    # just copy everything. Headers are platform-independent text files.
+    for item in cuda_include.iterdir():
+        if item.name in ["cuda", "nv"]:
+            continue  # already copied above as CCCL/libcudacxx
+        dest_item = cccl_dest / item.name
+        if not dest_item.exists():
+            if item.is_dir():
+                shutil.copytree(str(item), str(dest_item), dirs_exist_ok=True)
+            else:
+                shutil.copy2(str(item), str(dest_item))
     print(f"Populated {cccl_dest} from {cuda_include} (incl. CUDA runtime headers)")
 else:
     if cccl_dest.exists():
