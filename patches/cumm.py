@@ -7,12 +7,37 @@ kernels. This patch adds:
   - bf16 Simt GEMM params (unaligned fallback for non-power-of-2 channels)
 
 Also forces package name to 'cumm' (not 'cumm-cu{version}').
+Also populates third_party/cccl/libcudacxx/include/ from $CUDA_HOME so
+setup.py bundles libcudacxx headers into the wheel for NVRTC.
 
 bf16 tensor core MMA instructions require sm_80+ (Ampere).
 bf16 Simt uses CUDA cores with f32 accumulation (works on any arch).
 """
+import os
 import re
+import shutil
 from pathlib import Path
+
+# ─── Populate third_party/cccl/libcudacxx/include from CUDA toolkit ───
+# cumm's setup.py copies from third_party/cccl/libcudacxx/include/ into
+# cumm/libcudacxx_include/ during build. But v0.8.2 has no cccl submodule,
+# so we populate it from the CUDA toolkit headers.
+cuda_home = os.environ.get("CUDA_HOME", "/usr/local/cuda")
+cuda_include = Path(cuda_home) / "include"
+cccl_dest = Path("third_party") / "cccl" / "libcudacxx" / "include"
+
+if not cccl_dest.exists() and cuda_include.exists():
+    cccl_dest.mkdir(parents=True, exist_ok=True)
+    for subdir in ["cuda", "nv"]:
+        src = cuda_include / subdir
+        if src.exists():
+            shutil.copytree(str(src), str(cccl_dest / subdir), dirs_exist_ok=True)
+    print(f"Populated {cccl_dest} from {cuda_include}")
+else:
+    if cccl_dest.exists():
+        print(f"third_party/cccl already populated, skipping")
+    else:
+        print(f"WARNING: Could not find CUDA headers at {cuda_include}")
 
 # ─── 0. Force package name to 'cumm' (ignore CUMM_CUDA_VERSION) ───
 setup_py = Path("setup.py")
