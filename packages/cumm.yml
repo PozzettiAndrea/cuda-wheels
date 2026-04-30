@@ -1,5 +1,6 @@
 name: cumm
 source_repo: FindDefinition/cumm
 source_tag: v0.8.2
+clone_recursive: true
 patch_script: patches/cumm.py
 extra_deps: pccm>=0.4.16 ccimport>=0.4.4
