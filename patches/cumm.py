@@ -36,13 +36,17 @@ for subdir in ["cuda", "nv"]:
         copied = True
 
 if copied:
-    # Ensure the headers are included in the wheel via MANIFEST.in
-    manifest = Path("MANIFEST.in")
-    manifest_content = manifest.read_text() if manifest.exists() else ""
-    manifest_line = "recursive-include cumm/libcudacxx_include *.h *.hpp"
-    if manifest_line not in manifest_content:
-        with manifest.open("a") as f:
-            f.write(f"\n{manifest_line}\n")
+    # Patch setup.py to include libcudacxx_include in package_data
+    # (MANIFEST.in only works for sdists, not pip wheel)
+    _setup_py = Path("setup.py")
+    _setup_content = _setup_py.read_text()
+    if "libcudacxx_include" not in _setup_content:
+        _setup_content = _setup_content.replace(
+            "include_package_data=True,",
+            'include_package_data=True,\n    package_data={"cumm": ["libcudacxx_include/**/*"]},'
+        )
+        _setup_py.write_text(_setup_content)
+        print("Patched setup.py: added libcudacxx_include to package_data")
     print(f"Bundled libcudacxx headers from {cuda_include} into cumm/libcudacxx_include/")
 else:
     print(f"WARNING: Could not find CCCL headers at {cuda_include}/cuda/ - NVRTC may fail at runtime")
