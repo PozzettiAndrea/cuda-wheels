@@ -103,16 +103,17 @@ def _info_to_torch_list(info: dict) -> str:
 
 def resolve_arch_list(pkg: dict, cuda_version: str,
                       combo_arch_list: Optional[str] = None,
-                      pytorch_version: Optional[str] = None) -> str:
+                      pytorch_version: Optional[str] = None,
+                      default_arch_list: Optional[str] = None) -> str:
     """
     Resolve the TORCH_CUDA_ARCH_LIST for a (package, cuda, torch) tuple.
 
     Priority (highest first):
-      1. per-combo arch_list (passed in from the combinations table)
+      1. per-combo arch_list from the package's OWN build_matrix.combinations
       2. pkg.arch_list_by_cuda[cuda] (per-CUDA package override)
-      3. pkg.arch_list (static package-wide override — used by flash_attn / sage / pyg_lib)
-      4. PyTorch's build_cuda.sh truth for this (cuda, torch_minor) — fetched + disk-cached
-      5. _defaults.arch_list_by_cuda[cuda] (final fallback if fetch fails)
+      3. pkg.arch_list (static package-wide override)
+      4. default_arch_list — the matching combo's arch_list in _defaults.yml
+      5. fetch PyTorch's build_cuda.sh on the fly (network fallback)
     """
     if combo_arch_list:
         return combo_arch_list
@@ -121,21 +122,19 @@ def resolve_arch_list(pkg: dict, cuda_version: str,
         return pkg_by_cuda[cuda_version]
     if pkg.get("arch_list"):
         return pkg["arch_list"]
+    if default_arch_list:
+        return default_arch_list
 
-    # Pull from PyTorch's authoritative build_cuda.sh for this (cuda, torch).
-    # build_cuda.sh is bumped at the minor branch level, so v2.7.0 and v2.7.1
-    # share an entry — but we still pass the full tag so the cache key is
-    # consistent with PyPI scrape data.
+    # Network fallback: only reached if _defaults.yml lacks a matching combo.
     if pytorch_version:
         info = _fetch_pytorch_archs(f"v{pytorch_version}", cuda_version)
         if info:
             return _info_to_torch_list(info)
 
-    if cuda_version in DEFAULTS["arch_list_by_cuda"]:
-        return DEFAULTS["arch_list_by_cuda"][cuda_version]
     raise KeyError(
-        f"No arch_list resolved for cuda={cuda_version} pkg={pkg.get('name')}; "
-        f"add a pkg.arch_list, or fix _defaults.arch_list_by_cuda fallback."
+        f"No arch_list resolved for cuda={cuda_version} pytorch={pytorch_version} "
+        f"pkg={pkg.get('name')}; add an entry to packages/_defaults.yml's "
+        f"combinations or to the package YAML."
     )
 
 
@@ -217,20 +216,31 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         build = pkg.get("build_matrix") or {}
 
         # Resolve combinations: package's own override > _defaults.combinations.
-        # Resolve platforms similarly.
+        # Combos carry `combo_arch_list` (highest priority — per-combo override
+        # in the package's OWN build_matrix) and `default_arch_list` (lower
+        # priority — the corresponding entry in _defaults.yml, used as fallback
+        # only when the package has no other override).
         if "combinations" in build:
             combos_src = build["combinations"]
             default_python_vers = build.get("python_versions", [])
+            # Build a (cuda, pytorch) -> default arch_list lookup for fallback
+            default_arch_by_combo = {(c["cuda"], c["pytorch"]): c.get("arch_list")
+                                     for c in DEFAULTS["combinations"]}
             combos = []
             for c in combos_src:
                 python_vers = c.get("python_versions", default_python_vers)
-                combo_arch_list = c.get("arch_list")
+                combo_arch_list = c.get("arch_list")  # explicit per-combo override in this YAML
+                default_arch_list = default_arch_by_combo.get((c["cuda"], c["pytorch"]))
                 combo_source_tag = c.get("source_tag")
-                combos.append((c["cuda"], c["pytorch"], python_vers, combo_arch_list, combo_source_tag))
+                combos.append((c["cuda"], c["pytorch"], python_vers,
+                               combo_arch_list, combo_source_tag, default_arch_list))
         elif "cuda_versions" in build and "pytorch_versions" in build:
             # Legacy cartesian-product form
             python_vers = build["python_versions"]
-            combos = [(cuda, pytorch, python_vers, None, None)
+            default_arch_by_combo = {(c["cuda"], c["pytorch"]): c.get("arch_list")
+                                     for c in DEFAULTS["combinations"]}
+            combos = [(cuda, pytorch, python_vers, None, None,
+                       default_arch_by_combo.get((cuda, pytorch)))
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
         else:
@@ -238,14 +248,14 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
             combos = []
             for c in DEFAULTS["combinations"]:
                 combos.append((c["cuda"], c["pytorch"], c["python_versions"],
-                               c.get("arch_list"), c.get("source_tag")))
+                               None, c.get("source_tag"), c.get("arch_list")))
 
         platforms = build.get("platforms") or DEFAULTS.get("platforms", ["linux"])
         # Inject platforms back into build dict so existing code below reads it uniformly
         build = dict(build)
         build["platforms"] = platforms
 
-        for cuda, pytorch, python_versions, combo_arch_list, combo_source_tag in combos:
+        for cuda, pytorch, python_versions, combo_arch_list, combo_source_tag, default_arch_list in combos:
             if cuda_filter != "all" and cuda != cuda_filter:
                 continue
             # pytorch_filter accepts either full ("2.11.0") or major.minor ("2.11")
@@ -285,7 +295,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "pytorch": pytorch,
                         "python": python_ver,
                         "platform": platform,
-                        "arch_list": resolve_arch_list(pkg, cuda, combo_arch_list, pytorch),
+                        "arch_list": resolve_arch_list(pkg, cuda, combo_arch_list, pytorch, default_arch_list),
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
                         "free_disk_space": pkg.get("free_disk_space", defaults.get("free_disk_space", False)),
