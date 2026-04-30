@@ -1,6 +1,6 @@
 name: flex_gemm_ap
 source_repo: PozzettiAndrea/FlexGEMM-ap
-source_tag: ''
+source_tag: 3432bc7ce157b0f668ecf0d856d69353816f5c47
 extra_deps: numpy
 extra_cuda_components: cufft_dev nvtx
 clone_recursive: true

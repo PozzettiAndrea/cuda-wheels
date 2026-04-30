@@ -1,6 +1,6 @@
 name: flex_gemm
 source_repo: JeffreyXiang/FlexGEMM
-source_tag: ''
+source_tag: 6dd94a859c26ee8246888502eada3dd8ad85532e
 patch_script: patches/flexgemm.py
 extra_deps: numpy
 extra_cuda_components: cufft_dev nvtx

@@ -1,6 +1,6 @@
 name: cumesh_vb
 source_repo: visualbruno/CuMesh
-source_tag: ''
+source_tag: d10e54c30ddd03d11472c1431693f985501c7966
 patch_script: patches/cumesh_vb.py
 extra_cuda_components: curand_dev cufft_dev nvtx
 clone_recursive: true

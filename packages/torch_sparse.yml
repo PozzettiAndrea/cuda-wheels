@@ -1,5 +1,5 @@
 name: torch_sparse
 source_repo: rusty1s/pytorch_sparse
-source_tag: ''
+source_tag: 2be752eb2e12d4c76d29c7a11d0f0b77cfd9ff45
 patch_script: patches/torch_sparse.py
 clone_recursive: true

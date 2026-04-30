@@ -1,6 +1,6 @@
 name: dpvo_cuda
 source_repo: princeton-vl/DPVO
-source_tag: ''
+source_tag: 859bbbfdac6c6185f345003b3c473901fcd13ace
 version: 1.0.0
 patch_script: patches/dpvo_cuda.py
 extra_deps: numpy

@@ -1,6 +1,6 @@
 name: nvdiffrec_render
 source_repo: NVlabs/nvdiffrec
-source_tag: ''
+source_tag: a3e73909a01887c8a135235ff860dd23a045cc1b
 build_subdir: nvdiffrec_render
 patch_script: patches/nvdiffrec_render.py
 extra_deps: numpy

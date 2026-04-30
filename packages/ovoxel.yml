@@ -1,6 +1,6 @@
 name: o_voxel
 source_repo: microsoft/TRELLIS.2
-source_tag: ''
+source_tag: 5565d240c4a494caaf9ece7a554542b76ffa36d3
 build_subdir: o-voxel
 patch_script: patches/ovoxel.py
 clone_recursive: true

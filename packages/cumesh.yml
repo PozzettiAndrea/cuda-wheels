@@ -1,6 +1,6 @@
 name: cumesh
 source_repo: JeffreyXiang/CuMesh
-source_tag: ''
+source_tag: cf1a2f07304b5fe388ed86a16e4a0474599df914
 patch_script: patches/cumesh.py
 extra_cuda_components: curand_dev cufft_dev nvtx
 clone_recursive: true

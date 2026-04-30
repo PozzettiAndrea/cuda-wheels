@@ -1,4 +1,4 @@
 name: torch_spline_conv
 source_repo: rusty1s/pytorch_spline_conv
-source_tag: ''
+source_tag: 986b41c8d8149635e748bd369e998effff10099e
 version: 1.2.2

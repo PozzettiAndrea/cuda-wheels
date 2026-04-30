@@ -1,4 +1,4 @@
 name: torch_cluster
 source_repo: rusty1s/pytorch_cluster
-source_tag: ''
+source_tag: af7b9f0af6b74be1594eb3d0a1685470cbb21265
 patch_script: patches/torch_cluster.py

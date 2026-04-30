@@ -1,6 +1,6 @@
 name: o_voxel_vb
 source_repo: visualbruno/TRELLIS.2
-source_tag: ''
+source_tag: 65d1e13b4a92296036044df0633242bb9e95abf6
 build_subdir: o-voxel
 patch_script: patches/ovoxel_vb.py
 clone_recursive: true

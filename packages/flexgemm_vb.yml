@@ -1,6 +1,6 @@
 name: flex_gemm_vb
 source_repo: visualbruno/FlexGEMM
-source_tag: ''
+source_tag: db388bd17c34abc697792aa718dca780734c2783
 patch_script: patches/flexgemm_vb.py
 extra_deps: numpy
 extra_cuda_components: cufft_dev nvtx

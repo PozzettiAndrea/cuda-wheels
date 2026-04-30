@@ -1,6 +1,6 @@
 name: o_voxel_vb_ap
 source_repo: PozzettiAndrea/Trellis.2.drtk
-source_tag: ''
+source_tag: 200ba8cb5a4039db8acde3c09edc43a0031b4098
 build_subdir: o-voxel
 patch_script: patches/ovoxel_vb_ap.py
 clone_recursive: true
