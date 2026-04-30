@@ -361,3 +361,16 @@ for _hdr in ["half.h", "bfloat16.h", "tf32.h", "float8.h"]:
     _hdr_path.write_text(_hdr_content)
     _patched_ns += 1
 print(f"Patched {_patched_ns} dtype headers: fixed NVRTC namespace syntax (C++17 -> C++14)")
+
+# ─── 8. Fix cu++filt FileNotFoundError on Windows ───
+# cumm calls cu++filt (CUDA toolkit CLI) to demangle kernel names.
+# On Windows without a system CUDA install, this crashes with FileNotFoundError.
+# Fix: wrap the subprocess call in try/except and return the mangled name.
+_nvrtc_init = Path("cumm/nvrtc/__init__.py")
+_nvrtc_init_content = _nvrtc_init.read_text()
+_old_cufilt = '        res = subprocess.check_output(["cu++filt",\n                                       name]).decode("utf-8").strip()\n        return res'
+_new_cufilt = '        try:\n            res = subprocess.check_output(["cu++filt",\n                                           name]).decode("utf-8").strip()\n            return res\n        except (FileNotFoundError, subprocess.CalledProcessError):\n            return name  # return mangled name if cu++filt unavailable'
+if _old_cufilt in _nvrtc_init_content:
+    _nvrtc_init_content = _nvrtc_init_content.replace(_old_cufilt, _new_cufilt)
+    _nvrtc_init.write_text(_nvrtc_init_content)
+    print("Patched cumm/nvrtc/__init__.py: cu++filt fallback for Windows")
