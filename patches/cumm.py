@@ -232,3 +232,34 @@ if old_resolve in const_content:
     print("Patched cumm/constants.py: fixed NVRTC include path resolution")
 else:
     print("WARNING: Could not find include path resolution block in constants.py")
+
+# ─── 6. Fix NVRTC "qualified name is not allowed" in dtype headers ───
+# Under __CUDACC_RTC__, CUDA_NAMESPACE_STD expands to cuda::std.
+# `namespace cuda::std {` is C++17 nested namespace syntax which NVRTC
+# rejects in its default C++14 mode. Fix: use C++14-compatible
+# `namespace cuda { namespace std {` and `}}` closing.
+_dtype_dir = Path("include") / "tensorview" / "gemm" / "dtypes"
+_patched_ns = 0
+for _hdr in ["half.h", "bfloat16.h", "tf32.h", "float8.h"]:
+    _hdr_path = _dtype_dir / _hdr
+    if not _hdr_path.exists():
+        print(f"WARNING: {_hdr_path} not found, skipping namespace fix")
+        continue
+    _hdr_content = _hdr_path.read_text()
+    if "namespace CUDA_NAMESPACE_STD {" not in _hdr_content:
+        continue
+    # Replace opening: namespace CUDA_NAMESPACE_STD { -> namespace cuda { namespace std {
+    _hdr_content = _hdr_content.replace(
+        "namespace CUDA_NAMESPACE_STD {",
+        "namespace cuda { namespace std {"
+    )
+    # Replace closing: } // namespace std -> }} // namespace cuda::std
+    # (some files have extra spaces before //)
+    _hdr_content = re.sub(
+        r'\}\s*//\s*namespace std\b',
+        '}} // namespace cuda::std',
+        _hdr_content
+    )
+    _hdr_path.write_text(_hdr_content)
+    _patched_ns += 1
+print(f"Patched {_patched_ns} dtype headers: fixed NVRTC namespace syntax (C++17 -> C++14)")
