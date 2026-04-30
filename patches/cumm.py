@@ -282,12 +282,13 @@ namespace std {
 #endif
 '''
     if "std::abs" not in _nvrtc_content:
-        # Insert before the final #endif
-        _nvrtc_content = _nvrtc_content.rstrip()
-        # Find the last #endif and insert before it
-        _last_endif = _nvrtc_content.rfind("#endif")
-        if _last_endif != -1:
-            _nvrtc_content = _nvrtc_content[:_last_endif] + _shims + "\n" + _nvrtc_content[_last_endif:]
+        # Insert after the M_PI define block, before the #endif that closes #ifndef __APPLE__
+        _marker = '#define M_PI 3.14159265358979323846\n#endif'
+        if _marker in _nvrtc_content:
+            _nvrtc_content = _nvrtc_content.replace(
+                _marker,
+                '#define M_PI 3.14159265358979323846\n#endif\n' + _shims
+            )
             _nvrtc_std.write_text(_nvrtc_content)
             print("Patched nvrtc_std.h: added std::abs/min/max shims")
     else:
