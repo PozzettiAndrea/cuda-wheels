@@ -32,7 +32,27 @@ if not cccl_dest.exists() and cuda_include.exists():
         src = cuda_include / subdir
         if src.exists():
             shutil.copytree(str(src), str(cccl_dest / subdir), dirs_exist_ok=True)
-    print(f"Populated {cccl_dest} from {cuda_include}")
+    # Also copy CUDA runtime headers (cuda.h, cuda_fp16.h, etc.) so NVRTC
+    # works on Windows without a system CUDA install. These are platform-
+    # independent text headers (~2.5MB).
+    import glob
+    for pattern in ["cuda*.h", "cuda*.hpp", "driver_types.h", "vector_types.h",
+                    "builtin_types.h", "host_defines.h", "device_types.h",
+                    "surface_types.h", "texture_types.h", "channel_descriptor.h",
+                    "device_launch_parameters.h", "library_types.h",
+                    "sm_20_intrinsics.h", "sm_20_intrinsics.hpp",
+                    "sm_32_intrinsics.h", "sm_32_intrinsics.hpp",
+                    "sm_35_intrinsics.h",
+                    "device_atomic_functions.h", "device_atomic_functions.hpp",
+                    "math_functions.h", "math_constants.h",
+                    "crt/*.h"]:
+        for f in glob.glob(str(cuda_include / pattern)):
+            f = Path(f)
+            dest_file = cccl_dest / f.relative_to(cuda_include)
+            dest_file.parent.mkdir(parents=True, exist_ok=True)
+            if not dest_file.exists():
+                shutil.copy2(str(f), str(dest_file))
+    print(f"Populated {cccl_dest} from {cuda_include} (incl. CUDA runtime headers)")
 else:
     if cccl_dest.exists():
         print(f"third_party/cccl already populated, skipping")
@@ -232,6 +252,31 @@ if old_resolve in const_content:
     print("Patched cumm/constants.py: fixed NVRTC include path resolution")
 else:
     print("WARNING: Could not find include path resolution block in constants.py")
+
+# ─── 5b. Patch _locate_cudart_includes_for_nvrtc to fallback to bundled headers ───
+# On Windows (no system CUDA, no triton), the function raises ValueError.
+# Add a fallback that uses the bundled libcudacxx_include dir which now
+# also contains CUDA runtime headers (cuda.h, cuda_fp16.h, etc.).
+_common_py = Path("cumm/common.py")
+_common_content = _common_py.read_text()
+_old_raise = '''    raise ValueError("can't find cudart include for nvrtc, you must either install cuda to your system "
+        "or use nvidia pip package (nvidia-cuda-runtime-cu12) (see https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).")'''
+_new_fallback = '''    # Fallback: use bundled headers in libcudacxx_include (contains CUDA runtime headers too)
+    if TENSORVIEW_LIBCUDACXX_PATH.exists() and (Path(TENSORVIEW_LIBCUDACXX_PATH) / "cuda_fp16.h").exists():
+        return [str(TENSORVIEW_LIBCUDACXX_PATH)]
+    raise ValueError("can't find cudart include for nvrtc, you must either install cuda to your system "
+        "or use nvidia pip package (nvidia-cuda-runtime-cu12) (see https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/).")'''
+if _old_raise in _common_content:
+    # Also need to import TENSORVIEW_LIBCUDACXX_PATH in the function scope
+    _common_content = _common_content.replace(_old_raise, _new_fallback)
+    # Ensure TENSORVIEW_LIBCUDACXX_PATH is imported at the top of the file
+    if "from cumm.constants import" in _common_content and "TENSORVIEW_LIBCUDACXX_PATH" not in _common_content.split("def ")[0]:
+        # It's already imported via constants — check if it's in the import line
+        pass  # Already imported at module level in common.py
+    _common_py.write_text(_common_content)
+    print("Patched cumm/common.py: added libcudacxx_include fallback for NVRTC cudart headers")
+else:
+    print("WARNING: Could not find cudart ValueError raise in common.py")
 
 # ─── 6. Fix NVRTC "qualified name is not allowed" in dtype headers ───
 # Under __CUDACC_RTC__, CUDA_NAMESPACE_STD expands to cuda::std.
