@@ -236,6 +236,46 @@ else:
 # ─── 6. Fix NVRTC "qualified name is not allowed" in dtype headers ───
 # Under __CUDACC_RTC__, CUDA_NAMESPACE_STD expands to cuda::std.
 # `namespace cuda::std {` is C++17 nested namespace syntax which NVRTC
+# rejects in its default C++14 mode. Fix: use C++14-compatible nesting.
+_dtype_dir = Path("include") / "tensorview" / "gemm" / "dtypes"
+_patched_ns = 0
+for _hdr in ["half.h", "bfloat16.h", "tf32.h", "float8.h"]:
+    _hdr_path = _dtype_dir / _hdr
+    if not _hdr_path.exists():
+        print(f"WARNING: {_hdr_path} not found, skipping namespace fix")
+        continue
+    _hdr_content = _hdr_path.read_text()
+    if "namespace CUDA_NAMESPACE_STD {" not in _hdr_content:
+        continue
+    _hdr_content = _hdr_content.replace(
+        "namespace CUDA_NAMESPACE_STD {",
+        "namespace cuda { namespace std {"
+    )
+    _hdr_content = re.sub(
+        r'\}\s*//\s*namespace std\b',
+        '}} // namespace cuda::std',
+        _hdr_content
+    )
+    _hdr_path.write_text(_hdr_content)
+    _patched_ns += 1
+print(f"Patched {_patched_ns} dtype headers: fixed NVRTC namespace syntax (C++17 -> C++14)")
+
+# ─── 7. Fix NVRTC "std has no member abs" in conv params codegen ───
+# cumm/conv/params.py emits std::abs() into NVRTC kernels, but NVRTC's
+# std namespace doesn't include abs (it's in <cstdlib>). Shape products
+# are always non-negative so abs is unnecessary — remove it.
+_params_py = Path("cumm/conv/params.py")
+_params_content = _params_py.read_text()
+_old_abs = 'code.raw("std::abs(" + " * ".join(lines) + ") <= std::numeric_limits<int>::max()")'
+_new_abs = 'code.raw("(" + " * ".join(lines) + ") <= std::numeric_limits<int>::max()")'
+if _old_abs in _params_content:
+    _params_content = _params_content.replace(_old_abs, _new_abs)
+    _params_py.write_text(_params_content)
+    print("Patched cumm/conv/params.py: removed std::abs from NVRTC codegen")
+
+# ─── 6. Fix NVRTC "qualified name is not allowed" in dtype headers ───
+# Under __CUDACC_RTC__, CUDA_NAMESPACE_STD expands to cuda::std.
+# `namespace cuda::std {` is C++17 nested namespace syntax which NVRTC
 # rejects in its default C++14 mode. Fix: use C++14-compatible
 # `namespace cuda { namespace std {` and `}}` closing.
 _dtype_dir = Path("include") / "tensorview" / "gemm" / "dtypes"
