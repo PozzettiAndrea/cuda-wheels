@@ -53,11 +53,19 @@ if setup_py.exists():
     )
     # Also add package_data for bundled libcudacxx headers
     if copied and "libcudacxx_include" not in setup_content:
-        setup_content = setup_content.replace(
-            "include_package_data=True,",
-            'include_package_data=True,\n    package_data={"cumm": ["libcudacxx_include/**/*"]},'
-        )
-        print("Patched setup.py: added libcudacxx_include to package_data")
+        # Collect all header files relative to cumm/ for package_data
+        # (setuptools doesn't support ** glob in package_data)
+        _cccl_files = []
+        for _f in (Path("cumm") / "libcudacxx_include").rglob("*"):
+            if _f.is_file():
+                _cccl_files.append(str(_f.relative_to(Path("cumm"))))
+        if _cccl_files:
+            _pkg_data_str = repr(_cccl_files)
+            setup_content = setup_content.replace(
+                "include_package_data=True,",
+                f'include_package_data=True,\n    package_data={{"cumm": {_pkg_data_str}}},'
+            )
+            print(f"Patched setup.py: added {len(_cccl_files)} libcudacxx files to package_data")
     setup_py.write_text(setup_content)
     print("Patched setup.py: forced package name to 'cumm'")
 
