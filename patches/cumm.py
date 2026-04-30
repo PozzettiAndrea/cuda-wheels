@@ -7,12 +7,45 @@ kernels. This patch adds:
   - bf16 Simt GEMM params (unaligned fallback for non-power-of-2 channels)
 
 Also forces package name to 'cumm' (not 'cumm-cu{version}').
+Also bundles libcudacxx (CCCL) headers into the wheel so NVRTC can find them
+at runtime without needing a system CUDA installation.
 
 bf16 tensor core MMA instructions require sm_80+ (Ampere).
 bf16 Simt uses CUDA cores with f32 accumulation (works on any arch).
 """
+import os
 import re
+import shutil
 from pathlib import Path
+
+# ─── Bundle libcudacxx headers into cumm/libcudacxx_include ───
+# cumm's NVRTC looks for cumm/libcudacxx_include/ at runtime to resolve
+# #include <cuda/std/limits> etc. Without this, users need a full CUDA
+# toolkit on the system. We copy the headers from $CUDA_HOME/include.
+cuda_home = os.environ.get("CUDA_HOME", "/usr/local/cuda")
+cuda_include = Path(cuda_home) / "include"
+dest = Path("cumm") / "libcudacxx_include"
+
+# The headers we need are under include/cuda/ and include/nv/
+# (cuda/std/*, cuda/atomic, nv/target etc.)
+copied = False
+for subdir in ["cuda", "nv"]:
+    src = cuda_include / subdir
+    if src.exists():
+        shutil.copytree(str(src), str(dest / subdir), dirs_exist_ok=True)
+        copied = True
+
+if copied:
+    # Ensure the headers are included in the wheel via MANIFEST.in
+    manifest = Path("MANIFEST.in")
+    manifest_content = manifest.read_text() if manifest.exists() else ""
+    manifest_line = "recursive-include cumm/libcudacxx_include *.h *.hpp"
+    if manifest_line not in manifest_content:
+        with manifest.open("a") as f:
+            f.write(f"\n{manifest_line}\n")
+    print(f"Bundled libcudacxx headers from {cuda_include} into cumm/libcudacxx_include/")
+else:
+    print(f"WARNING: Could not find CCCL headers at {cuda_include}/cuda/ - NVRTC may fail at runtime")
 
 # ─── 0. Force package name to 'cumm' (ignore CUMM_CUDA_VERSION) ───
 setup_py = Path("setup.py")
