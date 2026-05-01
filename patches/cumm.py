@@ -362,15 +362,39 @@ for _hdr in ["half.h", "bfloat16.h", "tf32.h", "float8.h"]:
     _patched_ns += 1
 print(f"Patched {_patched_ns} dtype headers: fixed NVRTC namespace syntax (C++17 -> C++14)")
 
-# ─── 8. Fix cu++filt FileNotFoundError on Windows ───
+# ─── 8. Bundle cu++filt and patch cumm to find it ───
 # cumm calls cu++filt (CUDA toolkit CLI) to demangle kernel names.
-# On Windows without a system CUDA install, this crashes with FileNotFoundError.
-# Fix: wrap the subprocess call in try/except and return the mangled name.
+# spconv needs demangled names to look up constants (e.g. spconv::kSizeOfParams).
+# On systems without CUDA toolkit, cu++filt isn't available.
+# Fix: bundle cu++filt binary into cumm/bin/ and patch the subprocess call to use it.
+_cufilt_src = Path(cuda_home) / "bin" / ("cu++filt.exe" if os.name == "nt" else "cu++filt")
+_cufilt_dest = Path("cumm") / "bin"
+if _cufilt_src.exists():
+    _cufilt_dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(str(_cufilt_src), str(_cufilt_dest / _cufilt_src.name))
+    print(f"Bundled {_cufilt_src.name} into cumm/bin/")
+
+# Patch cufilt() to look for bundled cu++filt first
 _nvrtc_init = Path("cumm/nvrtc/__init__.py")
 _nvrtc_init_content = _nvrtc_init.read_text()
-_old_cufilt = '        res = subprocess.check_output(["cu++filt",\n                                       name]).decode("utf-8").strip()\n        return res'
-_new_cufilt = '        try:\n            res = subprocess.check_output(["cu++filt",\n                                           name]).decode("utf-8").strip()\n            return res\n        except (FileNotFoundError, subprocess.CalledProcessError):\n            return name  # return mangled name if cu++filt unavailable'
+_old_cufilt = '''        res = subprocess.check_output(["cu++filt",
+                                       name]).decode("utf-8").strip()
+        return res'''
+_new_cufilt = '''        # Try bundled cu++filt first, then system cu++filt
+        import cumm
+        _bundled = Path(cumm.__file__).parent / "bin" / ("cu++filt.exe" if os.name == "nt" else "cu++filt")
+        _cmd = str(_bundled) if _bundled.exists() else "cu++filt"
+        try:
+            res = subprocess.check_output([_cmd, name]).decode("utf-8").strip()
+            return res
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return name'''
 if _old_cufilt in _nvrtc_init_content:
+    # Ensure os and Path imports exist
+    if "from pathlib import Path" not in _nvrtc_init_content:
+        _nvrtc_init_content = "from pathlib import Path\n" + _nvrtc_init_content
+    if "import os" not in _nvrtc_init_content:
+        _nvrtc_init_content = "import os\n" + _nvrtc_init_content
     _nvrtc_init_content = _nvrtc_init_content.replace(_old_cufilt, _new_cufilt)
     _nvrtc_init.write_text(_nvrtc_init_content)
-    print("Patched cumm/nvrtc/__init__.py: cu++filt fallback for Windows")
+    print("Patched cumm/nvrtc/__init__.py: use bundled cu++filt")
