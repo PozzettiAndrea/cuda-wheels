@@ -81,6 +81,14 @@ runs:
       shell: bash
       run: |
         cd source
+        # Set CUDA_HOME for patch scripts that need it (e.g. cumm header bundling)
+        if [ -z "$CUDA_HOME" ]; then
+          if [ -d "/usr/local/cuda-${{ inputs.cuda-version }}" ]; then
+            export CUDA_HOME="/usr/local/cuda-${{ inputs.cuda-version }}"
+          elif [ -n "$CUDA_PATH" ]; then
+            export CUDA_HOME="$CUDA_PATH"
+          fi
+        fi
         python $GITHUB_WORKSPACE/${{ inputs.patch-script }}
 
     - name: Pre-build script
