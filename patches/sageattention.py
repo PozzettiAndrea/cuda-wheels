@@ -52,9 +52,10 @@ if old_abi in content:
 else:
     print("WARNING: Could not find ABI block - source may have changed")
 
-# Reduce nvcc --threads from 8 to 4 to avoid OOM on GitHub runners
-content = content.replace('"--threads=8"', '"--threads=4"')
-print("Patched nvcc --threads=8 -> --threads=4")
+# Reduce nvcc --threads from 8 to 1 to avoid OOM on GitHub runners.
+# Combined with max_jobs=2 in sageattention.yml.
+content = content.replace('"--threads=8"', '"--threads=1"')
+print("Patched nvcc --threads=8 -> --threads=1")
 
 # Fix _qattn_sm90 extension: it uses Hopper-only wgmma instructions but inherits
 # the global NVCC_FLAGS with all arch gencode flags (sm_80, sm_86, etc.), causing

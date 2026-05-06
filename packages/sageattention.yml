@@ -2,6 +2,10 @@ name: sageattention
 source_repo: thu-ml/SageAttention
 source_tag: v2.2.0
 patch_script: patches/sageattention.py
+# Constrain CI peak memory: sage's massive template instantiations × N arches
+# OOM 16GB github-hosted windows runners under unlimited parallelism. Pair with
+# nvcc --threads=1 in patches/sageattention.py.
+max_jobs: 2
 arch_list_by_cuda:
   # Must include 8.9 (Ada / RTX 40-series) — sage 2.x's _qattn_sm89 extension
   # contains Ada-only FP8 mma instructions gated on __CUDA_ARCH__ >= 890. Without
