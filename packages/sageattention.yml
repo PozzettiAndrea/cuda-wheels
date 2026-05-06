@@ -3,8 +3,14 @@ source_repo: thu-ml/SageAttention
 source_tag: v2.2.0
 patch_script: patches/sageattention.py
 arch_list_by_cuda:
-  '12.4': 8.0 9.0+PTX
-  '12.6': 8.0 9.0+PTX
-  '12.8': 8.0 9.0 10.0 12.0+PTX
-  '12.9': 8.0 9.0 10.0 12.0+PTX
-  '13.0': 8.0 9.0 10.0 12.0+PTX
+  # Must include 8.9 (Ada / RTX 40-series) — sage 2.x's _qattn_sm89 extension
+  # contains Ada-only FP8 mma instructions gated on __CUDA_ARCH__ >= 890. Without
+  # an sm_89 cubin the loader falls back to sm_80 binary (forward-compatible
+  # Ampere → Ada), where those gated paths compile to stubs and `cudaErrorLaunchFailure`
+  # surfaces at runtime on real Ada hardware. 8.6 added too so Ampere consumer
+  # cards (3090/3080/3070/3060) get a native cubin instead of relying on JIT.
+  '12.4': 8.0 8.6 8.9 9.0+PTX
+  '12.6': 8.0 8.6 8.9 9.0+PTX
+  '12.8': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '12.9': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '13.0': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
