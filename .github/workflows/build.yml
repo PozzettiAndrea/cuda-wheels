@@ -38,6 +38,8 @@ on:
           - pyg_lib
           - torch_spline_conv
           - drtk
+          - diff_gaussian_rasterization
+          - simple_knn
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

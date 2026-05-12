@@ -1,0 +1,4 @@
+name: diff_gaussian_rasterization
+source_repo: ashawkey/diff-gaussian-rasterization
+source_tag: main
+clone_recursive: true
