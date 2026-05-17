@@ -31,6 +31,29 @@ if old_where in pyproject_text:
 else:
     print("NOTE: pyproject.toml didn't contain 'where = [\"src/\"]' -- skipping (may already be fixed upstream)")
 
+# csrc/CMakeLists.txt: strip GCC-only flags forwarded to host compiler that
+# MSVC chokes on. `-Wconversion` triggers cl error D8021 ("invalid numeric
+# argument '/Wconversion'") because MSVC parses '-W<digit>' as warning level.
+# `-fno-strict-aliasing` is a GCC aliasing knob with no MSVC equivalent;
+# MSVC errors out the same way. Neither is load-bearing for libnatten
+# correctness — they're a non-critical warning + a GCC-specific optimizer
+# safety hint. Strip both unconditionally; behavior on Linux is unchanged
+# in any way that matters for the built kernels.
+cmake_file = Path("csrc/CMakeLists.txt")
+cmake_text = cmake_file.read_text()
+patched_cmake = cmake_text
+for line in (
+    'set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wconversion")',
+    'set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-fno-strict-aliasing")',
+):
+    if line in patched_cmake:
+        patched_cmake = patched_cmake.replace(line + "\n", "", 1)
+        print(f"Stripped from csrc/CMakeLists.txt: {line}")
+    else:
+        print(f"NOTE: csrc/CMakeLists.txt didn't contain {line!r} -- skipping (may already be removed upstream)")
+if patched_cmake != cmake_text:
+    cmake_file.write_text(patched_cmake)
+
 setup_file = Path("setup.py")
 content = setup_file.read_text()
 

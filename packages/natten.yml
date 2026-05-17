@@ -4,9 +4,16 @@ source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
-# CUTLASS template instantiations have large peak memory like sage. Constrain
-# to keep CI runners from OOM-ing under unlimited parallelism.
-max_jobs: 2
+# CUTLASS template instantiations have large peak memory. Pair max_jobs=4
+# slots with nvcc --threads=1 (via nvcc_flags below) so each compile is
+# single-threaded — matches the sage memory-safety pattern, just with more
+# slots since each is smaller.
+max_jobs: 4
+# Force nvcc to single-threaded per file (NATTEN's CMakeLists doesn't pass
+# --threads; without this, nvcc default is 1 anyway, but we make it explicit
+# so the parallelism story is documented and stays stable across nvcc
+# versions). Forwarded to every nvcc invocation via NVCC_APPEND_FLAGS.
+nvcc_flags: --threads=1
 # cmake is required by NATTEN's setup.py (checks for the executable at build
 # time). Ninja generator is used.
 extra_deps: cmake ninja
