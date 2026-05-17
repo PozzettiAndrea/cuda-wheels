@@ -1,0 +1,26 @@
+name: natten
+source_repo: SHI-Labs/NATTEN
+source_tag: v0.21.1
+patch_script: patches/natten.py
+# NATTEN vendors CUTLASS as a submodule under third_party/.
+clone_recursive: true
+# CUTLASS template instantiations have large peak memory like sage. Constrain
+# to keep CI runners from OOM-ing under unlimited parallelism.
+max_jobs: 2
+# cmake is required by NATTEN's setup.py (checks for the executable at build
+# time). Ninja generator is used.
+extra_deps: cmake ninja
+arch_list_by_cuda:
+  # NATTEN's documented build floor is sm_80 (Ampere). Pre-Ampere arches
+  # aren't listed as valid NATTEN_CUDA_ARCH values on natten.org/install,
+  # even though the runtime check at backends/configs/checks.py is permissive
+  # to sm_60. We track NATTEN's own supported matrix, not the runtime gate.
+  #
+  # Hopper (9.0) auto-enables -DNATTEN_WITH_HOPPER_FNA=1 in setup.py.
+  # Blackwell (10.0/10.3) auto-enables -DNATTEN_WITH_BLACKWELL_FNA=1 and
+  # requires CUDA 12.8+ — hence omitted from cu124/cu126 rows.
+  '12.4': 8.0 8.6 8.9 9.0+PTX
+  '12.6': 8.0 8.6 8.9 9.0+PTX
+  '12.8': 8.0 8.6 8.9 9.0 10.0+PTX
+  '12.9': 8.0 8.6 8.9 9.0 10.0+PTX
+  '13.0': 8.0 8.6 8.9 9.0 10.0 10.3+PTX

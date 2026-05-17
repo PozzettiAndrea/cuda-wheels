@@ -24,6 +24,7 @@ Pre-built CUDA Python wheels for ML/3D packages that are painful to compile from
 | torch_cluster | [pyg-team/pytorch_cluster](https://github.com/pyg-team/pytorch_cluster) |
 | torch_scatter | [pyg-team/pytorch_scatter](https://github.com/pyg-team/pytorch_scatter) |
 | torch_sparse | [pyg-team/pytorch_sparse](https://github.com/pyg-team/pytorch_sparse) |
+| natten | [SHI-Labs/NATTEN](https://github.com/SHI-Labs/NATTEN) |
 
 ## Usage
 
