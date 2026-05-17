@@ -12,8 +12,24 @@ between the two so cuda-wheels' standard build env "just works":
   2. If NATTEN_N_WORKERS is unset, fall back to MAX_JOBS. Without this,
      NATTEN defaults to cpu_count()//4 which is unrelated to the cuda-wheels
      max_jobs cap — and CUTLASS template instantiations need the cap.
+
+Also patches pyproject.toml: setuptools.packages.find.where = ["src/"] has
+a trailing slash that newer setuptools' convert_path rejects on Windows
+("path 'src/' cannot end with '/'"), failing metadata generation before
+the build even starts. Linux's convert_path is permissive and ignores it.
 """
 from pathlib import Path
+
+# pyproject.toml: strip trailing slash from packages.find.where (Windows fix).
+pyproject_file = Path("pyproject.toml")
+pyproject_text = pyproject_file.read_text()
+old_where = 'where = ["src/"]'
+new_where = 'where = ["src"]'
+if old_where in pyproject_text:
+    pyproject_file.write_text(pyproject_text.replace(old_where, new_where, 1))
+    print("Patched pyproject.toml: packages.find.where 'src/' -> 'src' (Windows fix)")
+else:
+    print("NOTE: pyproject.toml didn't contain 'where = [\"src/\"]' -- skipping (may already be fixed upstream)")
 
 setup_file = Path("setup.py")
 content = setup_file.read_text()
