@@ -122,9 +122,15 @@ runs:
       # In compile-shard mode, monkeypatch torch.utils.cpp_extension.CUDAExtension
       # to filter its `sources=[...]` list to this shard's slice. The filter is
       # injected at the top of setup.py so it applies before CUDAExtension is
-      # called. Uses hashlib.md5 (NOT Python's hash(), which is salt-randomized
-      # per process) so the partition is stable across the shard job and the
-      # downstream link job.
+      # called.
+      #
+      # Partition: sorted(sources) round-robin'd to shards (file at sorted-index
+      # i goes to shard (i % shard_count) + 1). Sorted-and-modulo guarantees
+      # balance for small file counts -- with 7 files across 4 shards you get
+      # sizes 2,2,2,1 instead of the unbalanced 0,1,3,3 you can hit with
+      # hash-mod. Deterministic across runs and shards (every shard and the
+      # link job see the same sort order from the same input list), so the
+      # partition is consistent.
       if: inputs.shard-count != '0' && inputs.link-only != 'true'
       shell: bash
       run: |
@@ -141,11 +147,10 @@ runs:
         SHARD_INDEX="${{ inputs.shard-index }}"
         SHARD_COUNT="${{ inputs.shard-count }}"
         python3 - "$SETUP_PY" "$SHARD_INDEX" "$SHARD_COUNT" <<'PYEOF'
-        import sys, hashlib, textwrap
+        import sys, textwrap
         setup_path, shard_index, shard_count = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
         prelude = textwrap.dedent(f"""
             # --- cuda-wheels shard filter (injected) ---
-            import hashlib as _cuw_hashlib
             _CUW_SHARD_INDEX = {shard_index}
             _CUW_SHARD_COUNT = {shard_count}
             try:
@@ -157,11 +162,20 @@ runs:
                         sources = args[1]
                     if sources is None:
                         sources = []
-                    kept = [s for s in sources
-                            if int(_cuw_hashlib.md5(str(s).encode()).hexdigest(), 16) % _CUW_SHARD_COUNT == (_CUW_SHARD_INDEX - 1)]
+                    # Sorted round-robin keeps the partition balanced (a, b)
+                    # and deterministic across shards and the link job.
+                    sources_sorted = sorted(str(s) for s in sources)
+                    kept = [s for i, s in enumerate(sources_sorted)
+                            if i % _CUW_SHARD_COUNT == (_CUW_SHARD_INDEX - 1)]
                     print(f'[cuda-wheels shard {{_CUW_SHARD_INDEX}}/{{_CUW_SHARD_COUNT}}] keeping {{len(kept)}}/{{len(sources)}} sources:')
                     for s in kept:
                         print(f'    {{s}}')
+                    if not kept:
+                        raise RuntimeError(
+                            f'cuda-wheels: shard {{_CUW_SHARD_INDEX}}/{{_CUW_SHARD_COUNT}} '
+                            f'is empty (only {{len(sources)}} sources). Reduce the '
+                            f'`sharding:` field in the package yaml to at most {{len(sources)}}.'
+                        )
                     if 'sources' in kwargs:
                         kwargs['sources'] = kept
                     else:
