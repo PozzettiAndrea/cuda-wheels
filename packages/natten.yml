@@ -4,6 +4,19 @@ source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
+# Sharded compile: 16 shards split the ~144 autogen .cu files (sorted
+# round-robin partition; each shard compiles ~9 files). patches/natten.py
+# injects a post-autogen filter in setup.py that deletes the .cu files
+# NOT in this shard's slice, gated on CUDA_WHEELS_SHARD_INDEX/COUNT env
+# vars (set by the build-wheel action). Monolithic compile projects to
+# 4-5h (close to GH Actions' 6h cap); sharded should be ~20-40min per shard.
+sharding: 16
+# Linux-only: NATTEN v0.21.6 ships no Windows wheels and MSVC compat has
+# multiple known issues (sm_100 FMHA BWD C2061, etc). Producing Windows
+# wheels here would 1) almost certainly fail mid-build, 2) waste 16x CI
+# minutes per attempt. Revisit Windows when upstream lands MSVC support.
+build_matrix:
+  platforms: ["linux"]
 # CUTLASS template instantiations have large peak memory. max_jobs=4 OOM'd
 # (exit 143 + runner shutdown signal) ~3min into Blackwell FMHA compile on
 # 16GB Linux runner — each .cu peaks above the assumed 3.5GB. Backed off
