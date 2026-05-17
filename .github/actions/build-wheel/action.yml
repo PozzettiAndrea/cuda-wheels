@@ -102,6 +102,20 @@ runs:
       if: inputs.platform == 'linux'
       shell: bash
       run: |
+        # Background resource monitor: prints a one-line snapshot every 120s
+        # for the lifetime of this step. GH Actions kills background subshells
+        # at step end, so no explicit teardown needed. Useful for diagnosing
+        # OOM kills (exit code 143 + runner shutdown) on heavy CUTLASS builds.
+        ( while true; do
+            mem=$(awk '/MemAvailable/{a=$2/1024/1024} /MemTotal/{t=$2/1024/1024} END{printf "%.1f/%.1fGB free", a, t}' /proc/meminfo 2>/dev/null || echo "?")
+            swap=$(awk '/SwapFree/{f=$2/1024/1024} /SwapTotal/{t=$2/1024/1024} END{printf "%.1f/%.1fGB swap free", f, t}' /proc/meminfo 2>/dev/null || echo "?")
+            load=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo "?")
+            top3=$(ps -eo rss=,comm= --sort=-rss 2>/dev/null | head -3 | awk '{printf "%s(%.1fGB) ", $2, $1/1024/1024}' || echo "?")
+            echo "[resmon $(date -u +%H:%M:%SZ)] mem: $mem | swap: $swap | load: $load | top3: $top3"
+            sleep 120
+        done ) &
+        RESMON_PID=$!
+        trap "kill $RESMON_PID 2>/dev/null || true" EXIT
         BUILD_DIR="source"
         if [ -n "${{ inputs.build-subdir }}" ]; then
           BUILD_DIR="source/${{ inputs.build-subdir }}"
