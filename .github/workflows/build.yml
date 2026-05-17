@@ -447,6 +447,83 @@ jobs:
           patch-script: ${{ matrix.patch_script }}
           build-subdir: ${{ matrix.build_subdir }}
           nvcc-flags: ${{ matrix.nvcc_flags }}
+          shard-index: ${{ matrix.shard_index }}
+          shard-count: ${{ matrix.shard_count }}
+          package: ${{ matrix.package }}
+          python-version: ${{ matrix.python }}
+
+      - name: Upload artifact
+        # Compile-shard jobs upload their .o tarball via the build-wheel action's
+        # own upload step; this wheel-upload only runs in full-build mode.
+        if: matrix.shard_count == 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
+          path: dist/*.whl
+
+  link-windows:
+    name: Link ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }} (Windows)
+    # Mirror of link-linux for sharded Windows packages.
+    needs: [generate-matrix, build-windows]
+    if: ${{ needs.build-windows.result != 'cancelled' && fromJson(needs.generate-matrix.outputs.matrix).windows_link.include[0] != null }}
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows_link }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Ensure Git\bin on PATH (so shell:bash works)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Enable long paths
+        shell: powershell
+        run: git config --system core.longpaths true
+
+      - uses: actions/checkout@v4
+
+      - name: Setup CUDA
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: windows
+          installer-type: ${{ matrix.cuda_installer }}
+          extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
+        with:
+          python-version: ${{ matrix.python }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: windows
+          extra-deps: ${{ matrix.extra_deps }}
+
+      - name: Link sharded wheel
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: windows
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
+          clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
+          nvcc-flags: ${{ matrix.nvcc_flags }}
+          shard-index: '0'
+          shard-count: ${{ matrix.shard_count }}
+          link-only: 'true'
+          package: ${{ matrix.package }}
+          python-version: ${{ matrix.python }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -455,8 +532,8 @@ jobs:
           path: dist/*.whl
 
   release:
-    needs: [build-linux, link-linux, build-windows]
-    if: always() && (needs.build-linux.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled')
+    needs: [build-linux, link-linux, build-windows, link-windows]
+    if: always() && (needs.build-linux.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled' || needs.link-windows.result != 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: write

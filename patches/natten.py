@@ -12,6 +12,15 @@ between the two so cuda-wheels' standard build env "just works":
   2. If NATTEN_N_WORKERS is unset, fall back to MAX_JOBS. Without this,
      NATTEN defaults to cpu_count()//4 which is unrelated to the cuda-wheels
      max_jobs cap — and CUTLASS template instantiations need the cap.
+  3. On Windows, strip 10.0 / 10.3 (Blackwell DC) from the arch list.
+     NATTEN's setup.py enables -DNATTEN_WITH_BLACKWELL_FNA=1 when those
+     archs are present, which compiles `sm100_fmha_bwd_kernel_tma_warpspecialized.hpp`.
+     That kernel uses CUTLASS template idioms MSVC's strict mode rejects
+     (C2061 syntax error: identifier 'PipelineState'). Stripping the archs
+     skips the Blackwell-DC code path entirely. Windows users with RTX 5090
+     (sm_120 consumer Blackwell) are still covered because sm_120 doesn't
+     trigger NATTEN_WITH_BLACKWELL_FNA — it compiles via the regular
+     CUTLASS-FNA path.
 
 Also patches pyproject.toml: setuptools.packages.find.where = ["src/"] has
 a trailing slash that newer setuptools' convert_path rejects on Windows
@@ -88,6 +97,17 @@ if not os.getenv("NATTEN_N_WORKERS"):
     _mj = os.getenv("MAX_JOBS", "")
     if _mj.isdigit() and int(_mj) > 0:
         os.environ["NATTEN_N_WORKERS"] = _mj
+# Windows: strip Blackwell DC archs (10.0, 10.3) from NATTEN_CUDA_ARCH to
+# avoid enabling NATTEN_WITH_BLACKWELL_FNA and pulling in the
+# sm100_fmha_bwd_kernel_tma_warpspecialized.hpp template that MSVC's
+# strict mode rejects with C2061. RTX 5090 (sm_120) is unaffected and
+# stays in the arch list (it doesn't trigger the Blackwell DC code path).
+import platform as _cuw_platform
+if _cuw_platform.system() == "Windows":
+    _na = os.environ.get("NATTEN_CUDA_ARCH", "")
+    _kept = [a for a in _na.split(";") if a.strip() and a.strip() not in ("10.0", "10.3", "100", "103")]
+    os.environ["NATTEN_CUDA_ARCH"] = ";".join(_kept)
+    print(f"[cuda-wheels] Windows: stripped Blackwell DC archs from NATTEN_CUDA_ARCH; result: {os.environ['NATTEN_CUDA_ARCH']!r}")
 # Pin NATTEN_BUILD_DIR to a predictable in-source location so the cuda-wheels
 # shard/link harness can find the .o files. Default is a temporary directory
 # whose name changes per run, which doesn't survive the upload/restore

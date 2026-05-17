@@ -455,12 +455,11 @@ runs:
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Package shard objects (compile-shard mode)
-      # Tar the build/temp.* tree so the link job can extract it back at the
-      # same relative paths. We don't care about the (partial) .whl that pip
+      # Tar the build/ tree so the link job can extract it back at the same
+      # relative paths. We don't care about the (partial) .whl that pip
       # produced — it's missing the other shards' kernels and gets discarded.
-      # In link-only mode we already have the wheel from this same pip wheel
-      # invocation, so this step is skipped.
-      if: inputs.platform == 'linux' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      # Cross-platform via bash (Git Bash on Windows ships tar/find/cp).
+      if: inputs.shard-count != '0' && inputs.link-only != 'true'
       shell: bash
       run: |
         cd source
@@ -490,7 +489,7 @@ runs:
         ls -lh $GITHUB_WORKSPACE/shard-out/
 
     - name: Upload shard artifact (compile-shard mode)
-      if: inputs.platform == 'linux' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      if: inputs.shard-count != '0' && inputs.link-only != 'true'
       uses: actions/upload-artifact@v4
       with:
         # Naming key must include every dimension that produces different .o
@@ -590,6 +589,24 @@ runs:
         if ("${{ inputs.nvcc-flags }}" -ne "") {
           $env:NVCC_APPEND_FLAGS = "${{ inputs.nvcc-flags }}"
         }
+        # Shard env vars for cmake-style packages (e.g. NATTEN). See the
+        # equivalent block in the Linux build step for rationale -- the
+        # cpp_extension shard filter monkey-patches CUDAExtension at
+        # setup.py import time, but cmake-style packages can't intercept
+        # that way and read these env vars at runtime to filter their
+        # autogen output (see patches/natten.py).
+        if ("${{ inputs.shard-count }}" -ne "0" -and "${{ inputs.link-only }}" -ne "true") {
+          $env:CUDA_WHEELS_SHARD_INDEX = "${{ inputs.shard-index }}"
+          $env:CUDA_WHEELS_SHARD_COUNT = "${{ inputs.shard-count }}"
+          Write-Host "[compile-shard] CUDA_WHEELS_SHARD_INDEX=$($env:CUDA_WHEELS_SHARD_INDEX) of $($env:CUDA_WHEELS_SHARD_COUNT)"
+        }
+        # Link-only mode: same USE_NINJA=0 fallback that the Linux step uses
+        # (torch 2.8's BuildExtension does respect the kwargs we patched in,
+        # but defensively set this too in case some code path checks env).
+        if ("${{ inputs.link-only }}" -eq "true") {
+          $env:USE_NINJA = "0"
+          Write-Host "[link-only] USE_NINJA=0"
+        }
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
@@ -620,7 +637,8 @@ runs:
         cp *.whl $GITHUB_WORKSPACE/dist/
 
     - name: Rename wheel with CUDA+PyTorch suffix (Windows)
-      if: inputs.platform == 'windows'
+      # Skip in compile-shard mode -- no wheel was kept.
+      if: inputs.platform == 'windows' && (inputs.shard-count == '0' || inputs.link-only == 'true')
       id: rename-windows
       shell: powershell
       run: |
