@@ -253,7 +253,9 @@ jobs:
     # Runs after compile-shard jobs finish. Only fans out for sharded packages
     # (link-matrix is empty for unsharded — the job is then skipped entirely
     # because the strategy matrix has no entries to iterate over).
-    needs: build-linux
+    # generate-matrix is in needs because we reference its `matrix` output;
+    # GH Actions only exposes outputs from direct needs.
+    needs: [generate-matrix, build-linux]
     if: ${{ needs.build-linux.result != 'cancelled' && fromJson(needs.generate-matrix.outputs.matrix).linux_link.include[0] != null }}
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
     strategy:
