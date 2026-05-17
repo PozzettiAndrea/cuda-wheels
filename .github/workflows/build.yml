@@ -123,6 +123,8 @@ jobs:
   build-linux:
     name: Linux ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
+    # Skip when the linux matrix is empty (mirrors build-windows guard).
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux.include[0] != null }}
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
     strategy:
       fail-fast: false
@@ -334,6 +336,11 @@ jobs:
   build-windows:
     name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     needs: generate-matrix
+    # Skip when the windows matrix is empty (e.g. a linux-only sharded
+    # package). Without this guard GH Actions errors with
+    # "matrix must define at least one vector" and flags the whole
+    # workflow as failure even though release succeeds.
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows.include[0] != null }}
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
     strategy:
       fail-fast: false

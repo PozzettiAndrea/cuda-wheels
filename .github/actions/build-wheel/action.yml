@@ -335,6 +335,29 @@ runs:
         if [ -n "${{ inputs.nvcc-flags }}" ]; then
           export NVCC_APPEND_FLAGS="${{ inputs.nvcc-flags }}"
         fi
+        # Link-only mode: pre-build artifacts already on disk (build/temp.*/),
+        # touch-stamped newer than .cu/.cpp sources. Disable ninja so torch's
+        # BuildExtension falls back to distutils' CCompiler, which honors
+        # output-presence + mtime and SKIPS .o files that are up-to-date.
+        # The earlier ninja-log merge approach didn't work — ninja's
+        # command_hash check rejected the merged log because setuptools'
+        # regenerated build.ninja produced subtly different command strings
+        # than what the shards recorded.
+        if [ "${{ inputs.link-only }}" = "true" ]; then
+          export USE_NINJA=0
+          echo "[link-only] USE_NINJA=0 (distutils mtime-based skip)"
+          # Diagnostic: show the merged .ninja_log + build/temp tree before
+          # the build runs, so if pip still rebuilds we can see what state
+          # it started from.
+          echo "[diag] build/temp tree before pip wheel:"
+          find build -type f -printf '  %P (%s bytes, mtime=%T@)\n' 2>/dev/null | head -30 || true
+          echo "[diag] (.ninja_log contents -- ignored when USE_NINJA=0)"
+          find build -name '.ninja_log' -exec head -10 {} +  || true
+          echo "[diag] earliest source mtime:"
+          find . -name '*.cu' -o -name '*.cpp' 2>/dev/null | head -1 | xargs -I{} stat -c '%y %n' {} || true
+          echo "[diag] sample .o mtime (should be newer than source mtime):"
+          find build -name '*.o' | head -1 | xargs -I{} stat -c '%y %n' {} || true
+        fi
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Package shard objects (compile-shard mode)
