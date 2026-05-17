@@ -199,6 +199,68 @@ runs:
             print(f'injected shard filter at top of {setup_path}')
         PYEOF
 
+    - name: Force-disable ninja in setup.py (link-only mode)
+      # torch 2.8's BuildExtension does NOT read USE_NINJA env var (checked
+      # in torch/utils/cpp_extension.py:_use_ninja: only reads kwargs).
+      # The reliable way to disable ninja is to wrap BuildExtension so its
+      # default kwarg becomes use_ninja=False. Inject a prelude at the top
+      # of setup.py that monkeypatches torch.utils.cpp_extension.BuildExtension
+      # before the package's `from torch.utils.cpp_extension import
+      # BuildExtension` line resolves -- the import then binds locally to
+      # the wrapped class with ninja disabled.
+      #
+      # We disable ninja because (a) the .ninja_log merge approach fails
+      # ("build log version is too old" + command_hash mismatch under
+      # setuptools' regenerated build.ninja), and (b) the distutils
+      # fallback honors mtime natively and the shard's touched .o files
+      # are recognized as up-to-date, collapsing compile to a no-op.
+      if: inputs.link-only == 'true'
+      shell: bash
+      run: |
+        cd source
+        BUILD_DIR="."
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="${{ inputs.build-subdir }}"
+        fi
+        SETUP_PY="$BUILD_DIR/setup.py"
+        if [ ! -f "$SETUP_PY" ]; then
+          echo "::error::setup.py not found at $SETUP_PY -- only cpp_extension flow supported in link-only mode"
+          exit 1
+        fi
+        python3 - "$SETUP_PY" <<'PYEOF'
+        import sys, textwrap
+        setup_path = sys.argv[1]
+        prelude = textwrap.dedent("""
+            # --- cuda-wheels link-only ninja disabler (injected) ---
+            # torch 2.8 ignores USE_NINJA env var; only respects kwargs.
+            # Wrap BuildExtension so any `BuildExtension(...)` defaults
+            # use_ninja=False. setup.py's `from torch.utils.cpp_extension
+            # import BuildExtension` then resolves to the wrapped class.
+            try:
+                from torch.utils import cpp_extension as _cuw_cppext_l
+                _cuw_orig_BE = _cuw_cppext_l.BuildExtension
+                class _CuwLinkOnlyBuildExtension(_cuw_orig_BE):
+                    def __init__(self, *args, **kwargs):
+                        kwargs['use_ninja'] = False
+                        super().__init__(*args, **kwargs)
+                    @classmethod
+                    def with_options(cls, **kwargs):
+                        kwargs['use_ninja'] = False
+                        return _cuw_orig_BE.with_options(**kwargs)
+                _cuw_cppext_l.BuildExtension = _CuwLinkOnlyBuildExtension
+                print('[cuda-wheels link-only] BuildExtension wrapped with use_ninja=False')
+            except ImportError:
+                pass
+            # --- end cuda-wheels link-only ninja disabler ---
+            """)
+        content = open(setup_path).read()
+        if '_CuwLinkOnlyBuildExtension' in content:
+            print('ninja disabler already applied -- skipping')
+        else:
+            open(setup_path, 'w').write(prelude + content)
+            print(f'injected ninja disabler at top of {setup_path}')
+        PYEOF
+
     - name: Download shard artifacts (link-only mode)
       if: inputs.link-only == 'true'
       uses: actions/download-artifact@v4
