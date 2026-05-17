@@ -7,9 +7,9 @@ clone_recursive: true
 # CUTLASS template instantiations have large peak memory. max_jobs=4 OOM'd
 # (exit 143 + runner shutdown signal) ~3min into Blackwell FMHA compile on
 # 16GB Linux runner — each .cu peaks above the assumed 3.5GB. Backed off
-# to 3 slots, paired with nvcc --threads=1 (via nvcc_flags below) for
-# single-threaded per-file compiles.
-max_jobs: 3
+# to 2 slots (with 8GB swap added in build.yml) paired with nvcc --threads=1
+# (via nvcc_flags below) for single-threaded per-file compiles.
+max_jobs: 2
 # Force nvcc to single-threaded per file (NATTEN's CMakeLists doesn't pass
 # --threads; without this, nvcc default is 1 anyway, but we make it explicit
 # so the parallelism story is documented and stays stable across nvcc

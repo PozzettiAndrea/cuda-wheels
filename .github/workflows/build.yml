@@ -209,9 +209,9 @@ jobs:
           extra-deps: ${{ matrix.extra_deps }}
 
       - name: Add swap space
-        if: steps.check.outputs.exists != 'true' && (matrix.package == 'sageattention' || matrix.package == 'sageattn3')
+        if: steps.check.outputs.exists != 'true' && (matrix.package == 'sageattention' || matrix.package == 'sageattn3' || matrix.package == 'natten')
         run: |
-          sudo fallocate -l 6G /mnt/swapfile
+          sudo fallocate -l 8G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile
           sudo mkswap /mnt/swapfile
           sudo swapon /mnt/swapfile
