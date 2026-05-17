@@ -231,11 +231,19 @@ runs:
         import sys, textwrap
         setup_path = sys.argv[1]
         prelude = textwrap.dedent("""
-            # --- cuda-wheels link-only ninja disabler (injected) ---
-            # torch 2.8 ignores USE_NINJA env var; only respects kwargs.
-            # Wrap BuildExtension so any `BuildExtension(...)` defaults
-            # use_ninja=False. setup.py's `from torch.utils.cpp_extension
-            # import BuildExtension` then resolves to the wrapped class.
+            # --- cuda-wheels link-only ninja disabler + compile no-op (injected) ---
+            # (1) Disable ninja: torch 2.8 ignores USE_NINJA env var; only
+            #     respects kwargs. Wrap BuildExtension so any
+            #     `BuildExtension(...)` defaults use_ninja=False.
+            # (2) No-op compile(): in link-only mode the .o files are already
+            #     on disk from shard extraction. distutils' mtime-based skip
+            #     proved unreliable across the shard->link runner transition
+            #     (mtimes don't always survive the path setuptools takes),
+            #     so we monkeypatch CCompiler.compile to return the expected
+            #     .o paths without invoking gcc/nvcc -- but only if every
+            #     expected .o file actually exists on disk; otherwise we
+            #     fall back to the real compile to avoid silent breakage.
+            import os as _cuw_os
             try:
                 from torch.utils import cpp_extension as _cuw_cppext_l
                 _cuw_orig_BE = _cuw_cppext_l.BuildExtension
@@ -251,7 +259,31 @@ runs:
                 print('[cuda-wheels link-only] BuildExtension wrapped with use_ninja=False')
             except ImportError:
                 pass
-            # --- end cuda-wheels link-only ninja disabler ---
+            try:
+                from distutils import ccompiler as _cuw_dccc
+                _cuw_orig_compile = _cuw_dccc.CCompiler.compile
+                def _cuw_noop_compile(self, sources, output_dir=None, macros=None,
+                                      include_dirs=None, debug=0, extra_preargs=None,
+                                      extra_postargs=None, depends=None):
+                    outdir = output_dir if output_dir is not None else (self.output_dir or '')
+                    objs = self.object_filenames(sources, strip_dir=0, output_dir=outdir)
+                    missing = [o for o in objs if not _cuw_os.path.exists(o)]
+                    if missing:
+                        print(f'[cuda-wheels link-only] {len(missing)}/{len(objs)} .o files missing; '
+                              f'falling back to real compile. First missing: {missing[0]!r}')
+                        return _cuw_orig_compile(self, sources, output_dir=output_dir,
+                                                 macros=macros, include_dirs=include_dirs,
+                                                 debug=debug, extra_preargs=extra_preargs,
+                                                 extra_postargs=extra_postargs, depends=depends)
+                    print(f'[cuda-wheels link-only] CCompiler.compile no-op: all {len(objs)} .o files present, skipping compile')
+                    for o in objs:
+                        print(f'    {o} ({_cuw_os.path.getsize(o)} bytes)')
+                    return objs
+                _cuw_dccc.CCompiler.compile = _cuw_noop_compile
+                print('[cuda-wheels link-only] CCompiler.compile patched to no-op when objects exist')
+            except ImportError:
+                pass
+            # --- end cuda-wheels link-only patches ---
             """)
         content = open(setup_path).read()
         if '_CuwLinkOnlyBuildExtension' in content:
