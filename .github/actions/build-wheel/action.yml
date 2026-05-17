@@ -48,10 +48,30 @@ inputs:
     description: 'Extra flags to pass to nvcc via NVCC_APPEND_FLAGS (e.g. -diag-suppress 221)'
     required: false
     default: ''
+  shard-index:
+    description: '1-based shard number for this job (default 0 = unsharded). Only meaningful with shard-count > 0.'
+    required: false
+    default: '0'
+  shard-count:
+    description: 'Total shard count for this package (default 0 = unsharded). When > 0, this job compiles only its slice of sources.'
+    required: false
+    default: '0'
+  link-only:
+    description: 'When "true", download all shard artifacts and run link only. No compile.'
+    required: false
+    default: 'false'
+  package:
+    description: 'Package name (used in shard artifact naming to disambiguate concurrent sharded builds).'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python version (e.g. 3.10). Used in shard artifact naming because the cpp_extension build dir is python-version-specific.'
+    required: false
+    default: ''
 
 outputs:
   wheel-path:
-    description: 'Path to the built wheel'
+    description: 'Path to the built wheel (set only in full-build or link-only modes; empty in compile-shard mode).'
     value: ${{ steps.rename.outputs.wheel-path }}
 
 runs:
@@ -97,6 +117,115 @@ runs:
       run: |
         cd source
         ${{ inputs.pre-build-script }}
+
+    - name: Apply shard filter (compile-shard mode)
+      # In compile-shard mode, monkeypatch torch.utils.cpp_extension.CUDAExtension
+      # to filter its `sources=[...]` list to this shard's slice. The filter is
+      # injected at the top of setup.py so it applies before CUDAExtension is
+      # called. Uses hashlib.md5 (NOT Python's hash(), which is salt-randomized
+      # per process) so the partition is stable across the shard job and the
+      # downstream link job.
+      if: inputs.shard-count != '0' && inputs.link-only != 'true'
+      shell: bash
+      run: |
+        cd source
+        BUILD_DIR="."
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="${{ inputs.build-subdir }}"
+        fi
+        SETUP_PY="$BUILD_DIR/setup.py"
+        if [ ! -f "$SETUP_PY" ]; then
+          echo "::error::shard filter expects $SETUP_PY (cpp_extension build); cmake adapter not implemented yet"
+          exit 1
+        fi
+        SHARD_INDEX="${{ inputs.shard-index }}"
+        SHARD_COUNT="${{ inputs.shard-count }}"
+        python3 - "$SETUP_PY" "$SHARD_INDEX" "$SHARD_COUNT" <<'PYEOF'
+        import sys, hashlib, textwrap
+        setup_path, shard_index, shard_count = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+        prelude = textwrap.dedent(f"""
+            # --- cuda-wheels shard filter (injected) ---
+            import hashlib as _cuw_hashlib
+            _CUW_SHARD_INDEX = {shard_index}
+            _CUW_SHARD_COUNT = {shard_count}
+            try:
+                from torch.utils import cpp_extension as _cuw_cpp_extension
+                _cuw_orig_CUDAExtension = _cuw_cpp_extension.CUDAExtension
+                def _cuw_sharded_CUDAExtension(*args, **kwargs):
+                    sources = kwargs.get('sources', None)
+                    if sources is None and len(args) >= 2:
+                        sources = args[1]
+                    if sources is None:
+                        sources = []
+                    kept = [s for s in sources
+                            if int(_cuw_hashlib.md5(str(s).encode()).hexdigest(), 16) % _CUW_SHARD_COUNT == (_CUW_SHARD_INDEX - 1)]
+                    print(f'[cuda-wheels shard {{_CUW_SHARD_INDEX}}/{{_CUW_SHARD_COUNT}}] keeping {{len(kept)}}/{{len(sources)}} sources:')
+                    for s in kept:
+                        print(f'    {{s}}')
+                    if 'sources' in kwargs:
+                        kwargs['sources'] = kept
+                    else:
+                        args = list(args)
+                        if len(args) >= 2:
+                            args[1] = kept
+                        else:
+                            kwargs['sources'] = kept
+                        args = tuple(args)
+                    return _cuw_orig_CUDAExtension(*args, **kwargs)
+                _cuw_cpp_extension.CUDAExtension = _cuw_sharded_CUDAExtension
+            except ImportError:
+                pass
+            # --- end cuda-wheels shard filter ---
+            """)
+        content = open(setup_path).read()
+        if '_cuw_sharded_CUDAExtension' in content:
+            print('shard filter already applied -- skipping')
+        else:
+            open(setup_path, 'w').write(prelude + content)
+            print(f'injected shard filter at top of {setup_path}')
+        PYEOF
+
+    - name: Download shard artifacts (link-only mode)
+      if: inputs.link-only == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        # Glob pattern matching every shard artifact for this (package, platform,
+        # python, cuda, torch) tuple. Each shard uploaded its tarball under a
+        # distinct name `shard-<pkg>-<platform>-py<py>-cu<cuda>-torch<torch>-<shard_index>-of-<shard_count>`.
+        pattern: shard-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-*-of-${{ inputs.shard-count }}
+        path: /tmp/shard-artifacts
+
+    - name: Restore shard objects (link-only mode)
+      # Each shard uploaded a tarball of its `build/temp.linux-*` slice. Extract
+      # all of them back into the cloned source's build/ directory at the same
+      # relative paths the original compile used. Then `touch -m` every .o so
+      # ninja sees them as newer than .cu sources and skips recompile.
+      if: inputs.link-only == 'true'
+      shell: bash
+      run: |
+        cd source
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          cd "${{ inputs.build-subdir }}"
+        fi
+        # Each downloaded artifact directory contains a single objects.tar.gz
+        # produced by the compile-shard step. Untar them all in-place.
+        mkdir -p build
+        shopt -s nullglob
+        found=0
+        for tarball in /tmp/shard-artifacts/*/objects.tar.gz; do
+          found=$((found+1))
+          echo "extracting $tarball"
+          tar -xzf "$tarball" -C .
+        done
+        if [ "$found" = "0" ]; then
+          echo "::error::no shard artifacts found at /tmp/shard-artifacts -- did the upstream compile-shard jobs succeed?"
+          ls -laR /tmp/shard-artifacts || true
+          exit 1
+        fi
+        echo "restored $found shard archive(s); object tree now:"
+        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
+        echo "(touching every .o to be newer than .cu/.cpp sources, so ninja skips recompile)"
+        find build -name '*.o' -exec touch -m {} +
 
     - name: Build wheel (Linux)
       if: inputs.platform == 'linux'
@@ -149,8 +278,54 @@ runs:
         fi
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
+    - name: Package shard objects (compile-shard mode)
+      # Tar the build/temp.* tree so the link job can extract it back at the
+      # same relative paths. We don't care about the (partial) .whl that pip
+      # produced — it's missing the other shards' kernels and gets discarded.
+      # In link-only mode we already have the wheel from this same pip wheel
+      # invocation, so this step is skipped.
+      if: inputs.platform == 'linux' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      shell: bash
+      run: |
+        cd source
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          cd "${{ inputs.build-subdir }}"
+        fi
+        if [ ! -d build ]; then
+          echo "::error::no build/ directory after compile -- did setup.py build_ext run?"
+          ls -la
+          exit 1
+        fi
+        echo "Object tree this shard produced:"
+        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
+        OBJ_COUNT=$(find build -name '*.o' | wc -l)
+        echo "Total objects: $OBJ_COUNT"
+        if [ "$OBJ_COUNT" = "0" ]; then
+          echo "::error::no .o files produced by this shard -- shard filter may have dropped everything, or compile failed silently"
+          exit 1
+        fi
+        # Tar only the temp tree (object files + ninja state). The link job
+        # untars at the same relative path and runs setup.py build_ext, which
+        # sees the .o's as fresh.
+        mkdir -p $GITHUB_WORKSPACE/shard-out
+        tar -czf $GITHUB_WORKSPACE/shard-out/objects.tar.gz build/temp.*
+        ls -lh $GITHUB_WORKSPACE/shard-out/
+
+    - name: Upload shard artifact (compile-shard mode)
+      if: inputs.platform == 'linux' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        # Naming key must include every dimension that produces different .o
+        # output (package, platform, python, cuda, torch). The link job
+        # downloads with a `*-of-<shard_count>` glob to gather all shards.
+        name: shard-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-${{ inputs.shard-index }}-of-${{ inputs.shard-count }}
+        path: shard-out/objects.tar.gz
+        retention-days: 1
+
     - name: Repair wheel (Linux)
-      if: inputs.platform == 'linux'
+      # Skip when we're in compile-shard mode (we threw away the partial wheel
+      # and uploaded objects instead). Always runs in full or link-only mode.
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true')
       shell: bash
       run: |
         python -m pip install auditwheel patchelf
@@ -240,7 +415,8 @@ runs:
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
-      if: inputs.platform == 'linux'
+      # Skip in compile-shard mode -- no wheel was kept.
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true')
       id: rename-linux
       shell: bash
       run: |
@@ -293,6 +469,8 @@ runs:
         Copy-Item *.whl $env:GITHUB_WORKSPACE\dist\
 
     - name: Fix wheel METADATA version
+      # Skip in compile-shard mode -- no wheel exists yet.
+      if: inputs.shard-count == '0' || inputs.link-only == 'true'
       shell: bash
       run: |
         # The wheel filename includes the local version (e.g., +cu130torch29)
@@ -301,6 +479,8 @@ runs:
         python $GITHUB_WORKSPACE/scripts/patch_wheel_version.py $GITHUB_WORKSPACE/dist
 
     - name: Set wheel-path output
+      # Empty in compile-shard mode; populated otherwise.
+      if: inputs.shard-count == '0' || inputs.link-only == 'true'
       id: rename
       shell: bash
       run: |

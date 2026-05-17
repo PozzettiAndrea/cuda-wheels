@@ -322,7 +322,7 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         continue
 
                     defaults = DEFAULTS.get("defaults", {})
-                    matrix.append({
+                    base_entry = {
                         "package": pkg_name,
                         "version": pkg_version,
                         "source_repo": pkg["source_repo"],
@@ -343,12 +343,55 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "cuda_installer": pkg.get("cuda_installer", "network"),
                         "extra_cuda_components": pkg.get("extra_cuda_components", ""),
                         "nvcc_flags": pkg.get("nvcc_flags", ""),
-                    })
+                    }
+
+                    # Sharding: when pkg.sharding > 0, emit N compile-shard entries
+                    # (one per shard, distinguished by shard_index) into the matrix.
+                    # The downstream link job is fanned out by a separate matrix
+                    # produced via _link_matrix_from() below.
+                    sharding = int(pkg.get("sharding", 0))
+                    if sharding > 0:
+                        for shard_index in range(1, sharding + 1):
+                            entry = dict(base_entry)
+                            entry["shard_index"] = shard_index
+                            entry["shard_count"] = sharding
+                            matrix.append(entry)
+                    else:
+                        # Unsharded: emit defaults so action.yml inputs always get sane values.
+                        base_entry["shard_index"] = 0
+                        base_entry["shard_count"] = 0
+                        matrix.append(base_entry)
 
     if skipped > 0:
         print(f"Skipped {skipped} existing wheels")
 
     return matrix
+
+
+def link_matrix_from(matrix: list) -> list:
+    """Derive the link-job matrix from the compile matrix.
+
+    For each unique (package, cuda, pytorch, python, platform) tuple that has
+    shard_count > 0, emit ONE link entry. The link job downloads all N shards'
+    .o artifacts, runs link-only, and produces the final wheel.
+
+    Unsharded entries (shard_count == 0) are filtered out — the regular build
+    job handles those end-to-end and produces the wheel directly.
+    """
+    seen = set()
+    link_jobs = []
+    for entry in matrix:
+        if int(entry.get("shard_count", 0)) <= 0:
+            continue
+        key = (entry["package"], entry["cuda"], entry["pytorch"],
+               entry["python"], entry["platform"])
+        if key in seen:
+            continue
+        seen.add(key)
+        link_entry = dict(entry)
+        link_entry.pop("shard_index", None)  # link job is not per-shard
+        link_jobs.append(link_entry)
+    return link_jobs
 
 
 def main():
@@ -366,24 +409,37 @@ def main():
                             platform_filter=args.platform, cuda_filter=args.cuda,
                             pytorch_filter=args.pytorch, python_filter=args.python)
 
-    # Split by platform
+    # Split by platform; for sharded packages, also produce a separate
+    # link-job matrix per platform (one link job per unique pkg/cuda/torch/py).
     linux_jobs = [j for j in matrix if j["platform"] == "linux"]
     windows_jobs = [j for j in matrix if j["platform"] == "windows"]
+    linux_link_jobs = link_matrix_from(linux_jobs)
+    windows_link_jobs = link_matrix_from(windows_jobs)
 
     output = {
         "linux": {"include": linux_jobs},
         "windows": {"include": windows_jobs},
+        "linux_link": {"include": linux_link_jobs},
+        "windows_link": {"include": windows_link_jobs},
     }
 
     with open(args.output, "w") as f:
         # No indent - GitHub Actions needs single-line JSON for GITHUB_OUTPUT
         json.dump(output, f, separators=(',', ':'))
 
-    print(f"Generated {len(matrix)} build jobs ({len(linux_jobs)} Linux, {len(windows_jobs)} Windows)")
+    print(f"Generated {len(matrix)} build jobs "
+          f"({len(linux_jobs)} Linux, {len(windows_jobs)} Windows)")
+    if linux_link_jobs or windows_link_jobs:
+        print(f"  + {len(linux_link_jobs)} Linux link jobs, "
+              f"{len(windows_link_jobs)} Windows link jobs (sharded packages)")
 
     # Also print to stdout for debugging
     for job in matrix:
-        print(f"  - {job['package']} py{job['python']} cu{job['cuda_short']} {job['platform']}")
+        shard_info = (f" shard={job['shard_index']}/{job['shard_count']}"
+                      if int(job.get("shard_count", 0)) > 0 else "")
+        print(f"  - {job['package']} py{job['python']} cu{job['cuda_short']} {job['platform']}{shard_info}")
+    for job in linux_link_jobs + windows_link_jobs:
+        print(f"  - LINK {job['package']} py{job['python']} cu{job['cuda_short']} {job['platform']} (collects {job['shard_count']} shards)")
 
 
 if __name__ == "__main__":

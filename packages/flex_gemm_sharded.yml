@@ -1,0 +1,28 @@
+# Sharded-build test bed.
+#
+# Mirrors packages/flexgemm.yml in every respect except:
+#   - name is flex_gemm_sharded (so wheels don't collide with the canonical
+#     flex_gemm release)
+#   - sharding: 4 enables the sharded compile/link path. The build job for
+#     this package fans out into 4 parallel shards (one per .cu file slice),
+#     each uploads its .o tree as an artifact, and a downstream link job
+#     downloads all 4 and runs the link step to produce the final wheel.
+#
+# Used as the validation harness for the sharded-build infrastructure before
+# rolling it out to NATTEN (where each compile attempt costs hours).
+# flex_gemm has 7 source files (6 .cu + 1 .cpp) and total compile ~5-10min,
+# making iteration on the sharding mechanism cheap.
+
+name: flex_gemm_sharded
+source_repo: JeffreyXiang/FlexGEMM
+source_tag: 6dd94a859c26ee8246888502eada3dd8ad85532e
+sharding: 4
+patch_script: patches/flex_gemm_sharded.py
+extra_deps: numpy
+extra_cuda_components: cufft_dev nvtx
+clone_recursive: true
+# Sharded build path is Linux-only in this iteration. Windows compile-shard
+# adapter not implemented yet; restricting platforms prevents the matrix
+# from generating windows entries for this test bed.
+build_matrix:
+  platforms: ["linux"]
