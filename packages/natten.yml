@@ -1,6 +1,6 @@
 name: natten
 source_repo: SHI-Labs/NATTEN
-source_tag: v0.21.1
+source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
