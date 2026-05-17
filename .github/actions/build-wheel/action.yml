@@ -211,9 +211,15 @@ runs:
 
     - name: Restore shard objects (link-only mode)
       # Each shard uploaded a tarball of its `build/temp.linux-*` slice. Extract
-      # all of them back into the cloned source's build/ directory at the same
-      # relative paths the original compile used. Then `touch -m` every .o so
-      # ninja sees them as newer than .cu sources and skips recompile.
+      # all of them into the cloned source's build/ directory at the same
+      # relative paths the original compile used.
+      #
+      # Important: delete every shard's .ninja_log / .ninja_deps / build.ninja.
+      # Each shard's ninja state only covers its own slice of sources; when
+      # multiple tarballs are extracted, only the last writer's state survives
+      # and ninja sees inconsistent or partial state, causing a full rebuild.
+      # Without prior ninja state, ninja falls back to plain mtime comparison
+      # and trusts the .o files we touch as up-to-date.
       if: inputs.link-only == 'true'
       shell: bash
       run: |
@@ -221,8 +227,6 @@ runs:
         if [ -n "${{ inputs.build-subdir }}" ]; then
           cd "${{ inputs.build-subdir }}"
         fi
-        # Each downloaded artifact directory contains a single objects.tar.gz
-        # produced by the compile-shard step. Untar them all in-place.
         mkdir -p build
         shopt -s nullglob
         found=0
@@ -236,9 +240,18 @@ runs:
           ls -laR /tmp/shard-artifacts || true
           exit 1
         fi
+        # Strip ninja state -- conflicting / partial across shards (see header).
+        find build -name '.ninja_log' -delete
+        find build -name '.ninja_deps' -delete
+        find build -name 'build.ninja' -delete
         echo "restored $found shard archive(s); object tree now:"
         find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
-        echo "(touching every .o to be newer than .cu/.cpp sources, so ninja skips recompile)"
+        echo "Total .o files: $(find build -name '*.o' | wc -l)"
+        echo "(touching every .o so its mtime is well after every .cu/.cpp source)"
+        # `touch -m` updates mtime to "now". Run on .o files only (sources keep
+        # their checkout mtime, which is older). Without this, the shard's .o
+        # might have an earlier mtime than the freshly-cloned .cu and ninja
+        # would rebuild.
         find build -name '*.o' -exec touch -m {} +
 
     - name: Build wheel (Linux)
