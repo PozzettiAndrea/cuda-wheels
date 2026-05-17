@@ -54,6 +54,23 @@ for line in (
 if patched_cmake != cmake_text:
     cmake_file.write_text(patched_cmake)
 
+# csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
+# token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
+# without <ciso646>; MSVC errors with `identifier "not" is undefined` unless
+# /permissive- or /Za is set. Replace with the standard `!` operator — this
+# is a one-liner in the macro definition, but the macro expands inside other
+# helpers.h checks (lines ~325, ~366 in the build error), so every consumer
+# is fixed by the single substitution.
+helpers_file = Path("csrc/include/natten/helpers.h")
+helpers_text = helpers_file.read_text()
+old_check = '(not x.is_sparse(),'
+new_check = '(!x.is_sparse(),'
+if old_check in helpers_text:
+    helpers_file.write_text(helpers_text.replace(old_check, new_check))
+    print(f"Patched csrc/include/natten/helpers.h: replaced {old_check!r} with {new_check!r} (MSVC fix)")
+else:
+    print("NOTE: csrc/include/natten/helpers.h didn't contain 'not x.is_sparse(),' -- skipping")
+
 setup_file = Path("setup.py")
 content = setup_file.read_text()
 
