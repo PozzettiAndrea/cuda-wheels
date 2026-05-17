@@ -13,18 +13,39 @@ import re
 from pathlib import Path
 
 # --- Rename the package so the sharded wheel doesn't shadow flex_gemm ---
+# Modern setuptools (PEP 621) reads name from pyproject.toml's [project]
+# section. setup.py `name=` is the fallback. Rewrite both so the produced
+# wheel is named flex_gemm_sharded-* regardless of which one setuptools
+# resolves first.
 setup_py = Path("setup.py")
 setup_text = setup_py.read_text()
-old = 'name="flex_gemm"'
-new = 'name="flex_gemm_sharded"'
-if old in setup_text:
-    setup_py.write_text(setup_text.replace(old, new, 1))
-    print(f"Renamed setup.py: {old} -> {new}")
+old_setup = 'name="flex_gemm"'
+new_setup = 'name="flex_gemm_sharded"'
+if old_setup in setup_text:
+    setup_py.write_text(setup_text.replace(old_setup, new_setup, 1))
+    print(f"Renamed setup.py: {old_setup} -> {new_setup}")
 else:
-    raise SystemExit(
-        f"FATAL: anchor {old!r} not found in setup.py -- upstream may have "
-        f"changed. Re-check the patch against the pinned source_tag."
-    )
+    print(f"NOTE: anchor {old_setup!r} not in setup.py -- continuing; pyproject.toml is authoritative under PEP 621")
+
+pyproject = Path("pyproject.toml")
+if pyproject.exists():
+    py_text = pyproject.read_text()
+    old_proj = 'name = "flex_gemm"'
+    new_proj = 'name = "flex_gemm_sharded"'
+    if old_proj in py_text:
+        pyproject.write_text(py_text.replace(old_proj, new_proj, 1))
+        print(f"Renamed pyproject.toml [project] name: flex_gemm -> flex_gemm_sharded")
+    else:
+        # Maybe formatted as name="flex_gemm" (no spaces)
+        old_alt = 'name="flex_gemm"'
+        new_alt = 'name="flex_gemm_sharded"'
+        if old_alt in py_text:
+            pyproject.write_text(py_text.replace(old_alt, new_alt, 1))
+            print(f"Renamed pyproject.toml [project] name (no-space form): flex_gemm -> flex_gemm_sharded")
+        else:
+            raise SystemExit(
+                "FATAL: could not find name field in pyproject.toml -- upstream may have changed"
+            )
 
 # --- triton-windows compatibility (mirrors patches/flexgemm.py) ---
 pyproject = Path("pyproject.toml")
