@@ -4,13 +4,18 @@ source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
-# Sharded compile: 16 shards split the ~144 autogen .cu files (sorted
-# round-robin partition; each shard compiles ~9 files). patches/natten.py
-# injects a post-autogen filter in setup.py that deletes the .cu files
-# NOT in this shard's slice, gated on CUDA_WHEELS_SHARD_INDEX/COUNT env
-# vars (set by the build-wheel action). Monolithic compile projects to
-# 4-5h (close to GH Actions' 6h cap); sharded should be ~20-40min per shard.
-sharding: 16
+# Sequential-checkpoint mode (5h handoff). NATTEN's monolithic compile is
+# ~5h, very close to the GH Actions 6h per-job cap. With sequential_checkpoint
+# at 18000s (5h), most matrix cells either complete in one job (just under
+# the timeout) or hand off to a single chain-link-1 that finishes the
+# remaining work. The chain mechanism was proven on natten_sequential
+# (run 26052223468): chain-link-1's ninja correctly skipped the 8 .o files
+# restored from chain-link-0, going [1/152] instead of [1/160].
+#
+# Was previously `sharding: 16`. We pivoted away from sharding for NATTEN
+# because cmake's regen made the link-job step rebuild from scratch.
+# Sharding stays the right tool for cpp_extension packages (flex_gemm_sharded).
+sequential_checkpoint: 18000
 # Windows is back in scope: patches/natten.py strips sm_100/103 (Blackwell DC)
 # from NATTEN_CUDA_ARCH on Windows so the MSVC-incompatible
 # sm100_fmha_bwd_kernel_tma_warpspecialized.hpp (C2061) doesn't get pulled in.

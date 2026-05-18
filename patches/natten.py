@@ -213,4 +213,74 @@ else:
         "Re-check the patch against the pinned source_tag."
     )
 
+# Sequential-checkpoint: skip cmake configure on resume. Proven on
+# natten_sequential (run 26052223468) -- combined with CMAKE_SUPPRESS_REGENERATION
+# below and the action.yml's sudo-touch of CUDA targets/ headers, ninja
+# correctly resumes the build mid-chain. Without this patch, NATTEN's setup.py
+# always runs cmake configure, which regenerates build.ninja with subtly
+# different command strings and trips ninja's command_hash check.
+old_cmake_pair = '''            # Config and build the extension
+            subprocess.check_call(
+                ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+            )
+            cmake_build_args = [
+                "--build",
+                build_dir,
+                "-j",
+                str(N_WORKERS),
+            ]
+            if VERBOSE:
+                cmake_build_args.append("--verbose")
+            subprocess.check_call(["cmake", *cmake_build_args])'''
+
+new_cmake_pair = '''            # cuda-wheels sequential-checkpoint: skip the cmake configure call
+            # on resume so the restored build.ninja is honored byte-identically
+            # by ninja. A fresh configure re-emits build.ninja with subtly
+            # different compile-command strings, forcing a full rebuild via
+            # the command_hash check.
+            _cuw_cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+            _cuw_build_ninja = os.path.join(build_dir, "build.ninja")
+            if os.path.isfile(_cuw_cmake_cache) and os.path.isfile(_cuw_build_ninja):
+                print(f"[cuda-wheels] reusing CMakeCache.txt + build.ninja in {build_dir}; skipping configure")
+            else:
+                subprocess.check_call(
+                    ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+                )
+            cmake_build_args = [
+                "--build",
+                build_dir,
+                "-j",
+                str(N_WORKERS),
+            ]
+            if VERBOSE:
+                cmake_build_args.append("--verbose")
+            subprocess.check_call(["cmake", *cmake_build_args])'''
+
+if old_cmake_pair in content:
+    content = content.replace(old_cmake_pair, new_cmake_pair, 1)
+    print("Patched setup.py: skip cmake configure on resume when CMakeCache.txt + build.ninja exist")
+else:
+    raise SystemExit(
+        "FATAL: cmake configure block not found in NATTEN setup.py -- upstream may have changed."
+    )
+
+# Inject -DCMAKE_SUPPRESS_REGENERATION=TRUE into cmake_args. Without it,
+# cmake's Ninja generator emits a RERUN_CMAKE edge that ninja itself fires
+# on chain-link resume (visible as "[0/1] Re-running CMake..."), re-running
+# cmake configure as a ninja edge -- defeating the setup.py-level skip above.
+old_cmake_args = '''            cmake_args = [
+                f"-DPYTHON_PATH={sys.executable}",'''
+
+new_cmake_args = '''            cmake_args = [
+                "-DCMAKE_SUPPRESS_REGENERATION=TRUE",
+                f"-DPYTHON_PATH={sys.executable}",'''
+
+if old_cmake_args in content:
+    content = content.replace(old_cmake_args, new_cmake_args, 1)
+    print("Patched setup.py: injected -DCMAKE_SUPPRESS_REGENERATION=TRUE into cmake_args")
+else:
+    raise SystemExit(
+        "FATAL: cmake_args initializer not found in NATTEN setup.py -- upstream may have changed."
+    )
+
 setup_file.write_text(content)
