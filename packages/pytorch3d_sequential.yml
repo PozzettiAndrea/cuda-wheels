@@ -28,11 +28,16 @@ clone_recursive: true
 # parallel jobs, force nvcc to a single internal thread per file (--threads=1
 # via NVCC_APPEND_FLAGS), and add 8GB swap in build.yml.
 max_jobs: 2
-# Force nvcc to single-threaded per file. Appended to every nvcc invocation
-# via NVCC_APPEND_FLAGS; the trailing --threads=1 overrides the earlier
-# --threads $NVCC_THREADS that torch's cpp_extension emits, so each nvcc
-# process keeps its peak memory bounded.
-nvcc_flags: --threads=1
+# nvcc_flags: --threads=1 was DROPPED for Windows. Run 26037716007 (Windows
+# cu13.0 torch2.11 py3.10) failed at LINK with LNK1120: 7 unresolved
+# externals for pulsar template specializations (e.g. norm_sphere_gradients<1>).
+# Canonical pytorch3d ships ~81 Windows wheels for the exact same matrix
+# cell, so it's not an upstream incompatibility -- it's something we
+# introduced. The only emitted-code-affecting diff was --threads=1
+# (max_jobs is a ninja knob, can't change per-file nvcc output). Documented
+# as a parallelism knob, but it's the only changing variable, so drop it
+# and observe. If Linux now OOMs without --threads=1 we'll need a
+# per-platform `nvcc_flags` mechanism (currently flat in the YAML schema).
 # Linux is fully wired through _chain_link.yml. Windows is included so we
 # can trigger a Windows run and observe what the action.yml's linux-only
 # Save/Trigger gates do (they currently skip on Windows, so a Windows job
