@@ -93,6 +93,36 @@ if 'cuda-wheels Windows shard mode' not in cmake_text:
 else:
     print("NOTE: /FORCE:UNRESOLVED block already present in csrc/CMakeLists.txt -- skipping")
 
+# Restrict Blackwell autogen .cu files to sm_100/103 only. NATTEN gates these
+# files with NATTEN_WITH_BLACKWELL_FNA (a single global flag), not per-arch
+# #if __CUDA_ARCH__ guards, so when the flag is on cmake still compiles each
+# Blackwell .cu against the target's full CUDA_ARCHITECTURES list (sm_80, 86,
+# 89, 90, 100, 120, etc.). That's ~5x wasted nvcc template-instantiation work
+# per Blackwell file -- nvcc parses + emits CUTLASS template stubs for archs
+# that the source's #ifdefs make empty. Setting per-file CUDA_ARCHITECTURES
+# overrides the target-global list for just those sources.
+cmake_text = cmake_file.read_text()
+blackwell_restrict_block = '''
+
+# --- cuda-wheels blackwell arch restrict (injected) ---
+# Compile Blackwell autogen .cu files only for sm_100/103. They're gated
+# by NATTEN_WITH_BLACKWELL_FNA (global flag) rather than per-arch #ifdefs,
+# so emitting code for sm_80/86/89/90/120 is pure wasted nvcc work.
+if(${NATTEN_WITH_BLACKWELL_FNA})
+    set_source_files_properties(
+        ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA}
+        PROPERTIES CUDA_ARCHITECTURES "100;103"
+    )
+    message(STATUS "cuda-wheels: Blackwell sources restricted to sm_100/103")
+endif()
+# --- end cuda-wheels blackwell arch restrict ---
+'''
+if 'cuda-wheels blackwell arch restrict' not in cmake_text:
+    cmake_file.write_text(cmake_text + blackwell_restrict_block)
+    print("Appended Blackwell arch-restrict block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: Blackwell arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
 # token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
 # without <ciso646>; MSVC errors with `identifier "not" is undefined` unless

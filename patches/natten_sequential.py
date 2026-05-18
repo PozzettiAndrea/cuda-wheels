@@ -50,6 +50,30 @@ for line in (
 if patched_cmake != cmake_text:
     cmake_file.write_text(patched_cmake)
 
+# Restrict Blackwell autogen .cu files to sm_100/103 only. NATTEN gates these
+# files with NATTEN_WITH_BLACKWELL_FNA (a single global flag), not per-arch
+# #if __CUDA_ARCH__ guards, so when the flag is on cmake still compiles each
+# Blackwell .cu against the target's full CUDA_ARCHITECTURES list. Mirrors
+# the block in patches/natten.py.
+cmake_text = cmake_file.read_text()
+blackwell_restrict_block = '''
+
+# --- cuda-wheels blackwell arch restrict (injected) ---
+if(${NATTEN_WITH_BLACKWELL_FNA})
+    set_source_files_properties(
+        ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA}
+        PROPERTIES CUDA_ARCHITECTURES "100;103"
+    )
+    message(STATUS "cuda-wheels: Blackwell sources restricted to sm_100/103")
+endif()
+# --- end cuda-wheels blackwell arch restrict ---
+'''
+if 'cuda-wheels blackwell arch restrict' not in cmake_text:
+    cmake_file.write_text(cmake_text + blackwell_restrict_block)
+    print("Appended Blackwell arch-restrict block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: Blackwell arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: MSVC alt-token fix (no-op on Linux but kept
 # for consistency with patches/natten.py in case we extend chain to Windows).
 helpers_file = Path("csrc/include/natten/helpers.h")

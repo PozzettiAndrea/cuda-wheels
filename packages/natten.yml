@@ -4,18 +4,16 @@ source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
-# Sequential-checkpoint mode (5h handoff). NATTEN's monolithic compile is
-# ~5h, very close to the GH Actions 6h per-job cap. With sequential_checkpoint
-# at 18000s (5h), most matrix cells either complete in one job (just under
-# the timeout) or hand off to a single chain-link-1 that finishes the
-# remaining work. The chain mechanism was proven on natten_sequential
-# (run 26052223468): chain-link-1's ninja correctly skipped the 8 .o files
-# restored from chain-link-0, going [1/152] instead of [1/160].
+# Blackwell autogen .cu files are now restricted to sm_100/103 (see
+# patches/natten.py's set_source_files_properties block); this cuts the
+# heaviest part of the compile to ~1/5 of its prior cost. Combined with
+# the existing arch list, total Linux wall time should fit comfortably in
+# one 6h job, so sequential_checkpoint is dropped. The chain mechanism
+# stays available (action.yml + _chain_link.yml) — just unused unless
+# `sequential_checkpoint: N` is set here. natten_sequential.yml keeps it
+# as a regression check for the resume path.
 #
-# Was previously `sharding: 16`. We pivoted away from sharding for NATTEN
-# because cmake's regen made the link-job step rebuild from scratch.
-# Sharding stays the right tool for cpp_extension packages (flex_gemm_sharded).
-sequential_checkpoint: 18000
+# Was previously `sharding: 16`, then `sequential_checkpoint: 18000`.
 # Windows is back in scope: patches/natten.py strips sm_100/103 (Blackwell DC)
 # from NATTEN_CUDA_ARCH on Windows so the MSVC-incompatible
 # sm100_fmha_bwd_kernel_tma_warpspecialized.hpp (C2061) doesn't get pulled in.
