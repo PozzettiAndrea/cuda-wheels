@@ -112,8 +112,16 @@ if _cuw_platform.system() == "Windows":
 # shard/link harness can find the .o files. Default is a temporary directory
 # whose name changes per run, which doesn't survive the upload/restore
 # handoff between shard compile jobs and the downstream link job.
+# IMPORTANT: NATTEN's setup.py at line 67-68 falls back to the tempdir if
+# the directory doesn't exist:
+#   if not os.path.isdir(BUILD_DIR):
+#       BUILD_DIR = tmp_dir.name
+# so we must create the directory before the env var is read.
 if not os.getenv("NATTEN_BUILD_DIR"):
-    os.environ["NATTEN_BUILD_DIR"] = os.path.abspath("build/natten_cmake")
+    _cuw_natten_build_dir = os.path.abspath("build/natten_cmake")
+    os.makedirs(_cuw_natten_build_dir, exist_ok=True)
+    os.environ["NATTEN_BUILD_DIR"] = _cuw_natten_build_dir
+    print(f"[cuda-wheels] NATTEN_BUILD_DIR set to {_cuw_natten_build_dir}")
 ''' + anchor
 
 if anchor in content:

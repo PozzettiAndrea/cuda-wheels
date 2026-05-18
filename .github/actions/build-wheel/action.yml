@@ -454,51 +454,6 @@ runs:
         fi
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
 
-    - name: Package shard objects (compile-shard mode)
-      # Tar the build/ tree so the link job can extract it back at the same
-      # relative paths. We don't care about the (partial) .whl that pip
-      # produced — it's missing the other shards' kernels and gets discarded.
-      # Cross-platform via bash (Git Bash on Windows ships tar/find/cp).
-      if: inputs.shard-count != '0' && inputs.link-only != 'true'
-      shell: bash
-      run: |
-        cd source
-        if [ -n "${{ inputs.build-subdir }}" ]; then
-          cd "${{ inputs.build-subdir }}"
-        fi
-        if [ ! -d build ]; then
-          echo "::error::no build/ directory after compile -- did setup.py build_ext run?"
-          ls -la
-          exit 1
-        fi
-        echo "Object tree this shard produced:"
-        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
-        OBJ_COUNT=$(find build -name '*.o' | wc -l)
-        echo "Total objects: $OBJ_COUNT"
-        if [ "$OBJ_COUNT" = "0" ]; then
-          echo "::error::no .o files produced by this shard -- shard filter may have dropped everything, or compile failed silently"
-          exit 1
-        fi
-        # Tar the entire build/ tree. Captures both cpp_extension layout
-        # (build/temp.<plat>-cpython-<py>/.../*.o) and cmake-style layout
-        # (build/natten_cmake/CMakeFiles/natten.dir/.../*.o for NATTEN).
-        # The link job extracts at the same relative path and the build
-        # system's mtime check finds the .o files in place.
-        mkdir -p $GITHUB_WORKSPACE/shard-out
-        tar -czf $GITHUB_WORKSPACE/shard-out/objects.tar.gz build/
-        ls -lh $GITHUB_WORKSPACE/shard-out/
-
-    - name: Upload shard artifact (compile-shard mode)
-      if: inputs.shard-count != '0' && inputs.link-only != 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        # Naming key must include every dimension that produces different .o
-        # output (package, platform, python, cuda, torch). The link job
-        # downloads with a `*-of-<shard_count>` glob to gather all shards.
-        name: shard-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-${{ inputs.shard-index }}-of-${{ inputs.shard-count }}
-        path: shard-out/objects.tar.gz
-        retention-days: 1
-
     - name: Repair wheel (Linux)
       # Skip when we're in compile-shard mode (we threw away the partial wheel
       # and uploaded objects instead). Always runs in full or link-only mode.
@@ -608,6 +563,50 @@ runs:
           Write-Host "[link-only] USE_NINJA=0"
         }
         python -m pip wheel . --no-build-isolation --no-deps -v -w dist
+
+    - name: Package shard objects (compile-shard mode)
+      # Must run AFTER both Build wheel (Linux) and Build wheel (Windows) so
+      # the build/ tree exists regardless of platform. Cross-platform via
+      # bash (Git Bash on Windows ships tar/find/cp).
+      if: inputs.shard-count != '0' && inputs.link-only != 'true'
+      shell: bash
+      run: |
+        cd source
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          cd "${{ inputs.build-subdir }}"
+        fi
+        if [ ! -d build ]; then
+          echo "::error::no build/ directory after compile -- did setup.py build_ext run?"
+          ls -la
+          exit 1
+        fi
+        echo "Object tree this shard produced:"
+        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
+        OBJ_COUNT=$(find build -name '*.o' | wc -l)
+        echo "Total objects: $OBJ_COUNT"
+        if [ "$OBJ_COUNT" = "0" ]; then
+          echo "::error::no .o files produced by this shard -- shard filter may have dropped everything, or compile failed silently"
+          exit 1
+        fi
+        # Tar the entire build/ tree. Captures both cpp_extension layout
+        # (build/temp.<plat>-cpython-<py>/.../*.o) and cmake-style layout
+        # (build/natten_cmake/CMakeFiles/natten.dir/.../*.o for NATTEN).
+        # The link job extracts at the same relative path and the build
+        # system's mtime check finds the .o files in place.
+        mkdir -p $GITHUB_WORKSPACE/shard-out
+        tar -czf $GITHUB_WORKSPACE/shard-out/objects.tar.gz build/
+        ls -lh $GITHUB_WORKSPACE/shard-out/
+
+    - name: Upload shard artifact (compile-shard mode)
+      if: inputs.shard-count != '0' && inputs.link-only != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        # Naming key must include every dimension that produces different .o
+        # output (package, platform, python, cuda, torch). The link job
+        # downloads with a `*-of-<shard_count>` glob to gather all shards.
+        name: shard-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-${{ inputs.shard-index }}-of-${{ inputs.shard-count }}
+        path: shard-out/objects.tar.gz
+        retention-days: 1
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       # Skip in compile-shard mode -- no wheel was kept.
