@@ -1,0 +1,113 @@
+"""Patch NATTEN for cuda-wheels sequential-checkpoint build.
+
+Identical structure to patches/natten.py except:
+  - Renames the package to natten_sequential so wheels don't collide with
+    the canonical natten release while we validate the chain mechanism.
+  - Drops the autogen shard filter (sequential-checkpoint mode doesn't
+    partition .cu files across parallel jobs; it builds the full file set
+    sequentially across timeout-bounded jobs).
+  - Drops the Windows /FORCE:UNRESOLVED block (chain mode is Linux-only
+    for this POC).
+
+Everything else (the TORCH_CUDA_ARCH_LIST -> NATTEN_CUDA_ARCH shim, the
+pyproject.toml fix, the csrc/CMakeLists.txt strip, the helpers.h MSVC
+fix, the NATTEN_BUILD_DIR pin) is identical to patches/natten.py.
+"""
+from pathlib import Path
+
+# pyproject.toml: strip trailing slash from packages.find.where (Windows fix),
+# AND rewrite the package name to natten_sequential.
+pyproject_file = Path("pyproject.toml")
+pyproject_text = pyproject_file.read_text()
+old_where = 'where = ["src/"]'
+new_where = 'where = ["src"]'
+if old_where in pyproject_text:
+    pyproject_text = pyproject_text.replace(old_where, new_where, 1)
+    print("Patched pyproject.toml: packages.find.where 'src/' -> 'src' (Windows fix)")
+# Rename the package in pyproject.toml's [project] table if present.
+for old, new in (
+    ('name = "natten"', 'name = "natten_sequential"'),
+    ('name="natten"', 'name="natten_sequential"'),
+):
+    if old in pyproject_text:
+        pyproject_text = pyproject_text.replace(old, new, 1)
+        print(f"Renamed pyproject.toml [project] name: {old} -> {new}")
+        break
+pyproject_file.write_text(pyproject_text)
+
+# csrc/CMakeLists.txt: strip GCC-only flags forwarded to host compiler that
+# MSVC chokes on. Harmless on Linux too.
+cmake_file = Path("csrc/CMakeLists.txt")
+cmake_text = cmake_file.read_text()
+patched_cmake = cmake_text
+for line in (
+    'set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wconversion")',
+    'set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-fno-strict-aliasing")',
+):
+    if line in patched_cmake:
+        patched_cmake = patched_cmake.replace(line + "\n", "", 1)
+        print(f"Stripped from csrc/CMakeLists.txt: {line}")
+if patched_cmake != cmake_text:
+    cmake_file.write_text(patched_cmake)
+
+# csrc/include/natten/helpers.h: MSVC alt-token fix (no-op on Linux but kept
+# for consistency with patches/natten.py in case we extend chain to Windows).
+helpers_file = Path("csrc/include/natten/helpers.h")
+helpers_text = helpers_file.read_text()
+old_check = '(not x.is_sparse(),'
+new_check = '(!x.is_sparse(),'
+if old_check in helpers_text:
+    helpers_file.write_text(helpers_text.replace(old_check, new_check))
+    print(f"Patched csrc/include/natten/helpers.h: {old_check!r} -> {new_check!r}")
+
+setup_file = Path("setup.py")
+content = setup_file.read_text()
+
+# Rename in setup.py's name="..." field.
+for old, new in (
+    ('name="natten"', 'name="natten_sequential"'),
+    ("name='natten'", "name='natten_sequential'"),
+    ('name = "natten"', 'name = "natten_sequential"'),
+    ("name = 'natten'", "name = 'natten_sequential'"),
+):
+    if old in content:
+        content = content.replace(old, new, 1)
+        print(f"Renamed setup.py: {old} -> {new}")
+        break
+
+anchor = 'CUDA_ARCH = os.getenv("NATTEN_CUDA_ARCH", "")'
+shim = '''# cuda-wheels shim: bridge TORCH_CUDA_ARCH_LIST -> NATTEN_CUDA_ARCH
+# and MAX_JOBS -> NATTEN_N_WORKERS so the cuda-wheels build harness can
+# drive NATTEN with its standard env vars. See patches/natten_sequential.py.
+if not os.getenv("NATTEN_CUDA_ARCH"):
+    _torch_arch = os.getenv("TORCH_CUDA_ARCH_LIST", "")
+    _parts = [p.replace("+PTX", "").strip() for p in _torch_arch.replace(";", " ").split()]
+    _parts = [p for p in _parts if p]
+    if _parts:
+        os.environ["NATTEN_CUDA_ARCH"] = ";".join(_parts)
+if not os.getenv("NATTEN_N_WORKERS"):
+    _mj = os.getenv("MAX_JOBS", "")
+    if _mj.isdigit() and int(_mj) > 0:
+        os.environ["NATTEN_N_WORKERS"] = _mj
+# Pin NATTEN_BUILD_DIR to a predictable in-source location so the
+# sequential-checkpoint chain can find the .o files across resume.
+# NATTEN's setup.py at line 67-68 falls back to a tempdir if the
+# directory doesn't exist, so we must create the directory before the
+# env var is read.
+if not os.getenv("NATTEN_BUILD_DIR"):
+    _cuw_natten_build_dir = os.path.abspath("build/natten_cmake")
+    os.makedirs(_cuw_natten_build_dir, exist_ok=True)
+    os.environ["NATTEN_BUILD_DIR"] = _cuw_natten_build_dir
+    print(f"[cuda-wheels] NATTEN_BUILD_DIR set to {_cuw_natten_build_dir}")
+''' + anchor
+
+if anchor in content:
+    content = content.replace(anchor, shim, 1)
+    print("Patched setup.py: TORCH_CUDA_ARCH_LIST -> NATTEN_CUDA_ARCH and MAX_JOBS -> NATTEN_N_WORKERS shim inserted")
+else:
+    raise SystemExit(
+        "FATAL: anchor 'CUDA_ARCH = os.getenv(\"NATTEN_CUDA_ARCH\", \"\")' "
+        "not found in setup.py -- upstream may have changed."
+    )
+
+setup_file.write_text(content)

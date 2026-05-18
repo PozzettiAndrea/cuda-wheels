@@ -44,6 +44,7 @@ on:
           - flex_gemm_sharded
           - flex_gemm_sequential
           - pytorch3d_sequential
+          - natten_sequential
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

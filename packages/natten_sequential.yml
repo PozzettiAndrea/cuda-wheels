@@ -1,0 +1,54 @@
+# NATTEN with sequential-checkpoint mode (1h handoff between chain links).
+#
+# Mirrors packages/natten.yml in every respect except:
+#   - name is natten_sequential (so wheels don't collide with the canonical
+#     natten release while we validate the chain mechanism)
+#   - sequential_checkpoint: 3600 caps each compile job at 1 hour. NATTEN's
+#     monolithic compile is ~5h, so a 1h timeout fires ~5 times per chain
+#     -> 5 chain links + a final link that finishes the build. Total wall
+#     time ~6h, comfortably under the 10-link cap in .github/workflows/build.yml.
+#   - sharding removed (replaced by sequential-checkpoint as the chosen
+#     strategy for NATTEN; sharding stays available for cpp_extension
+#     packages via packages/flex_gemm_sharded.yml).
+#   - patch script is patches/natten_sequential.py, which is the same as
+#     patches/natten.py minus the sharding shim, plus a wheel-name rewrite
+#     to natten_sequential.
+#
+# Linux-only POC. Cross-platform Windows chain plumbing (PowerShell timeout
+# + Git Bash tar) is deferred until the Linux mechanism is proven.
+
+name: natten_sequential
+source_repo: SHI-Labs/NATTEN
+source_tag: v0.21.6
+patch_script: patches/natten_sequential.py
+# NATTEN vendors CUTLASS as a submodule under third_party/.
+clone_recursive: true
+# 1h timeout per chain link; chain auto-skips remaining links once the build
+# completes. See _chain_link.yml + .github/workflows/build.yml for the
+# orchestration (10 hardcoded chain-link jobs gated on prior link's `done`).
+sequential_checkpoint: 3600
+# CUTLASS template instantiations have large peak memory; same caps as
+# the natten POC runs proved (max_jobs=4 OOM'd ~3min in; max_jobs=2 with
+# nvcc --threads=1 + 8GB swap stayed stable across full chain links).
+max_jobs: 2
+# Force nvcc to single-threaded per file via NVCC_APPEND_FLAGS. Trailing
+# --threads=1 overrides the earlier --threads $NVCC_THREADS that torch's
+# cpp_extension emits, so each nvcc process keeps its peak memory bounded.
+nvcc_flags: --threads=1
+# cmake is required by NATTEN's setup.py (checks for the executable at
+# build time). Ninja generator is used.
+extra_deps: cmake ninja
+arch_list_by_cuda:
+  # NATTEN's documented build floor is sm_80 (Ampere). Pre-Ampere arches
+  # aren't listed as valid NATTEN_CUDA_ARCH values on natten.org/install.
+  # Hopper (9.0) auto-enables -DNATTEN_WITH_HOPPER_FNA=1 in setup.py.
+  # Blackwell DC (10.0/10.3) auto-enables -DNATTEN_WITH_BLACKWELL_FNA=1 and
+  # requires CUDA 12.8+. Blackwell consumer (12.0, sm_120 / RTX 5090)
+  # doesn't trigger any arch-specific NATTEN flags.
+  '12.4': 8.0 8.6 8.9 9.0+PTX
+  '12.6': 8.0 8.6 8.9 9.0+PTX
+  '12.8': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '12.9': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '13.0': 8.0 8.6 8.9 9.0 10.0 10.3 12.0+PTX
+build_matrix:
+  platforms: ["linux"]
