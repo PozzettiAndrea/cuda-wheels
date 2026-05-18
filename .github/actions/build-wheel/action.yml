@@ -488,11 +488,22 @@ runs:
         # what made our v1 touch ineffective on NATTEN (run 26046924674).
         CUDA_INC_DIR_TOP="/usr/local/cuda-${{ inputs.cuda-version }}/include"
         CUDA_INC_DIR_TARGETS="/usr/local/cuda-${{ inputs.cuda-version }}/targets"
-        for d in $TORCH_INC_DIRS $PYTHON_INC_DIR $CUDA_INC_DIR_TOP $CUDA_INC_DIR_TARGETS; do
+        # CUDA is apt-installed as root, so its headers are root-owned and a
+        # runner-user touch fails silently (Permission denied, swallowed by
+        # 2>/dev/null). Use sudo for the CUDA paths. Torch+Python live under
+        # hostedtoolcache which IS runner-owned, no sudo needed.
+        for d in $TORCH_INC_DIRS $PYTHON_INC_DIR; do
           if [ -d "$d" ]; then
             COUNT=$(find "$d" -type f 2>/dev/null | wc -l)
-            echo "  touching $d ($COUNT files) -> epoch 1"
+            echo "  touching $d ($COUNT files, no sudo) -> epoch 1"
             find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
+          fi
+        done
+        for d in $CUDA_INC_DIR_TOP $CUDA_INC_DIR_TARGETS; do
+          if [ -d "$d" ]; then
+            COUNT=$(sudo find "$d" -type f 2>/dev/null | wc -l)
+            echo "  touching $d ($COUNT files, with sudo) -> epoch 1"
+            sudo find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
           fi
         done
         echo "Sample source vs .o mtime (source SHOULD be older than .o):"
