@@ -597,7 +597,15 @@ runs:
         echo "Newest .o files (top 10 by mtime):"
         find "$BUILD_DIR" -name '*.o' -printf '  %T@ %P (%s bytes)\n' 2>/dev/null | sort -rn | head -10 || true
         mkdir -p $GITHUB_WORKSPACE/checkpoint-out
-        tar -czf $GITHUB_WORKSPACE/checkpoint-out/source.tar.gz source/
+        # CRITICAL: use --format=posix (PAX). The default ustar format stores
+        # mtimes at second precision, but ninja's .ninja_log records mtimes
+        # at nanosecond precision (Linux ext4 native). After a default tar
+        # extract, .o file mtimes are truncated to whole seconds, ninja's
+        # restat compares disk_mtime (e.g. 1779103894.000000000) against
+        # log_mtime (1779103894.789712106), sees them differ, and rebuilds
+        # every restored target. PAX preserves nanoseconds via extended
+        # headers -- GNU tar reads them transparently on extract.
+        tar --format=posix -czf $GITHUB_WORKSPACE/checkpoint-out/source.tar.gz source/
         ls -lh $GITHUB_WORKSPACE/checkpoint-out/
 
     - name: Upload checkpoint artifact (sequential mode, save)
