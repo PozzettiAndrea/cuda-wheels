@@ -357,8 +357,11 @@ runs:
         find build -name '.ninja_log' -delete 2>/dev/null || true
         find build -name 'CMakeCache.txt' -delete 2>/dev/null || true
         find build -name 'CMakeFiles' -type d -prune -exec sh -c 'find "$1" -name "*.cmake" -delete; find "$1" -name "Makefile*" -delete' _ {} \; 2>/dev/null || true
-        echo "Restored $found shard archive(s). Object tree:"
-        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
+        echo "Restored $found shard archive(s). Object tree (first 50):"
+        # `set -o pipefail` is on, so SIGPIPE from `head` closing early would
+        # exit the script. Append `|| true` to swallow it -- listing is purely
+        # informational.
+        find build -name '*.o' -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
         OBJ_COUNT=$(find build -name '*.o' | wc -l)
         echo "Total .o files: $OBJ_COUNT"
         if [ "$OBJ_COUNT" = "0" ]; then
@@ -580,8 +583,9 @@ runs:
           ls -la
           exit 1
         fi
-        echo "Object tree this shard produced:"
-        find build -name '*.o' -printf '  %P (%s bytes)\n' | head -50
+        echo "Object tree this shard produced (first 50):"
+        # `|| true` to swallow SIGPIPE under pipefail if find > head -50.
+        find build -name '*.o' -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
         OBJ_COUNT=$(find build -name '*.o' | wc -l)
         echo "Total objects: $OBJ_COUNT"
         if [ "$OBJ_COUNT" = "0" ]; then
