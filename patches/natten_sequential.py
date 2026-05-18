@@ -158,4 +158,29 @@ else:
         "Re-check against the pinned source_tag."
     )
 
+# Inject -DCMAKE_SUPPRESS_REGENERATION=TRUE into cmake_args. Without this,
+# cmake's Ninja generator emits a RERUN_CMAKE edge that ninja itself fires
+# at start-of-build (visible as "[0/1] Re-running CMake..." in the log) --
+# this re-runs cmake configure AS A NINJA EDGE, regenerating build.ninja
+# with different command_hashes. Even though our setup.py patch above
+# skips the EXPLICIT cmake configure call on resume, the implicit one
+# inside ninja still fires. CMAKE_SUPPRESS_REGENERATION=TRUE tells cmake
+# to never emit that edge in the first place. Safe to set on link-0 too
+# (build.ninja just won't auto-regenerate if CMakeLists.txt changes mid-run,
+# which isn't a thing we do).
+old_cmake_args = '''            cmake_args = [
+                f"-DPYTHON_PATH={sys.executable}",'''
+
+new_cmake_args = '''            cmake_args = [
+                "-DCMAKE_SUPPRESS_REGENERATION=TRUE",
+                f"-DPYTHON_PATH={sys.executable}",'''
+
+if old_cmake_args in content:
+    content = content.replace(old_cmake_args, new_cmake_args, 1)
+    print("Patched setup.py: injected -DCMAKE_SUPPRESS_REGENERATION=TRUE into cmake_args")
+else:
+    raise SystemExit(
+        "FATAL: cmake_args initializer not found in NATTEN setup.py -- upstream may have changed."
+    )
+
 setup_file.write_text(content)
