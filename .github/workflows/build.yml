@@ -93,16 +93,6 @@ on:
         required: false
         type: string
         default: '0'
-      checkpoint_session_id:
-        description: 'Sequential-checkpoint resume token (set by chain-link self-triggers; leave blank for fresh runs)'
-        required: false
-        type: string
-        default: ''
-      checkpoint_iter:
-        description: 'Sequential-checkpoint iteration counter (set by chain-link self-triggers; starts at 0)'
-        required: false
-        type: string
-        default: '0'
 
 jobs:
   generate-matrix:
@@ -143,10 +133,6 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux }}
     permissions:
       contents: read
-      # actions:write lets the sequential-checkpoint chain-link self-trigger
-      # via `gh workflow run` when a build times out and saves a checkpoint.
-      # No-op for non-checkpointed packages.
-      actions: write
 
     steps:
       - name: Free disk space
@@ -256,12 +242,6 @@ jobs:
           shard-count: ${{ matrix.shard_count }}
           package: ${{ matrix.package }}
           python-version: ${{ matrix.python }}
-          sequential-checkpoint: ${{ matrix.sequential_checkpoint }}
-          checkpoint-session-id: ${{ inputs.checkpoint_session_id }}
-          checkpoint-iter: ${{ inputs.checkpoint_iter }}
-          # Forwarded to the chain-link self-trigger so the successor run
-          # inherits the same matrix-cell coordinates and overwrite flag.
-          overwrite: ${{ inputs.overwrite && 'true' || 'false' }}
 
       - name: Upload artifact
         # Compile-shard jobs upload their .o tarball via the build-wheel action's
@@ -358,6 +338,135 @@ jobs:
         with:
           name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
           path: dist/*.whl
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Sequential-checkpoint chain (10 links). Each `uses:` call invokes the
+  # reusable workflow `_chain_link.yml`, which contains the full per-link
+  # logic. Links are wired with `needs:` so they run sequentially in the
+  # SAME workflow run. The `if:` clause gates each link on the previous
+  # one's `done` output: as soon as a link completes the build (done=true),
+  # every subsequent link is skipped. Setting `result == 'success' &&
+  # outputs.done == 'false'` (rather than `outputs.done != 'true'`) means
+  # skipped/failed/cancelled predecessors also short-circuit the chain.
+  build-linux-chain-link-0:
+    needs: generate-matrix
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 0
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-1:
+    needs: [generate-matrix, build-linux-chain-link-0]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-0.result == 'success' && needs.build-linux-chain-link-0.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 1
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-2:
+    needs: [generate-matrix, build-linux-chain-link-1]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-1.result == 'success' && needs.build-linux-chain-link-1.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 2
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-3:
+    needs: [generate-matrix, build-linux-chain-link-2]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-2.result == 'success' && needs.build-linux-chain-link-2.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 3
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-4:
+    needs: [generate-matrix, build-linux-chain-link-3]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-3.result == 'success' && needs.build-linux-chain-link-3.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 4
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-5:
+    needs: [generate-matrix, build-linux-chain-link-4]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-4.result == 'success' && needs.build-linux-chain-link-4.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 5
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-6:
+    needs: [generate-matrix, build-linux-chain-link-5]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-5.result == 'success' && needs.build-linux-chain-link-5.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 6
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-7:
+    needs: [generate-matrix, build-linux-chain-link-6]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-6.result == 'success' && needs.build-linux-chain-link-6.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 7
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-8:
+    needs: [generate-matrix, build-linux-chain-link-7]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-7.result == 'success' && needs.build-linux-chain-link-7.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 8
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
+
+  build-linux-chain-link-9:
+    needs: [generate-matrix, build-linux-chain-link-8]
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_chain.include[0] != null && needs.build-linux-chain-link-8.result == 'success' && needs.build-linux-chain-link-8.outputs.done == 'false' }}
+    uses: ./.github/workflows/_chain_link.yml
+    with:
+      iter: 9
+      matrix_json: ${{ needs.generate-matrix.outputs.matrix }}
+      runner: ${{ inputs.runner }}
+      max_jobs_override: ${{ inputs.max_jobs }}
+      overwrite: ${{ inputs.overwrite }}
+    secrets: inherit
 
   build-windows:
     name: Windows ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
@@ -558,8 +667,25 @@ jobs:
           path: dist/*.whl
 
   release:
-    needs: [build-linux, link-linux, build-windows, link-windows]
-    if: always() && (needs.build-linux.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled' || needs.link-windows.result != 'cancelled')
+    needs:
+      - build-linux
+      - link-linux
+      - build-windows
+      - link-windows
+      - build-linux-chain-link-0
+      - build-linux-chain-link-1
+      - build-linux-chain-link-2
+      - build-linux-chain-link-3
+      - build-linux-chain-link-4
+      - build-linux-chain-link-5
+      - build-linux-chain-link-6
+      - build-linux-chain-link-7
+      - build-linux-chain-link-8
+      - build-linux-chain-link-9
+    # Release runs whenever ANY build/link/chain-link path produced a result
+    # (not cancelled). Skipped chain links are normal (cascade-skip after a
+    # link completes the build); we still want release to run.
+    if: always() && (needs.build-linux.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled' || needs.link-windows.result != 'cancelled' || needs.build-linux-chain-link-0.result == 'success' || needs.build-linux-chain-link-1.result == 'success' || needs.build-linux-chain-link-2.result == 'success' || needs.build-linux-chain-link-3.result == 'success' || needs.build-linux-chain-link-4.result == 'success' || needs.build-linux-chain-link-5.result == 'success' || needs.build-linux-chain-link-6.result == 'success' || needs.build-linux-chain-link-7.result == 'success' || needs.build-linux-chain-link-8.result == 'success' || needs.build-linux-chain-link-9.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -576,9 +702,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Collect wheels and group by package
+          # Collect wheels and group by package. If artifacts/ doesn't exist
+          # (no upstream job produced any artifacts -- e.g. every chain-link
+          # was skipped after the first one completed and uploaded its wheel,
+          # or every job failed pre-build), there's nothing to release.
           mkdir -p wheels
-          find artifacts -name "*.whl" -exec cp {} wheels/ \;
+          if [ -d artifacts ]; then
+            find artifacts -name "*.whl" -exec cp {} wheels/ \;
+          else
+            echo "::notice::no artifacts/ directory -- no wheels were uploaded; nothing to release"
+            exit 0
+          fi
 
           echo "Collected wheels:"
           ls -la wheels/

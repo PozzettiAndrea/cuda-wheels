@@ -368,6 +368,10 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         base_entry["shard_index"] = 0
                         base_entry["shard_count"] = 0
                         matrix.append(base_entry)
+                    # Note: packages with sequential_checkpoint > 0 stay in the
+                    # main matrix here; main() splits them out into a separate
+                    # linux_chain matrix below so the regular build-linux job
+                    # doesn't try to build them in one shot.
 
     if skipped > 0:
         print(f"Skipped {skipped} existing wheels")
@@ -418,8 +422,17 @@ def main():
 
     # Split by platform; for sharded packages, also produce a separate
     # link-job matrix per platform (one link job per unique pkg/cuda/torch/py).
-    linux_jobs = [j for j in matrix if j["platform"] == "linux"]
+    linux_jobs_all = [j for j in matrix if j["platform"] == "linux"]
     windows_jobs = [j for j in matrix if j["platform"] == "windows"]
+
+    # Split sequential-checkpoint packages into a separate matrix. The chained
+    # build-linux-chain-link-N jobs in build.yml iterate over linux_chain; the
+    # regular build-linux job uses linux (and would otherwise OOM trying to
+    # build these in a single 6h-capped job). Windows chain support is
+    # deferred -- if a windows entry sneaks in here it'd be skipped silently.
+    linux_jobs = [j for j in linux_jobs_all if int(j.get("sequential_checkpoint", 0)) == 0]
+    linux_chain_jobs = [j for j in linux_jobs_all if int(j.get("sequential_checkpoint", 0)) > 0]
+
     linux_link_jobs = link_matrix_from(linux_jobs)
     windows_link_jobs = link_matrix_from(windows_jobs)
 
@@ -428,6 +441,7 @@ def main():
         "windows": {"include": windows_jobs},
         "linux_link": {"include": linux_link_jobs},
         "windows_link": {"include": windows_link_jobs},
+        "linux_chain": {"include": linux_chain_jobs},
     }
 
     with open(args.output, "w") as f:
@@ -435,7 +449,8 @@ def main():
         json.dump(output, f, separators=(',', ':'))
 
     print(f"Generated {len(matrix)} build jobs "
-          f"({len(linux_jobs)} Linux, {len(windows_jobs)} Windows)")
+          f"({len(linux_jobs)} Linux, {len(windows_jobs)} Windows, "
+          f"{len(linux_chain_jobs)} Linux chain)")
     if linux_link_jobs or windows_link_jobs:
         print(f"  + {len(linux_link_jobs)} Linux link jobs, "
               f"{len(windows_link_jobs)} Windows link jobs (sharded packages)")

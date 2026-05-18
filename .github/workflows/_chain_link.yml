@@ -1,0 +1,177 @@
+name: Sequential-checkpoint chain link
+# Reusable workflow (workflow_call). build.yml invokes this N times per
+# (package, cell) — once per chain link — passing `iter`. Each call is a
+# separate GH Actions job; build.yml wires them with `needs:` so they run
+# sequentially within the SAME run, with the `done` output gating whether
+# subsequent links run or are skipped.
+#
+# This file owns the per-link logic so we don't have to copy-paste 10
+# nearly-identical job blocks into build.yml. The matrix from
+# generate-matrix is threaded in as a JSON-string input.
+
+on:
+  workflow_call:
+    inputs:
+      iter:
+        description: 'Chain-link iteration number (0 for the first link).'
+        type: number
+        required: true
+      matrix_json:
+        description: 'The full matrix JSON from generate-matrix (we read .linux_chain from it).'
+        type: string
+        required: true
+      runner:
+        description: 'Runner type: github (default) or self-hosted.'
+        type: string
+        required: false
+        default: 'github'
+      max_jobs_override:
+        description: 'Workflow-dispatch override for max parallel compile jobs (0 = use package default).'
+        type: string
+        required: false
+        default: '0'
+      overwrite:
+        description: 'When true, skip the "wheel exists in release" early-out.'
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      done:
+        description: '"true" once the chain has produced (or found) a wheel; "false" if the link timed out and uploaded a checkpoint for the next link.'
+        value: ${{ jobs.build.outputs.done }}
+
+jobs:
+  build:
+    name: chain ${{ inputs.iter }} ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json).linux_chain }}
+    permissions:
+      contents: read
+    outputs:
+      # `done` = build completed (or pre-existing wheel found) somewhere in
+      # this link. build.yml gates the next link on this; if 'true', no
+      # further compile happens.
+      done: ${{ steps.bw.outputs.done || (steps.check.outputs.exists == 'true' && 'true' || 'false') }}
+    steps:
+      - name: Free disk space
+        if: matrix.free_disk_space == true
+        run: |
+          sudo rm -rf /usr/share/dotnet &
+          sudo rm -rf /usr/local/lib/android &
+          sudo rm -rf /opt/ghc &
+          sudo rm -rf /opt/hostedtoolcache/CodeQL &
+          sudo rm -rf /usr/share/swift &
+          sudo rm -rf /usr/local/graalvm &
+          sudo rm -rf /usr/local/.ghcup &
+          sudo rm -rf /opt/hostedtoolcache/go &
+          sudo apt-get clean &
+          wait
+          df -h
+
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        run: |
+          PKG_NAME="${{ matrix.package }}"
+          PKG_VERSION="${{ matrix.version }}"
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2)
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+          WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
+          echo "wheel_prefix=$WHEEL_PREFIX" >> $GITHUB_OUTPUT
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if wheel exists in release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WHEEL_PREFIX="${{ steps.meta.outputs.wheel_prefix }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: ${WHEEL_PREFIX}*.whl"
+          mkdir -p dist
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Overwrite enabled, will rebuild"
+          else
+            MATCHING=$({ gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null || true; } | grep "^${WHEEL_PREFIX}" | grep "manylinux" | head -1 || true)
+            if [ -n "$MATCHING" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "::notice::Wheel exists in release: $MATCHING"
+              gh release download "$RELEASE" -p "$MATCHING" -D dist
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "::notice::No manylinux wheel found matching: ${WHEEL_PREFIX}*"
+            fi
+          fi
+
+      - name: Setup CUDA
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: linux
+          installer-type: ${{ matrix.cuda_installer }}
+          extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup build environment
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-build-env
+        with:
+          python-version: ${{ matrix.python }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: linux
+          extra-deps: ${{ matrix.extra_deps }}
+
+      - name: Add swap space
+        # Sequential-checkpoint packages are inherently memory-heavy (that's
+        # why they checkpoint). Allocate 8GB swap unconditionally for any
+        # chain-mode package; cheap insurance against OOM kills mid-compile.
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          sudo fallocate -l 8G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+
+      - name: Build wheel
+        id: bw
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: linux
+          max-jobs: ${{ inputs.max_jobs_override != '0' && inputs.max_jobs_override || matrix.max_jobs }}
+          clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
+          nvcc-flags: ${{ matrix.nvcc_flags }}
+          shard-index: '0'
+          shard-count: '0'
+          package: ${{ matrix.package }}
+          python-version: ${{ matrix.python }}
+          sequential-checkpoint: ${{ matrix.sequential_checkpoint }}
+          checkpoint-iter: ${{ inputs.iter }}
+
+      - name: Upload wheel artifact
+        # Only the link that COMPLETED the build (or saw the wheel already
+        # exists in the release) uploads. Intermediate-link uploads would
+        # produce empty artifacts and collide on name; the if-no-files-found
+        # is a belt-and-suspenders against a config skew.
+        if: steps.bw.outputs.done == 'true' || steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
+          path: dist/*.whl
+          if-no-files-found: ignore

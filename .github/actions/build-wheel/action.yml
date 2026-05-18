@@ -69,31 +69,32 @@ inputs:
     required: false
     default: ''
   sequential-checkpoint:
-    description: 'Seconds before forced checkpoint handoff. 0 (default) = no checkpointing. When > 0, the compile is wrapped in `timeout` and on timer-fire the build state is tarred to an artifact and a successor workflow_dispatch is triggered.'
+    description: 'Seconds before forced checkpoint handoff. 0 (default) = no checkpointing. When > 0 the compile is wrapped in `timeout`; on timer-fire the build state is tarred to an in-run artifact (checkpoint-iter-N) and the next chain-link job picks it up.'
     required: false
     default: '0'
-  checkpoint-session-id:
-    description: 'When set, this job is a chain-link resume. The action downloads the matching checkpoint artifact and extracts it into the freshly-cloned source tree before building.'
-    required: false
-    default: ''
   checkpoint-iter:
-    description: 'Chain-link iteration counter (0 for the first job). Incremented when self-triggering the successor; used as a safety cap to break infinite loops.'
+    description: 'Chain-link iteration counter. 0 = first link (does a fresh clone). > 0 = resume: skips clone/patch/pre-build, downloads checkpoint-iter-(N-1) artifact, and extracts source/ from it. The chain orchestration lives in .github/workflows/build.yml as N sequential jobs gated on the previous link''s done output.'
     required: false
     default: '0'
-  overwrite:
-    description: 'Forwarded to the chain-link self-trigger so the successor inherits the overwrite flag.'
-    required: false
-    default: 'false'
 
 outputs:
   wheel-path:
     description: 'Path to the built wheel (set only in full-build or link-only modes; empty in compile-shard mode).'
     value: ${{ steps.rename.outputs.wheel-path }}
+  done:
+    description: 'Sequential-checkpoint mode: "true" if the build completed (a wheel was produced or already existed), "false" if the chain link hit the timeout and saved a checkpoint for the next link. Empty string outside sequential-checkpoint mode.'
+    value: ${{ steps.build_linux.outputs.done }}
 
 runs:
   using: 'composite'
   steps:
     - name: Clone source
+      # Sequential-checkpoint chain links with iter>0 SKIP cloning -- the
+      # source/ tree is restored from the prior link's checkpoint tarball
+      # (preserving all source mtimes so ninja's restat against the .o files
+      # in the same tarball still passes). Only iter=0 (first link) or
+      # non-checkpointed builds do a fresh clone.
+      if: inputs.checkpoint-iter == '0'
       shell: bash
       run: |
         RECURSIVE_FLAG=""
@@ -113,7 +114,9 @@ runs:
         fi
 
     - name: Apply patch script
-      if: inputs.patch-script != ''
+      # Patches already applied in the prior chain link; their changes are
+      # preserved in the source/ tarball. Skip on chain-link resume.
+      if: inputs.patch-script != '' && inputs.checkpoint-iter == '0'
       shell: bash
       run: |
         cd source
@@ -128,7 +131,8 @@ runs:
         python $GITHUB_WORKSPACE/${{ inputs.patch-script }}
 
     - name: Pre-build script
-      if: inputs.pre-build-script != ''
+      # Already ran on iter=0; effects preserved in the source/ tarball.
+      if: inputs.pre-build-script != '' && inputs.checkpoint-iter == '0'
       shell: bash
       run: |
         cd source
@@ -388,61 +392,69 @@ runs:
         find build -name '*.o' -exec touch -m {} +
         rm -rf "$TEMP_DIR"
 
-    - name: Download checkpoint (sequential mode, resume)
-      # Sequential-checkpoint chain link: the previous chain link uploaded a
-      # tarball of its build/ tree as artifact
-      # `checkpoint-<pkg>-<platform>-py<py>-cu<cuda>-torch<torch>` to ITS run.
-      # We download from that run (identified by checkpoint-session-id, which
-      # is the prior run's GITHUB_RUN_ID, threaded through workflow_dispatch).
-      # github-token is required for cross-run artifact reads in v4.
-      if: inputs.checkpoint-session-id != ''
-      uses: actions/download-artifact@v4
-      with:
-        name: checkpoint-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
-        path: /tmp/checkpoint
-        run-id: ${{ inputs.checkpoint-session-id }}
-        github-token: ${{ github.token }}
-
-    - name: Restore checkpoint (sequential mode, resume)
-      # Extract the prior chain link's build/ tree into the freshly-cloned
-      # source dir. Touch every .o so its mtime > the freshly-checked-out
-      # source mtimes (otherwise ninja would see source-newer-than-.o and
-      # recompile). build.ninja and .ninja_log are also restored so ninja's
-      # command_hash check matches up and done targets are skipped. The
-      # command_hash match relies on identical env vars + cmake/cpp_extension
-      # config across chain links -- holds because each link uses the same
-      # runner image, CUDA install, and TORCH_CUDA_ARCH_LIST.
-      if: inputs.checkpoint-session-id != '' && inputs.platform == 'linux'
+    - name: Compute prev iter (sequential mode, resume)
+      # GH Actions expressions don't support arithmetic, so we can't compute
+      # iter-1 inline as a step input. Write it to $GITHUB_ENV here and the
+      # Download step below references it via env.
+      if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != ''
       shell: bash
       run: |
-        cd source
-        if [ -n "${{ inputs.build-subdir }}" ]; then
-          cd "${{ inputs.build-subdir }}"
-        fi
-        if [ ! -f /tmp/checkpoint/build.tar.gz ]; then
-          echo "::error::no build.tar.gz in /tmp/checkpoint -- prior chain link's upload may have failed"
+        echo "CUW_PREV_ITER=$((${{ inputs.checkpoint-iter }} - 1))" >> $GITHUB_ENV
+
+    - name: Download checkpoint (sequential mode, resume)
+      # Same-run artifact from the previous chain link (build-linux-chain-link
+      # iter N-1 in build.yml). No run-id needed -- v4 picks up artifacts from
+      # the current run by default.
+      if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != ''
+      uses: actions/download-artifact@v4
+      with:
+        name: checkpoint-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-iter-${{ env.CUW_PREV_ITER }}
+        path: /tmp/checkpoint
+
+    - name: Restore checkpoint (sequential mode, resume)
+      # Earlier sequential-checkpoint design tarred only source/build/ and
+      # re-cloned source/ fresh on each chain link. That broke incremental
+      # resume because: (a) the freshly-cloned source files had mtimes
+      # newer than the restored .o files, so ninja's source-newer-than-.o
+      # check triggered a full rebuild; and (b) the touch -m workaround
+      # bumped .o mtimes to "now," which then mismatched the .ninja_log's
+      # recorded mtime field and tripped ninja's restat check.
+      #
+      # New design: skip clone/patch/pre-build on resume (gated above on
+      # checkpoint-iter == '0') and tar the ENTIRE source/ tree on save.
+      # Restore here extracts source/ wholesale at its prior position --
+      # all source-file and .o mtimes are preserved through tar (which is
+      # mtime-preserving by default), so ninja's restat against .ninja_log
+      # entries works on the first try.
+      if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != '' && inputs.platform == 'linux'
+      shell: bash
+      run: |
+        if [ ! -f /tmp/checkpoint/source.tar.gz ]; then
+          echo "::error::no source.tar.gz in /tmp/checkpoint -- prior chain link's upload may have failed"
           ls -laR /tmp/checkpoint || true
           exit 1
         fi
         echo "Extracting checkpoint tarball into $(pwd)"
-        tar -xzf /tmp/checkpoint/build.tar.gz
-        if [ ! -d build ]; then
-          echo "::error::tarball did not extract a build/ directory"
-          tar -tzf /tmp/checkpoint/build.tar.gz | head -20
+        # Extract into the workspace root so source/ is recreated.
+        tar -xzf /tmp/checkpoint/source.tar.gz
+        if [ ! -d source ]; then
+          echo "::error::tarball did not extract a source/ directory"
+          tar -tzf /tmp/checkpoint/source.tar.gz | head -20
           exit 1
         fi
-        OBJ_COUNT=$(find build -name '*.o' 2>/dev/null | wc -l)
-        echo "Restored build/ tree: $OBJ_COUNT object files"
+        BUILD_DIR="source/build"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}/build"
+        fi
+        OBJ_COUNT=$(find "$BUILD_DIR" -name '*.o' 2>/dev/null | wc -l)
+        echo "Restored source/ tree: $OBJ_COUNT object files in $BUILD_DIR"
         echo "First 30 build/ entries:"
-        find build -type f -printf '  %P (%s bytes)\n' 2>/dev/null | head -30 || true
-        echo "(touching every .o so mtime > freshly-checked-out source mtime)"
-        find build -name '*.o' -exec touch -m {} +
-        # Also touch ninja state so ninja doesn't conservatively rebuild.
-        find build -name '.ninja_log' -exec touch -m {} + 2>/dev/null || true
-        find build -name '.ninja_deps' -exec touch -m {} + 2>/dev/null || true
-        find build -name 'build.ninja' -exec touch -m {} + 2>/dev/null || true
+        find "$BUILD_DIR" -type f -printf '  %P (%s bytes, mtime=%T@)\n' 2>/dev/null | head -30 || true
+        echo "Sample source vs .o mtime (source SHOULD be older than .o):"
+        find source -name '*.cu' -printf '  CU  %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
+        find "$BUILD_DIR" -name '*.o' -printf '  O   %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
         echo ".ninja_log (first 10 lines, if present):"
-        find build -name '.ninja_log' -exec head -10 {} + 2>/dev/null || true
+        find "$BUILD_DIR" -name '.ninja_log' -exec head -10 {} + 2>/dev/null || true
 
     - name: Build wheel (Linux)
       id: build_linux
@@ -533,8 +545,10 @@ runs:
         #   0   -- command completed within the time limit (success)
         #   124 -- command was killed because the time limit was reached
         #   N>0 -- command's own exit code (real failure, propagated)
-        # We treat 124 as "timeout fired, save checkpoint" and any other
-        # non-zero as a real build failure (chain breaks).
+        # We treat 124 as "timeout fired, save checkpoint for next link" and
+        # any other non-zero as a real build failure (chain breaks).
+        # Output `done`: 'true' = build complete (wheel produced, chain may
+        # terminate); 'false' = need next chain link to resume.
         SECS="${{ inputs.sequential-checkpoint }}"
         if [ -n "$SECS" ] && [ "$SECS" != "0" ]; then
           echo "[sequential-checkpoint] wrapping compile in 'timeout $SECS python -m pip wheel ...'"
@@ -544,105 +558,68 @@ runs:
           set -e
           echo "[sequential-checkpoint] wrapped command exit code: $rc"
           if [ "$rc" = "0" ]; then
-            echo "[sequential-checkpoint] build COMPLETED in time -- chain terminates here"
-            echo "checkpoint=false" >> $GITHUB_OUTPUT
+            echo "[sequential-checkpoint] build COMPLETED in time -- done=true"
+            echo "done=true" >> $GITHUB_OUTPUT
           elif [ "$rc" = "124" ]; then
-            echo "[sequential-checkpoint] TIMEOUT fired (rc=124) -- will save checkpoint + trigger successor chain link"
-            echo "checkpoint=true" >> $GITHUB_OUTPUT
+            echo "[sequential-checkpoint] TIMEOUT fired (rc=124) -- saving checkpoint for next link; done=false"
+            echo "done=false" >> $GITHUB_OUTPUT
           else
             echo "::error::build failed with rc=$rc (not a timeout). Chain breaks."
-            echo "checkpoint=false" >> $GITHUB_OUTPUT
+            echo "done=true" >> $GITHUB_OUTPUT
             exit $rc
           fi
         else
           python -m pip wheel . --no-build-isolation --no-deps -v -w dist
-          echo "checkpoint=false" >> $GITHUB_OUTPUT
+          echo "done=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Save checkpoint tarball (sequential mode, save)
-      # Runs when the compile hit the timeout. Tars the entire build/ tree
-      # (including .ninja_log, .ninja_deps, build.ninja, all produced .o
-      # files) for the successor chain link to extract and resume from.
-      if: inputs.platform == 'linux' && steps.build_linux.outputs.checkpoint == 'true'
+      # Runs when the compile hit the timeout. Tars the ENTIRE source/ tree
+      # (sources + patches + build/ with .ninja_log + .o files) for the next
+      # chain link's job to extract. The whole-source approach preserves all
+      # mtimes (vs an earlier build/-only design that re-cloned source and
+      # broke ninja's restat check). tar preserves mtimes by default.
+      if: inputs.platform == 'linux' && steps.build_linux.outputs.done == 'false'
       shell: bash
       run: |
-        cd source
-        if [ -n "${{ inputs.build-subdir }}" ]; then
-          cd "${{ inputs.build-subdir }}"
-        fi
-        if [ ! -d build ]; then
-          echo "::error::no build/ directory to checkpoint -- compile may have not even started"
+        if [ ! -d source ]; then
+          echo "::error::no source/ directory to checkpoint -- earlier steps may have failed"
           ls -la
           exit 1
         fi
-        OBJ_COUNT=$(find build -name '*.o' 2>/dev/null | wc -l)
-        TOTAL_FILES=$(find build -type f 2>/dev/null | wc -l)
-        echo "Checkpoint state: $OBJ_COUNT .o files, $TOTAL_FILES total files"
-        echo "First 30 files in build/:"
-        find build -type f -printf '  %P (%s bytes)\n' 2>/dev/null | head -30 || true
+        BUILD_DIR="source/build"
+        if [ -n "${{ inputs.build-subdir }}" ]; then
+          BUILD_DIR="source/${{ inputs.build-subdir }}/build"
+        fi
+        OBJ_COUNT=$(find "$BUILD_DIR" -name '*.o' 2>/dev/null | wc -l)
+        TOTAL_FILES=$(find source -type f 2>/dev/null | wc -l)
+        echo "Checkpoint state: $OBJ_COUNT .o files in $BUILD_DIR, $TOTAL_FILES total files in source/"
+        echo "Newest .o files (top 10 by mtime):"
+        find "$BUILD_DIR" -name '*.o' -printf '  %T@ %P (%s bytes)\n' 2>/dev/null | sort -rn | head -10 || true
         mkdir -p $GITHUB_WORKSPACE/checkpoint-out
-        tar -czf $GITHUB_WORKSPACE/checkpoint-out/build.tar.gz build/
+        tar -czf $GITHUB_WORKSPACE/checkpoint-out/source.tar.gz source/
         ls -lh $GITHUB_WORKSPACE/checkpoint-out/
 
     - name: Upload checkpoint artifact (sequential mode, save)
-      if: inputs.platform == 'linux' && steps.build_linux.outputs.checkpoint == 'true'
+      if: inputs.platform == 'linux' && steps.build_linux.outputs.done == 'false'
       uses: actions/upload-artifact@v4
       with:
-        # Artifact name is per (pkg, platform, py, cuda, torch). Each chain
-        # link uploads to its OWN run; the successor downloads from the
-        # named run via the run-id input. Constant-name (no iter suffix)
-        # keeps the lookup simple.
-        name: checkpoint-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}
-        path: checkpoint-out/build.tar.gz
-        # Short retention -- checkpoints are minutes-old by the time the
-        # successor reads them, then never read again.
+        # Per-iter artifact name. The next chain-link job (iter N+1) reads
+        # `checkpoint-<...>-iter-N` produced by THIS job (iter N). Same-run
+        # download in v4 needs no run-id/github-token.
+        name: checkpoint-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-iter-${{ inputs.checkpoint-iter }}
+        path: checkpoint-out/source.tar.gz
+        # Short retention -- checkpoint is consumed within minutes by the
+        # next job in the same run, then never read again.
         retention-days: 1
-
-    - name: Trigger next chain link (sequential mode, save)
-      # Fires workflow_dispatch for the same matrix coordinates, passing
-      # GITHUB_RUN_ID as the next link's checkpoint-session-id. GITHUB_TOKEN
-      # with actions:write permission (granted on the build-linux job) can
-      # invoke workflow_dispatch since Sep 2022. Safety: cap iter at 30 so a
-      # bug can't infinite-loop us.
-      if: inputs.platform == 'linux' && steps.build_linux.outputs.checkpoint == 'true'
-      shell: bash
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        ITER="${{ inputs.checkpoint-iter }}"
-        MAX_ITER=30
-        NEXT_ITER=$((ITER + 1))
-        if [ "$NEXT_ITER" -gt "$MAX_ITER" ]; then
-          echo "::error::checkpoint iter $NEXT_ITER exceeds cap of $MAX_ITER; chain will not continue. Bump max or investigate why the build hasn't converged."
-          exit 1
-        fi
-        echo "Triggering successor chain link:"
-        echo "  package=${{ inputs.package }}"
-        echo "  cuda=${{ inputs.cuda-version }}"
-        echo "  pytorch=${{ inputs.pytorch-version }}"
-        echo "  python=${{ inputs.python-version }}"
-        echo "  platform=${{ inputs.platform }}"
-        echo "  overwrite=${{ inputs.overwrite }}"
-        echo "  checkpoint_session_id=$GITHUB_RUN_ID (this run)"
-        echo "  checkpoint_iter=$NEXT_ITER"
-        gh workflow run build.yml \
-          --ref "$GITHUB_REF_NAME" \
-          -f package="${{ inputs.package }}" \
-          -f cuda="${{ inputs.cuda-version }}" \
-          -f pytorch="${{ inputs.pytorch-version }}" \
-          -f python="${{ inputs.python-version }}" \
-          -f platform="${{ inputs.platform }}" \
-          -f overwrite="${{ inputs.overwrite }}" \
-          -f checkpoint_session_id="$GITHUB_RUN_ID" \
-          -f checkpoint_iter="$NEXT_ITER"
-        echo "Successor workflow_dispatch sent. This job will now exit successfully and the chain continues in a fresh run."
 
     - name: Repair wheel (Linux)
       # Skip when we're in compile-shard mode (we threw away the partial wheel
       # and uploaded objects instead). Also skip in sequential-checkpoint
-      # mid-chain mode (the timeout fired, no wheel produced this iteration).
-      # Always runs in full or link-only mode when a wheel was actually built.
-      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.checkpoint != 'true'
+      # mid-chain mode (the timeout fired, done='false', no wheel produced
+      # this iteration). Runs in full or link-only mode and in the FINAL
+      # sequential-checkpoint chain link where a wheel was actually built.
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
       shell: bash
       run: |
         python -m pip install auditwheel patchelf
@@ -797,7 +774,7 @@ runs:
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       # Skip in compile-shard mode -- no wheel was kept. Also skip in
       # sequential-checkpoint mid-chain mode -- compile timed out, no wheel.
-      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.checkpoint != 'true'
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
       id: rename-linux
       shell: bash
       run: |
@@ -853,7 +830,7 @@ runs:
     - name: Fix wheel METADATA version
       # Skip in compile-shard mode -- no wheel exists yet. Also skip in
       # sequential-checkpoint mid-chain mode -- compile timed out, no wheel.
-      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.checkpoint != 'true'
+      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
       shell: bash
       run: |
         # The wheel filename includes the local version (e.g., +cu130torch29)
@@ -864,7 +841,7 @@ runs:
     - name: Set wheel-path output
       # Empty in compile-shard mode and in sequential-checkpoint mid-chain
       # mode; populated otherwise.
-      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.checkpoint != 'true'
+      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
       id: rename
       shell: bash
       run: |
