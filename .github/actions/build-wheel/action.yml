@@ -450,6 +450,17 @@ runs:
         echo "Restored source/ tree: $OBJ_COUNT object files in $BUILD_DIR"
         echo "First 30 build/ entries:"
         find "$BUILD_DIR" -type f -printf '  %P (%s bytes, mtime=%T@)\n' 2>/dev/null | head -30 || true
+        # Critical: torch + CUDA were freshly installed by Setup build-env /
+        # Setup CUDA EARLIER IN THIS JOB, so their header files have mtimes
+        # from this job's install time -- newer than our restored .o files
+        # built in the previous chain link. ninja's "input newer than output"
+        # check then forces a full rebuild ("ninja explain: output .o older
+        # than most recent input quint4x2.h"). Touch every restored .o to
+        # "now" so it's strictly newer than any external header. Safe for
+        # non-restat edges (cpp_extension's default): ninja's only freshness
+        # signal is input-vs-output filesystem mtime + cmd_hash match.
+        echo "Touching every restored .o so mtime > the just-installed torch/CUDA headers"
+        find "$BUILD_DIR" -name '*.o' -exec touch -m {} +
         echo "Sample source vs .o mtime (source SHOULD be older than .o):"
         find source -name '*.cu' -printf '  CU  %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
         find "$BUILD_DIR" -name '*.o' -printf '  O   %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
