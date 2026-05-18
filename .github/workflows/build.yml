@@ -228,7 +228,7 @@ jobs:
           extra-deps: ${{ matrix.extra_deps }}
 
       - name: Add swap space
-        if: steps.check.outputs.exists != 'true' && (matrix.package == 'sageattention' || matrix.package == 'sageattn3' || matrix.package == 'natten')
+        if: steps.check.outputs.exists != 'true' && (matrix.package == 'sageattention' || matrix.package == 'sageattn3' || matrix.package == 'natten' || matrix.package == 'pytorch3d_sequential')
         run: |
           sudo fallocate -l 8G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile

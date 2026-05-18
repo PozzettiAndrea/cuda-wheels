@@ -21,6 +21,19 @@ source_tag: v0.7.9
 sequential_checkpoint: 600
 patch_script: patches/pytorch3d_sequential.py
 clone_recursive: true
+# Two prior runs (26026982493, 26028337250) died at ~1m30s into the compile
+# with rc=143 -- classic OOM kill. pytorch3d builds CUDA kernels for 7
+# architectures (sm_75 ... sm_120) per file, each nvcc peaking ~4-8GB. With
+# ninja's default 4-way parallelism on a 4-vCPU runner that's ~24GB peak vs
+# 16GB available. Mitigations match the natten setup: cap ninja to 2
+# parallel jobs, force nvcc to a single internal thread per file (--threads=1
+# via NVCC_APPEND_FLAGS), and add 8GB swap in build.yml.
+max_jobs: 2
+# Force nvcc to single-threaded per file. Appended to every nvcc invocation
+# via NVCC_APPEND_FLAGS; the trailing --threads=1 overrides the earlier
+# --threads $NVCC_THREADS that torch's cpp_extension emits, so each nvcc
+# process keeps its peak memory bounded.
+nvcc_flags: --threads=1
 # Chain-exercise mode is Linux-only for the POC. Cross-platform Windows
 # chain plumbing (PowerShell timeout + Git Bash tar) is deferred until
 # the Linux mechanism is proven.
