@@ -441,10 +441,12 @@ runs:
         fi
         echo "Extracting checkpoint tarball into $(pwd)"
         # Extract into the workspace root so source/ is recreated.
-        tar -xzf "$CHECKPOINT_DIR/source.tar.gz"
+        # --force-local on Windows Git Bash so $CHECKPOINT_DIR's "D:\..." path
+        # isn't interpreted as a remote host.
+        tar --force-local -xzf "$CHECKPOINT_DIR/source.tar.gz"
         if [ ! -d source ]; then
           echo "::error::tarball did not extract a source/ directory"
-          tar -tzf "$CHECKPOINT_DIR/source.tar.gz" | head -20
+          tar --force-local -tzf "$CHECKPOINT_DIR/source.tar.gz" | head -20
           exit 1
         fi
         BUILD_DIR="source/build"
@@ -888,7 +890,11 @@ runs:
         # log_mtime (1779103894.789712106), sees them differ, and rebuilds
         # every restored target. PAX preserves nanoseconds via extended
         # headers -- GNU tar reads them transparently on extract.
-        tar --format=posix -czf $GITHUB_WORKSPACE/checkpoint-out/source.tar.gz source/
+        # --force-local: on Windows Git Bash, $GITHUB_WORKSPACE is a path like
+        # "D:\a\cuda-wheels\cuda-wheels". Without this flag, tar interprets
+        # "D:" as a remote SSH host ("rsh: D: resolve failed"). --force-local
+        # tells tar to treat the colon literally. No-op on Linux.
+        tar --force-local --format=posix -czf "$GITHUB_WORKSPACE/checkpoint-out/source.tar.gz" source/
         ls -lh $GITHUB_WORKSPACE/checkpoint-out/
 
     - name: Upload checkpoint artifact (sequential mode, save)
