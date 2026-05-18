@@ -33,8 +33,11 @@ max_jobs: 2
 # --threads $NVCC_THREADS that torch's cpp_extension emits, so each nvcc
 # process keeps its peak memory bounded.
 nvcc_flags: --threads=1
-# Chain-exercise mode is Linux-only for the POC. Cross-platform Windows
-# chain plumbing (PowerShell timeout + Git Bash tar) is deferred until
-# the Linux mechanism is proven.
+# Linux is fully wired through _chain_link.yml. Windows is included so we
+# can trigger a Windows run and observe what the action.yml's linux-only
+# Save/Trigger gates do (they currently skip on Windows, so a Windows job
+# with a sequential_checkpoint > 0 either completes within the timeout or
+# exits with no wheel produced -- useful for staking out the failure mode
+# before wiring real Windows chain support).
 build_matrix:
-  platforms: ["linux"]
+  platforms: ["linux", "windows"]
