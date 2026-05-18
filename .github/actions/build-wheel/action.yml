@@ -532,6 +532,16 @@ runs:
         cd $BUILD_DIR
         export TORCH_CUDA_ARCH_LIST="${{ inputs.arch-list }}"
         export CUDA_HOME=/usr/local/cuda-${{ inputs.cuda-version }}
+        # Force cmake's Ninja generator on Linux. Default is "Unix Makefiles"
+        # which lacks build.ninja + .ninja_log -- breaks sequential-checkpoint
+        # resume because there's no command_hash check (only mtime), and
+        # cmake reconfigure on resume bumps CMakeFiles/*.make rule files
+        # past the restored .o mtimes, triggering full rebuild. With Ninja
+        # we get the same chain-resume mechanism that works for
+        # cpp_extension packages (pytorch3d_sequential). NATTEN's setup.py
+        # only adds -G Ninja inside `if IS_WINDOWS:`; this env var fills
+        # the gap on Linux. cmake honors CMAKE_GENERATOR globally.
+        export CMAKE_GENERATOR=Ninja
         if [ -n "${{ inputs.max-jobs }}" ]; then
           export MAX_JOBS=${{ inputs.max-jobs }}
         fi
