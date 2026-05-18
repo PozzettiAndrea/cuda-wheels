@@ -63,6 +63,36 @@ for line in (
 if patched_cmake != cmake_text:
     cmake_file.write_text(patched_cmake)
 
+# Windows shard mode: MSVC linker fails the partial-link in each shard
+# with "LNK1120: 2709 unresolved externals" because only ~1/16 of the .o
+# files are present per shard. Linux's ld is permissive enough that the
+# partial .so still gets emitted (we discard it anyway -- only the .o
+# files matter from a shard). MSVC needs /FORCE:UNRESOLVED to tell it
+# to produce the .pyd despite unresolved symbols.
+#
+# In the link job, CUDA_WHEELS_SHARD_COUNT is not exported (the
+# build-wheel action only sets it in compile-shard mode), so this
+# conditional is a no-op there -- the link runs strict-linked with all
+# .o files present and no unresolved externals.
+cmake_text = cmake_file.read_text()
+shard_link_block = '''
+
+# --- cuda-wheels Windows shard mode (injected) ---
+# Tell MSVC's linker to ignore unresolved externals during a compile-shard
+# build (env var CUDA_WHEELS_SHARD_COUNT set). The resulting .pyd is
+# discarded; only the .o files are uploaded to the link job.
+if(${NATTEN_IS_WINDOWS} AND DEFINED ENV{CUDA_WHEELS_SHARD_COUNT})
+    target_link_options(natten PRIVATE "/FORCE:UNRESOLVED")
+    message(STATUS "cuda-wheels Windows shard mode: /FORCE:UNRESOLVED enabled")
+endif()
+# --- end cuda-wheels Windows shard mode ---
+'''
+if 'cuda-wheels Windows shard mode' not in cmake_text:
+    cmake_file.write_text(cmake_text + shard_link_block)
+    print("Appended Windows-shard-mode /FORCE:UNRESOLVED block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: /FORCE:UNRESOLVED block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
 # token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
 # without <ciso646>; MSVC errors with `identifier "not" is undefined` unless
