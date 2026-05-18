@@ -479,8 +479,16 @@ runs:
             pass
         " 2>/dev/null)
         PYTHON_INC_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null || echo "")
-        CUDA_INC_DIR="/usr/local/cuda-${{ inputs.cuda-version }}/include"
-        for d in $TORCH_INC_DIRS $PYTHON_INC_DIR $CUDA_INC_DIR; do
+        # CUDA headers live in two paths on Linux:
+        #   /usr/local/cuda-X.Y/include  (often empty or symlink-stub)
+        #   /usr/local/cuda-X.Y/targets/<arch>/include  (canonical, where
+        #       sm_20_intrinsics.h, cuda_runtime.h, etc. actually live)
+        # Touch BOTH. ninja sees the canonical path in compile commands and
+        # checks its mtime, not the stub path. Missing the targets path is
+        # what made our v1 touch ineffective on NATTEN (run 26046924674).
+        CUDA_INC_DIR_TOP="/usr/local/cuda-${{ inputs.cuda-version }}/include"
+        CUDA_INC_DIR_TARGETS="/usr/local/cuda-${{ inputs.cuda-version }}/targets"
+        for d in $TORCH_INC_DIRS $PYTHON_INC_DIR $CUDA_INC_DIR_TOP $CUDA_INC_DIR_TARGETS; do
           if [ -d "$d" ]; then
             COUNT=$(find "$d" -type f 2>/dev/null | wc -l)
             echo "  touching $d ($COUNT files) -> epoch 1"
