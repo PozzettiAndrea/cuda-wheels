@@ -83,7 +83,7 @@ outputs:
     value: ${{ steps.rename.outputs.wheel-path }}
   done:
     description: 'Sequential-checkpoint mode: "true" if the build completed (a wheel was produced or already existed), "false" if the chain link hit the timeout and saved a checkpoint for the next link. Empty string outside sequential-checkpoint mode.'
-    value: ${{ steps.build_linux.outputs.done }}
+    value: ${{ steps.build_outcome.outputs.done }}
 
 runs:
   using: 'composite'
@@ -403,13 +403,15 @@ runs:
 
     - name: Download checkpoint (sequential mode, resume)
       # Same-run artifact from the previous chain link (build-linux-chain-link
-      # iter N-1 in build.yml). No run-id needed -- v4 picks up artifacts from
-      # the current run by default.
+      # or build-windows-chain-link iter N-1 in build.yml). No run-id needed
+      # -- v4 picks up artifacts from the current run by default.
+      # Use runner.temp so this works on both Linux (/home/runner/work/_temp)
+      # and Windows (D:\a\_temp).
       if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != ''
       uses: actions/download-artifact@v4
       with:
         name: checkpoint-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-iter-${{ env.CUW_PREV_ITER }}
-        path: /tmp/checkpoint
+        path: ${{ runner.temp }}/checkpoint
 
     - name: Restore checkpoint (sequential mode, resume)
       # Earlier sequential-checkpoint design tarred only source/build/ and
@@ -426,20 +428,23 @@ runs:
       # all source-file and .o mtimes are preserved through tar (which is
       # mtime-preserving by default), so ninja's restat against .ninja_log
       # entries works on the first try.
-      if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != '' && inputs.platform == 'linux'
+      if: inputs.checkpoint-iter != '0' && inputs.checkpoint-iter != ''
       shell: bash
       run: |
-        if [ ! -f /tmp/checkpoint/source.tar.gz ]; then
-          echo "::error::no source.tar.gz in /tmp/checkpoint -- prior chain link's upload may have failed"
-          ls -laR /tmp/checkpoint || true
+        # Use $RUNNER_TEMP for cross-platform; on Windows the bash translation
+        # resolves it correctly via MSYS path mapping.
+        CHECKPOINT_DIR="$RUNNER_TEMP/checkpoint"
+        if [ ! -f "$CHECKPOINT_DIR/source.tar.gz" ]; then
+          echo "::error::no source.tar.gz in $CHECKPOINT_DIR -- prior chain link's upload may have failed"
+          ls -laR "$CHECKPOINT_DIR" || true
           exit 1
         fi
         echo "Extracting checkpoint tarball into $(pwd)"
         # Extract into the workspace root so source/ is recreated.
-        tar -xzf /tmp/checkpoint/source.tar.gz
+        tar -xzf "$CHECKPOINT_DIR/source.tar.gz"
         if [ ! -d source ]; then
           echo "::error::tarball did not extract a source/ directory"
-          tar -tzf /tmp/checkpoint/source.tar.gz | head -20
+          tar -tzf "$CHECKPOINT_DIR/source.tar.gz" | head -20
           exit 1
         fi
         BUILD_DIR="source/build"
@@ -618,13 +623,33 @@ runs:
           echo "done=true" >> $GITHUB_OUTPUT
         fi
 
+    - name: Compute build outcome (sequential mode)
+      # Either build_linux or build_windows runs (mutually exclusive on
+      # platform). Read whichever's `done` output exists and re-emit as a
+      # single output so downstream gates don't have to branch on platform.
+      id: build_outcome
+      shell: bash
+      run: |
+        LINUX="${{ steps.build_linux.outputs.done }}"
+        WINDOWS="${{ steps.build_windows.outputs.done }}"
+        if [ -n "$LINUX" ]; then
+          DONE="$LINUX"
+        elif [ -n "$WINDOWS" ]; then
+          DONE="$WINDOWS"
+        else
+          DONE=""
+        fi
+        echo "done=$DONE" >> $GITHUB_OUTPUT
+        echo "build_outcome: done='$DONE' (linux='$LINUX', windows='$WINDOWS')"
+
     - name: Save checkpoint tarball (sequential mode, save)
       # Runs when the compile hit the timeout. Tars the ENTIRE source/ tree
       # (sources + patches + build/ with .ninja_log + .o files) for the next
       # chain link's job to extract. The whole-source approach preserves all
       # mtimes (vs an earlier build/-only design that re-cloned source and
-      # broke ninja's restat check). tar preserves mtimes by default.
-      if: inputs.platform == 'linux' && steps.build_linux.outputs.done == 'false'
+      # broke ninja's restat check). tar preserves mtimes by default. Cross-
+      # platform: tar/find via Git Bash on Windows.
+      if: steps.build_outcome.outputs.done == 'false'
       shell: bash
       run: |
         if [ ! -d source ]; then
@@ -663,7 +688,7 @@ runs:
         ls -lh $GITHUB_WORKSPACE/checkpoint-out/
 
     - name: Upload checkpoint artifact (sequential mode, save)
-      if: inputs.platform == 'linux' && steps.build_linux.outputs.done == 'false'
+      if: steps.build_outcome.outputs.done == 'false'
       uses: actions/upload-artifact@v4
       with:
         # Per-iter artifact name. The next chain-link job (iter N+1) reads
@@ -681,7 +706,7 @@ runs:
       # mid-chain mode (the timeout fired, done='false', no wheel produced
       # this iteration). Runs in full or link-only mode and in the FINAL
       # sequential-checkpoint chain link where a wheel was actually built.
-      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_outcome.outputs.done != 'false'
       shell: bash
       run: |
         python -m pip install auditwheel patchelf
@@ -727,6 +752,7 @@ runs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Build wheel (Windows)
+      id: build_windows
       if: inputs.platform == 'windows'
       shell: powershell
       run: |
@@ -786,7 +812,38 @@ runs:
           $env:USE_NINJA = "0"
           Write-Host "[link-only] USE_NINJA=0"
         }
-        python -m pip wheel . --no-build-isolation --no-deps -v -w dist
+        # Sequential-checkpoint mode (Windows): wrap pip wheel in `timeout`
+        # via Git Bash (PowerShell doesn't ship `timeout` as a process-killer
+        # -- its `timeout` is just a pause). Same exit-code semantics as
+        # Linux: rc=0 success, rc=124 timeout fired (save checkpoint), other
+        # = real failure.
+        $secs = "${{ inputs.sequential-checkpoint }}"
+        if ($secs -ne "" -and $secs -ne "0") {
+          Write-Host "[sequential-checkpoint] wrapping compile in 'timeout $secs python -m pip wheel ...' (via Git Bash)"
+          $bash = "C:\Program Files\Git\bin\bash.exe"
+          if (-not (Test-Path $bash)) { $bash = "bash" }
+          # bash inherits Windows env vars (TORCH_CUDA_ARCH_LIST, MAX_JOBS,
+          # NVCC_THREADS, NVCC_APPEND_FLAGS, CUMM_*, FORCE_CUDA, etc.) set
+          # above, so the compile sees the same environment as the
+          # PowerShell-direct path. cd via bash to handle path translation.
+          & $bash -lc "timeout $secs python -m pip wheel . --no-build-isolation --no-deps -v -w dist"
+          $rc = $LASTEXITCODE
+          Write-Host "[sequential-checkpoint] wrapped command exit code: $rc"
+          if ($rc -eq 0) {
+            Write-Host "[sequential-checkpoint] build COMPLETED in time -- done=true"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
+          } elseif ($rc -eq 124) {
+            Write-Host "[sequential-checkpoint] TIMEOUT fired (rc=124) -- saving checkpoint for next link; done=false"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "done=false"
+          } else {
+            Write-Host "::error::build failed with rc=$rc (not a timeout). Chain breaks."
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
+            exit $rc
+          }
+        } else {
+          python -m pip wheel . --no-build-isolation --no-deps -v -w dist
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
+        }
 
     - name: Package shard objects (compile-shard mode)
       # Must run AFTER both Build wheel (Linux) and Build wheel (Windows) so
@@ -836,7 +893,7 @@ runs:
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
       # Skip in compile-shard mode -- no wheel was kept. Also skip in
       # sequential-checkpoint mid-chain mode -- compile timed out, no wheel.
-      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
+      if: inputs.platform == 'linux' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_outcome.outputs.done != 'false'
       id: rename-linux
       shell: bash
       run: |
@@ -862,8 +919,9 @@ runs:
         cp *.whl $GITHUB_WORKSPACE/dist/
 
     - name: Rename wheel with CUDA+PyTorch suffix (Windows)
-      # Skip in compile-shard mode -- no wheel was kept.
-      if: inputs.platform == 'windows' && (inputs.shard-count == '0' || inputs.link-only == 'true')
+      # Skip in compile-shard mode -- no wheel was kept. Also skip in
+      # sequential-checkpoint mid-chain mode -- compile timed out, no wheel.
+      if: inputs.platform == 'windows' && (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_outcome.outputs.done != 'false'
       id: rename-windows
       shell: powershell
       run: |
@@ -892,7 +950,7 @@ runs:
     - name: Fix wheel METADATA version
       # Skip in compile-shard mode -- no wheel exists yet. Also skip in
       # sequential-checkpoint mid-chain mode -- compile timed out, no wheel.
-      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
+      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_outcome.outputs.done != 'false'
       shell: bash
       run: |
         # The wheel filename includes the local version (e.g., +cu130torch29)
@@ -903,7 +961,7 @@ runs:
     - name: Set wheel-path output
       # Empty in compile-shard mode and in sequential-checkpoint mid-chain
       # mode; populated otherwise.
-      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_linux.outputs.done != 'false'
+      if: (inputs.shard-count == '0' || inputs.link-only == 'true') && steps.build_outcome.outputs.done != 'false'
       id: rename
       shell: bash
       run: |

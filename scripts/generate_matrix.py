@@ -423,15 +423,16 @@ def main():
     # Split by platform; for sharded packages, also produce a separate
     # link-job matrix per platform (one link job per unique pkg/cuda/torch/py).
     linux_jobs_all = [j for j in matrix if j["platform"] == "linux"]
-    windows_jobs = [j for j in matrix if j["platform"] == "windows"]
+    windows_jobs_all = [j for j in matrix if j["platform"] == "windows"]
 
-    # Split sequential-checkpoint packages into a separate matrix. The chained
-    # build-linux-chain-link-N jobs in build.yml iterate over linux_chain; the
-    # regular build-linux job uses linux (and would otherwise OOM trying to
-    # build these in a single 6h-capped job). Windows chain support is
-    # deferred -- if a windows entry sneaks in here it'd be skipped silently.
+    # Sequential-checkpoint packages go into a separate `<platform>_chain`
+    # matrix per platform. The chain reusable workflow `_chain_link.yml` is
+    # called 10 times per platform from build.yml; the matrix here threads
+    # the per-cell coordinates through each chain link.
     linux_jobs = [j for j in linux_jobs_all if int(j.get("sequential_checkpoint", 0)) == 0]
     linux_chain_jobs = [j for j in linux_jobs_all if int(j.get("sequential_checkpoint", 0)) > 0]
+    windows_jobs = [j for j in windows_jobs_all if int(j.get("sequential_checkpoint", 0)) == 0]
+    windows_chain_jobs = [j for j in windows_jobs_all if int(j.get("sequential_checkpoint", 0)) > 0]
 
     linux_link_jobs = link_matrix_from(linux_jobs)
     windows_link_jobs = link_matrix_from(windows_jobs)
@@ -442,6 +443,7 @@ def main():
         "linux_link": {"include": linux_link_jobs},
         "windows_link": {"include": windows_link_jobs},
         "linux_chain": {"include": linux_chain_jobs},
+        "windows_chain": {"include": windows_chain_jobs},
     }
 
     with open(args.output, "w") as f:
@@ -450,7 +452,8 @@ def main():
 
     print(f"Generated {len(matrix)} build jobs "
           f"({len(linux_jobs)} Linux, {len(windows_jobs)} Windows, "
-          f"{len(linux_chain_jobs)} Linux chain)")
+          f"{len(linux_chain_jobs)} Linux chain, "
+          f"{len(windows_chain_jobs)} Windows chain)")
     if linux_link_jobs or windows_link_jobs:
         print(f"  + {len(linux_link_jobs)} Linux link jobs, "
               f"{len(windows_link_jobs)} Windows link jobs (sharded packages)")
