@@ -110,4 +110,52 @@ else:
         "not found in setup.py -- upstream may have changed."
     )
 
+old_cmake_pair = '''            # Config and build the extension
+            subprocess.check_call(
+                ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+            )
+            cmake_build_args = [
+                "--build",
+                build_dir,
+                "-j",
+                str(N_WORKERS),
+            ]
+            if VERBOSE:
+                cmake_build_args.append("--verbose")
+            subprocess.check_call(["cmake", *cmake_build_args])'''
+
+new_cmake_pair = '''            # cuda-wheels sequential-checkpoint: skip the cmake configure call
+            # on resume so the restored build.ninja is honored byte-identically
+            # by ninja. A fresh configure re-emits build.ninja with subtly
+            # different compile-command strings (csrc/CMakeLists.txt has four
+            # execute_process() discovery calls + file(GLOB) over autogen), and
+            # ninja's command_hash check then forces a full rebuild regardless
+            # of how well our mtime-preservation tricks worked.
+            _cuw_cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+            _cuw_build_ninja = os.path.join(build_dir, "build.ninja")
+            if os.path.isfile(_cuw_cmake_cache) and os.path.isfile(_cuw_build_ninja):
+                print(f"[cuda-wheels] reusing CMakeCache.txt + build.ninja in {build_dir}; skipping configure")
+            else:
+                subprocess.check_call(
+                    ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+                )
+            cmake_build_args = [
+                "--build",
+                build_dir,
+                "-j",
+                str(N_WORKERS),
+            ]
+            if VERBOSE:
+                cmake_build_args.append("--verbose")
+            subprocess.check_call(["cmake", *cmake_build_args])'''
+
+if old_cmake_pair in content:
+    content = content.replace(old_cmake_pair, new_cmake_pair, 1)
+    print("Patched setup.py: skip cmake configure on resume when CMakeCache.txt + build.ninja exist")
+else:
+    raise SystemExit(
+        "FATAL: cmake configure block not found in NATTEN setup.py -- upstream may have changed. "
+        "Re-check against the pinned source_tag."
+    )
+
 setup_file.write_text(content)

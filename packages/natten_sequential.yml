@@ -3,10 +3,12 @@
 # Mirrors packages/natten.yml in every respect except:
 #   - name is natten_sequential (so wheels don't collide with the canonical
 #     natten release while we validate the chain mechanism)
-#   - sequential_checkpoint: 3600 caps each compile job at 1 hour. NATTEN's
-#     monolithic compile is ~5h, so a 1h timeout fires ~5 times per chain
-#     -> 5 chain links + a final link that finishes the build. Total wall
-#     time ~6h, comfortably under the 10-link cap in .github/workflows/build.yml.
+#   - sequential_checkpoint: 1200 caps each compile job at 20 minutes. With
+#     NATTEN's monolithic ~5h compile, that's ~15 chain links to converge --
+#     too many for the 10-link cap. So 1200 is a CHAIN-MECHANISM TEST setting:
+#     we just want to see whether link-1 actually resumes (i.e. starts ninja
+#     at a non-trivial percentage instead of 0%) before committing to a
+#     longer test. Bump back to 3600 once the resume is confirmed working.
 #   - sharding removed (replaced by sequential-checkpoint as the chosen
 #     strategy for NATTEN; sharding stays available for cpp_extension
 #     packages via packages/flex_gemm_sharded.yml).
@@ -26,7 +28,7 @@ clone_recursive: true
 # 1h timeout per chain link; chain auto-skips remaining links once the build
 # completes. See _chain_link.yml + .github/workflows/build.yml for the
 # orchestration (10 hardcoded chain-link jobs gated on prior link's `done`).
-sequential_checkpoint: 3600
+sequential_checkpoint: 1200
 # CUTLASS template instantiations have large peak memory; same caps as
 # the natten POC runs proved (max_jobs=4 OOM'd ~3min in; max_jobs=2 with
 # nvcc --threads=1 + 8GB swap stayed stable across full chain links).
