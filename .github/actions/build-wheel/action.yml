@@ -886,9 +886,14 @@ runs:
           if ($rc -eq 0) {
             Write-Host "[sequential-checkpoint] build COMPLETED in time -- done=true"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
+            # Explicit exit 0 -- otherwise GH Actions reads $LASTEXITCODE
+            # (still set from the bash call, possibly non-zero) and marks
+            # the step failed even though our handler succeeded.
+            exit 0
           } elseif ($rc -eq 124) {
             Write-Host "[sequential-checkpoint] TIMEOUT fired (rc=124) -- saving checkpoint for next link; done=false"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "done=false"
+            exit 0
           } else {
             Write-Host "::error::build failed with rc=$rc (not a timeout). Chain breaks."
             Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
