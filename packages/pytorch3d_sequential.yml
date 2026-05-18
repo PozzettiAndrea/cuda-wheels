@@ -1,0 +1,28 @@
+# Sequential-checkpoint chain-exercise test bed.
+#
+# Mirrors packages/pytorch3d.yml except:
+#   - name is pytorch3d_sequential (so wheels don't collide with the canonical
+#     pytorch3d release)
+#   - sequential_checkpoint: 600 caps each compile job at 10 minutes.
+#     pytorch3d's full compile is ~35-41min per matrix cell (observed in
+#     run 25066925045), so a 10min timeout fires ~4 times per cell. Total
+#     wall time per cell ~50min with job-startup overhead -- cheap enough
+#     to iterate on the checkpoint mechanism but long enough to exercise
+#     every code path (download checkpoint, restore, resume ninja, save
+#     checkpoint, trigger successor) multiple times.
+#
+# Trigger with workflow_dispatch filters cuda=13.0 pytorch=2.11 python=3.10
+# (or set the build_matrix below) so the test fans out to a single Linux
+# job instead of pytorch3d's full 95-cell matrix.
+
+name: pytorch3d_sequential
+source_repo: facebookresearch/pytorch3d
+source_tag: v0.7.9
+sequential_checkpoint: 600
+patch_script: patches/pytorch3d_sequential.py
+clone_recursive: true
+# Chain-exercise mode is Linux-only for the POC. Cross-platform Windows
+# chain plumbing (PowerShell timeout + Git Bash tar) is deferred until
+# the Linux mechanism is proven.
+build_matrix:
+  platforms: ["linux"]
