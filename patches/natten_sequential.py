@@ -74,6 +74,26 @@ if 'cuda-wheels blackwell arch restrict' not in cmake_text:
 else:
     print("NOTE: Blackwell arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
 
+# Restrict Hopper autogen .cu files to sm_90 only. Mirrors patches/natten.py.
+cmake_text = cmake_file.read_text()
+hopper_restrict_block = '''
+
+# --- cuda-wheels hopper arch restrict (injected) ---
+if(${NATTEN_WITH_HOPPER_FNA})
+    set_source_files_properties(
+        ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA}
+        PROPERTIES CUDA_ARCHITECTURES "90"
+    )
+    message(STATUS "cuda-wheels: Hopper sources restricted to sm_90")
+endif()
+# --- end cuda-wheels hopper arch restrict ---
+'''
+if 'cuda-wheels hopper arch restrict' not in cmake_text:
+    cmake_file.write_text(cmake_text + hopper_restrict_block)
+    print("Appended Hopper arch-restrict block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: Hopper arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: MSVC alt-token fix (no-op on Linux but kept
 # for consistency with patches/natten.py in case we extend chain to Windows).
 helpers_file = Path("csrc/include/natten/helpers.h")

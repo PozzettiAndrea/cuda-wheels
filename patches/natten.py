@@ -123,6 +123,38 @@ if 'cuda-wheels blackwell arch restrict' not in cmake_text:
 else:
     print("NOTE: Blackwell arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
 
+# Restrict Hopper autogen .cu files to sm_90 only. Same mechanism as the
+# Blackwell block above: NATTEN gates Hopper kernels with the global
+# NATTEN_WITH_HOPPER_FNA flag, so nvcc compiles each Hopper .cu for every
+# arch in the target's CUDA_ARCHITECTURES list even though only sm_90 emits
+# useful code. Impact is wider than Blackwell because every NATTEN matrix
+# cell includes sm_90: cu12.4/12.6 builds (no Blackwell at all) save 75%
+# per Hopper file, cu12.8/12.9 save 83%, cu13.0 saves 86%.
+# Runtime safety verified: can_run_cutlass_hopper_fna/fmha in
+# src/natten/backends/configs/checks.py reject device_cc != 90, and
+# csrc/src/hopper_fna_forward.cu re-asserts TORCH_CHECK(cc == 90, ...) at
+# the host entry. Host symbols unreachable on non-Hopper GPUs.
+cmake_text = cmake_file.read_text()
+hopper_restrict_block = '''
+
+# --- cuda-wheels hopper arch restrict (injected) ---
+# Compile Hopper autogen .cu files only for sm_90. Same logic as the
+# Blackwell-restrict block above.
+if(${NATTEN_WITH_HOPPER_FNA})
+    set_source_files_properties(
+        ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA}
+        PROPERTIES CUDA_ARCHITECTURES "90"
+    )
+    message(STATUS "cuda-wheels: Hopper sources restricted to sm_90")
+endif()
+# --- end cuda-wheels hopper arch restrict ---
+'''
+if 'cuda-wheels hopper arch restrict' not in cmake_text:
+    cmake_file.write_text(cmake_text + hopper_restrict_block)
+    print("Appended Hopper arch-restrict block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: Hopper arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
 # token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
 # without <ciso646>; MSVC errors with `identifier "not" is undefined` unless
