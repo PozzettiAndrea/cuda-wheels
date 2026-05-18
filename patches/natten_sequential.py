@@ -89,6 +89,18 @@ if not os.getenv("NATTEN_N_WORKERS"):
     _mj = os.getenv("MAX_JOBS", "")
     if _mj.isdigit() and int(_mj) > 0:
         os.environ["NATTEN_N_WORKERS"] = _mj
+# Windows: strip 10.0 / 10.3 (Blackwell DC) from the arch list. NATTEN's
+# setup.py enables -DNATTEN_WITH_BLACKWELL_FNA=1 when those archs are
+# present, which compiles sm100_fmha_bwd_kernel_tma_warpspecialized.hpp
+# -- that kernel uses CUTLASS template idioms MSVC's strict mode rejects
+# (C2061). RTX 5090 (sm_120 consumer Blackwell) doesn't trigger
+# NATTEN_WITH_BLACKWELL_FNA and stays in the arch list.
+import platform as _cuw_platform
+if _cuw_platform.system() == "Windows":
+    _na = os.environ.get("NATTEN_CUDA_ARCH", "")
+    _kept = [a for a in _na.split(";") if a.strip() and a.strip() not in ("10.0", "10.3", "100", "103")]
+    os.environ["NATTEN_CUDA_ARCH"] = ";".join(_kept)
+    print(f"[cuda-wheels] Windows: stripped Blackwell DC archs from NATTEN_CUDA_ARCH; result: {os.environ['NATTEN_CUDA_ARCH']!r}")
 # Pin NATTEN_BUILD_DIR to a predictable in-source location so the
 # sequential-checkpoint chain can find the .o files across resume.
 # NATTEN's setup.py at line 67-68 falls back to a tempdir if the

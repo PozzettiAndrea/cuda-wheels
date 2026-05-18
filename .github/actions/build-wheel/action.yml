@@ -486,8 +486,17 @@ runs:
         # Touch BOTH. ninja sees the canonical path in compile commands and
         # checks its mtime, not the stub path. Missing the targets path is
         # what made our v1 touch ineffective on NATTEN (run 26046924674).
-        CUDA_INC_DIR_TOP="/usr/local/cuda-${{ inputs.cuda-version }}/include"
-        CUDA_INC_DIR_TARGETS="/usr/local/cuda-${{ inputs.cuda-version }}/targets"
+        # Platform-conditional CUDA include paths.
+        # Linux: /usr/local/cuda-X.Y/{include,targets/x86_64-linux/include}
+        # Windows: C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/vX.Y/include
+        #          (Git Bash maps to /c/Program Files/NVIDIA GPU Computing Toolkit/...).
+        if [ "${{ inputs.platform }}" = "windows" ]; then
+          CUDA_INC_DIR_TOP="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ inputs.cuda-version }}/include"
+          CUDA_INC_DIR_TARGETS=""  # Windows install is flat under /include (no targets/ split)
+        else
+          CUDA_INC_DIR_TOP="/usr/local/cuda-${{ inputs.cuda-version }}/include"
+          CUDA_INC_DIR_TARGETS="/usr/local/cuda-${{ inputs.cuda-version }}/targets"
+        fi
         # CUDA is apt-installed as root, so its headers are root-owned and a
         # runner-user touch fails silently (Permission denied, swallowed by
         # 2>/dev/null). Use sudo for the CUDA paths. Torch+Python live under
@@ -499,11 +508,21 @@ runs:
             find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
           fi
         done
-        for d in $CUDA_INC_DIR_TOP $CUDA_INC_DIR_TARGETS; do
-          if [ -d "$d" ]; then
-            COUNT=$(sudo find "$d" -type f 2>/dev/null | wc -l)
-            echo "  touching $d ($COUNT files, with sudo) -> epoch 1"
-            sudo find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
+        # Windows CUDA dir is admin-installed but Git Bash on a GHA Windows
+        # runner has effective admin (the runner user is local admin), so
+        # `sudo` is a no-op. On Linux, `sudo` is needed for the apt-installed
+        # root-owned headers. The single sudo path works on both: it's a
+        # passthrough on Windows.
+        if [ "${{ inputs.platform }}" = "windows" ]; then
+          SUDO=""
+        else
+          SUDO="sudo"
+        fi
+        for d in "$CUDA_INC_DIR_TOP" "$CUDA_INC_DIR_TARGETS"; do
+          if [ -n "$d" ] && [ -d "$d" ]; then
+            COUNT=$($SUDO find "$d" -type f 2>/dev/null | wc -l)
+            echo "  touching $d ($COUNT files) -> epoch 1"
+            $SUDO find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
           fi
         done
         echo "Sample source vs .o mtime (source SHOULD be older than .o):"
