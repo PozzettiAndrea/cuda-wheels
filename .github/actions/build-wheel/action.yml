@@ -450,17 +450,38 @@ runs:
         echo "Restored source/ tree: $OBJ_COUNT object files in $BUILD_DIR"
         echo "First 30 build/ entries:"
         find "$BUILD_DIR" -type f -printf '  %P (%s bytes, mtime=%T@)\n' 2>/dev/null | head -30 || true
-        # Critical: torch + CUDA were freshly installed by Setup build-env /
-        # Setup CUDA EARLIER IN THIS JOB, so their header files have mtimes
-        # from this job's install time -- newer than our restored .o files
-        # built in the previous chain link. ninja's "input newer than output"
-        # check then forces a full rebuild ("ninja explain: output .o older
-        # than most recent input quint4x2.h"). Touch every restored .o to
-        # "now" so it's strictly newer than any external header. Safe for
-        # non-restat edges (cpp_extension's default): ninja's only freshness
-        # signal is input-vs-output filesystem mtime + cmd_hash match.
-        echo "Touching every restored .o so mtime > the just-installed torch/CUDA headers"
-        find "$BUILD_DIR" -name '*.o' -exec touch -m {} +
+        # Two failure modes in tension here:
+        #  (1) Touching .o files to "now" makes them newer than the freshly-
+        #      installed torch/python/CUDA include headers (so ninja's
+        #      "input newer than output" check passes), BUT it also makes
+        #      the .o newer than the .ninja_deps's stored-deps-info
+        #      timestamp ("ninja explain: stored deps info out of date"),
+        #      tripping a different rebuild rule.
+        #  (2) Leaving .o mtimes preserved fixes (1)'s rebuild-via-deps-info
+        #      but reintroduces (1)'s input-newer-than-output trip.
+        # Resolution: don't touch .o; instead touch the EXTERNAL header
+        # roots (torch, Python, CUDA) to epoch 1 so they're guaranteed
+        # older than any restored .o file. This satisfies BOTH ninja
+        # checks: the .o is older than its stored deps-info (no "modified
+        # externally"), AND newer than all external headers.
+        echo "Resolving freshly-installed include headers to touch to epoch 1..."
+        TORCH_INC_DIRS=$(python -c "
+        try:
+            from torch.utils import cpp_extension as e
+            for p in e.include_paths():
+                print(p)
+        except Exception:
+            pass
+        " 2>/dev/null)
+        PYTHON_INC_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null || echo "")
+        CUDA_INC_DIR="/usr/local/cuda-${{ inputs.cuda-version }}/include"
+        for d in $TORCH_INC_DIRS $PYTHON_INC_DIR $CUDA_INC_DIR; do
+          if [ -d "$d" ]; then
+            COUNT=$(find "$d" -type f 2>/dev/null | wc -l)
+            echo "  touching $d ($COUNT files) -> epoch 1"
+            find "$d" -type f -exec touch -m -d "@1" {} + 2>/dev/null || true
+          fi
+        done
         echo "Sample source vs .o mtime (source SHOULD be older than .o):"
         find source -name '*.cu' -printf '  CU  %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
         find "$BUILD_DIR" -name '*.o' -printf '  O   %p (mtime=%T@)\n' 2>/dev/null | head -1 || true
