@@ -874,8 +874,14 @@ runs:
           # NVCC_THREADS, NVCC_APPEND_FLAGS, CUMM_*, FORCE_CUDA, etc.) set
           # above, so the compile sees the same environment as the
           # PowerShell-direct path. cd via bash to handle path translation.
+          # GH Actions sets $PSNativeCommandUseErrorActionPreference=$true,
+          # which would halt this script when the wrapped bash returns
+          # 124 (timeout). Disable for this block so we can inspect rc
+          # and branch on done=true|false.
+          $PSNativeCommandUseErrorActionPreference = $false
           & $bash -lc "timeout $secs python -m pip wheel . --no-build-isolation --no-deps -v -w dist"
           $rc = $LASTEXITCODE
+          $PSNativeCommandUseErrorActionPreference = $true
           Write-Host "[sequential-checkpoint] wrapped command exit code: $rc"
           if ($rc -eq 0) {
             Write-Host "[sequential-checkpoint] build COMPLETED in time -- done=true"
