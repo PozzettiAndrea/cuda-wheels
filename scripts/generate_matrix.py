@@ -343,6 +343,13 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "cuda_installer": pkg.get("cuda_installer", "network"),
                         "extra_cuda_components": pkg.get("extra_cuda_components", ""),
                         "nvcc_flags": pkg.get("nvcc_flags", ""),
+                        # Seconds to allow each compile job before forcing a
+                        # checkpoint/handoff. 0 = no checkpointing (default).
+                        # The build-wheel action wraps the compile in `timeout`
+                        # and, when the timer fires, tars the build/ tree to
+                        # an artifact and triggers a successor workflow_dispatch
+                        # to resume. See packages/flex_gemm_sequential.yml.
+                        "sequential_checkpoint": int(pkg.get("sequential_checkpoint", 0)),
                     }
 
                     # Sharding: when pkg.sharding > 0, emit N compile-shard entries

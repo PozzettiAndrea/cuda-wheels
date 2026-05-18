@@ -42,6 +42,7 @@ on:
           - simple_knn
           - natten
           - flex_gemm_sharded
+          - flex_gemm_sequential
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
@@ -91,6 +92,16 @@ on:
         required: false
         type: string
         default: '0'
+      checkpoint_session_id:
+        description: 'Sequential-checkpoint resume token (set by chain-link self-triggers; leave blank for fresh runs)'
+        required: false
+        type: string
+        default: ''
+      checkpoint_iter:
+        description: 'Sequential-checkpoint iteration counter (set by chain-link self-triggers; starts at 0)'
+        required: false
+        type: string
+        default: '0'
 
 jobs:
   generate-matrix:
@@ -131,6 +142,10 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux }}
     permissions:
       contents: read
+      # actions:write lets the sequential-checkpoint chain-link self-trigger
+      # via `gh workflow run` when a build times out and saves a checkpoint.
+      # No-op for non-checkpointed packages.
+      actions: write
 
     steps:
       - name: Free disk space
@@ -240,15 +255,25 @@ jobs:
           shard-count: ${{ matrix.shard_count }}
           package: ${{ matrix.package }}
           python-version: ${{ matrix.python }}
+          sequential-checkpoint: ${{ matrix.sequential_checkpoint }}
+          checkpoint-session-id: ${{ inputs.checkpoint_session_id }}
+          checkpoint-iter: ${{ inputs.checkpoint_iter }}
+          # Forwarded to the chain-link self-trigger so the successor run
+          # inherits the same matrix-cell coordinates and overwrite flag.
+          overwrite: ${{ inputs.overwrite && 'true' || 'false' }}
 
       - name: Upload artifact
         # Compile-shard jobs upload their .o tarball via the build-wheel action's
         # own upload step; this wheel-upload only runs in full-build mode.
+        # Mid-chain sequential-checkpoint jobs also produce no wheel (the chain
+        # link upload's its checkpoint tarball + triggers a successor instead);
+        # `if-no-files-found: ignore` lets the step succeed when dist/ is empty.
         if: matrix.shard_count == 0
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
           path: dist/*.whl
+          if-no-files-found: ignore
 
   link-linux:
     name: Link ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}

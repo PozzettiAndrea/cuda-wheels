@@ -1,0 +1,31 @@
+# Sequential-checkpoint test bed.
+#
+# Mirrors packages/flexgemm.yml except:
+#   - name is flex_gemm_sequential (so wheels don't collide with the canonical
+#     flex_gemm release)
+#   - sequential_checkpoint: 600 caps each compile job at 10 minutes; on
+#     timeout the build state (whole build/ tree + .ninja_log + .o files) is
+#     tarred, uploaded as an artifact, and a new workflow run is triggered to
+#     resume from that state.
+#
+# Note: flex_gemm's full compile is ~5min so at 600s the timeout NEVER fires --
+# this acts as a smoke test that the timeout wrap doesn't break a normal
+# build. To exercise the actual handoff/restore mechanism in this POC, drop
+# the value to ~90-120 (forces 3-4 chain links per matrix cell).
+#
+# Once this proves the mechanism end-to-end (and cubins match monolithic
+# flex_gemm), the same machinery moves to NATTEN with a 1h-then-5h30m timeout.
+
+name: flex_gemm_sequential
+source_repo: JeffreyXiang/FlexGEMM
+source_tag: 6dd94a859c26ee8246888502eada3dd8ad85532e
+sequential_checkpoint: 600
+patch_script: patches/flex_gemm_sequential.py
+extra_deps: numpy
+extra_cuda_components: cufft_dev nvtx
+clone_recursive: true
+# Sequential-checkpoint path is Linux-only for the POC; Windows version of
+# the timeout/trigger plumbing is deferred until the Linux mechanism is
+# proven.
+build_matrix:
+  platforms: ["linux"]
