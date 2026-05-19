@@ -168,6 +168,40 @@ if 'cuda-wheels MSVC noise suppression' not in cmake_text:
 else:
     print("NOTE: MSVC noise-suppression block already present in csrc/CMakeLists.txt -- skipping")
 
+# nvcc / cudafe1 diagnostic suppression. Mirrors patches/natten.py.
+cmake_text = cmake_file.read_text()
+nvcc_diag_block = '''
+
+# --- cuda-wheels nvcc diagnostic suppression (injected) ---
+set(_cuw_nvcc_diag_codes
+    221    # floating-point value does not fit in required floating-point type
+    20011  # calling a __host__ function from __host__ __device__ context
+)
+foreach(_cuw_d ${_cuw_nvcc_diag_codes})
+    target_compile_options(natten PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+    )
+    if(TARGET natten_blackwell)
+        target_compile_options(natten_blackwell PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+        )
+    endif()
+    if(TARGET natten_hopper)
+        target_compile_options(natten_hopper PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+        )
+    endif()
+endforeach()
+list(JOIN _cuw_nvcc_diag_codes "," _cuw_nvcc_diag_label)
+message(STATUS "cuda-wheels: nvcc --diag-suppress=${_cuw_nvcc_diag_label} on natten + per-arch OBJECT libs")
+# --- end cuda-wheels nvcc diagnostic suppression ---
+'''
+if 'cuda-wheels nvcc diagnostic suppression' not in cmake_text:
+    cmake_file.write_text(cmake_text + nvcc_diag_block)
+    print("Appended nvcc diag-suppression block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: nvcc diag-suppression block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: MSVC alt-token fix (no-op on Linux but kept
 # for consistency with patches/natten.py in case we extend chain to Windows).
 helpers_file = Path("csrc/include/natten/helpers.h")

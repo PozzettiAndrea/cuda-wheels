@@ -296,6 +296,46 @@ if 'cuda-wheels MSVC noise suppression' not in cmake_text:
 else:
     print("NOTE: MSVC noise-suppression block already present in csrc/CMakeLists.txt -- skipping")
 
+# nvcc / cudafe1 diagnostic suppression. Separate from MSVC: nvcc warnings
+# use the #NNN-D form and are controlled by --diag-suppress=NNN rather than
+# /wd<num>. The MSVC block above doesn't touch them. Applies on all platforms
+# because nvcc runs on both Linux and Windows.
+cmake_text = cmake_file.read_text()
+nvcc_diag_block = '''
+
+# --- cuda-wheels nvcc diagnostic suppression (injected) ---
+set(_cuw_nvcc_diag_codes
+    221    # floating-point value does not fit in required floating-point type
+           # (NATTEN's fna_collective_softmax.hpp uses -((float)(1e+300)) as a
+           # sentinel; the double->float cast overflows. Pure noise.)
+    20011  # calling a __host__ function from __host__ __device__ context
+           # (CUTLASS template noise; harmless when only host path is taken)
+)
+foreach(_cuw_d ${_cuw_nvcc_diag_codes})
+    target_compile_options(natten PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+    )
+    if(TARGET natten_blackwell)
+        target_compile_options(natten_blackwell PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+        )
+    endif()
+    if(TARGET natten_hopper)
+        target_compile_options(natten_hopper PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--diag-suppress=${_cuw_d}>
+        )
+    endif()
+endforeach()
+list(JOIN _cuw_nvcc_diag_codes "," _cuw_nvcc_diag_label)
+message(STATUS "cuda-wheels: nvcc --diag-suppress=${_cuw_nvcc_diag_label} on natten + per-arch OBJECT libs")
+# --- end cuda-wheels nvcc diagnostic suppression ---
+'''
+if 'cuda-wheels nvcc diagnostic suppression' not in cmake_text:
+    cmake_file.write_text(cmake_text + nvcc_diag_block)
+    print("Appended nvcc diag-suppression block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: nvcc diag-suppression block already present in csrc/CMakeLists.txt -- skipping")
+
 # csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
 # token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
 # without <ciso646>; MSVC errors with `identifier "not" is undefined` unless
