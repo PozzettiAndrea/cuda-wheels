@@ -64,7 +64,16 @@ if(${NATTEN_WITH_BLACKWELL_FNA})
         ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA}
         PROPERTIES CUDA_ARCHITECTURES "100;103"
     )
-    message(STATUS "cuda-wheels: Blackwell sources restricted to sm_100/103")
+    list(LENGTH AUTOGEN_BLACKWELL_FNA  _cuw_n_bw_fna)
+    list(LENGTH AUTOGEN_BLACKWELL_FMHA _cuw_n_bw_fmha)
+    math(EXPR _cuw_n_bw "${_cuw_n_bw_fna} + ${_cuw_n_bw_fmha}")
+    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources restricted to sm_100/103 (${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA):")
+    foreach(_cuw_f ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
+        get_filename_component(_cuw_bn ${_cuw_f} NAME)
+        get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
+        get_filename_component(_cuw_pd ${_cuw_pd} NAME)
+        message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
+    endforeach()
 endif()
 # --- end cuda-wheels blackwell arch restrict ---
 '''
@@ -84,7 +93,16 @@ if(${NATTEN_WITH_HOPPER_FNA})
         ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA}
         PROPERTIES CUDA_ARCHITECTURES "90"
     )
-    message(STATUS "cuda-wheels: Hopper sources restricted to sm_90")
+    list(LENGTH AUTOGEN_HOPPER_FNA  _cuw_n_hp_fna)
+    list(LENGTH AUTOGEN_HOPPER_FMHA _cuw_n_hp_fmha)
+    math(EXPR _cuw_n_hp "${_cuw_n_hp_fna} + ${_cuw_n_hp_fmha}")
+    message(STATUS "cuda-wheels: ${_cuw_n_hp} Hopper sources restricted to sm_90 (${_cuw_n_hp_fna} FNA + ${_cuw_n_hp_fmha} FMHA):")
+    foreach(_cuw_f ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA})
+        get_filename_component(_cuw_bn ${_cuw_f} NAME)
+        get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
+        get_filename_component(_cuw_pd ${_cuw_pd} NAME)
+        message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
+    endforeach()
 endif()
 # --- end cuda-wheels hopper arch restrict ---
 '''
@@ -93,6 +111,29 @@ if 'cuda-wheels hopper arch restrict' not in cmake_text:
     print("Appended Hopper arch-restrict block to csrc/CMakeLists.txt")
 else:
     print("NOTE: Hopper arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
+# MSVC noise suppression. Mirrors patches/natten.py.
+cmake_text = cmake_file.read_text()
+msvc_noise_block = '''
+
+# --- cuda-wheels MSVC noise suppression (injected) ---
+if(${NATTEN_IS_WINDOWS})
+    set(_cuw_msvc_wd_codes 4514 4100 4623 4624 4577 4067 4068 4505 4127)
+    foreach(_cuw_c ${_cuw_msvc_wd_codes})
+        target_compile_options(natten PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+        )
+    endforeach()
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten target")
+endif()
+# --- end cuda-wheels MSVC noise suppression ---
+'''
+if 'cuda-wheels MSVC noise suppression' not in cmake_text:
+    cmake_file.write_text(cmake_text + msvc_noise_block)
+    print("Appended MSVC noise-suppression block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: MSVC noise-suppression block already present in csrc/CMakeLists.txt -- skipping")
 
 # csrc/include/natten/helpers.h: MSVC alt-token fix (no-op on Linux but kept
 # for consistency with patches/natten.py in case we extend chain to Windows).

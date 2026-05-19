@@ -113,7 +113,16 @@ if(${NATTEN_WITH_BLACKWELL_FNA})
         ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA}
         PROPERTIES CUDA_ARCHITECTURES "100;103"
     )
-    message(STATUS "cuda-wheels: Blackwell sources restricted to sm_100/103")
+    list(LENGTH AUTOGEN_BLACKWELL_FNA  _cuw_n_bw_fna)
+    list(LENGTH AUTOGEN_BLACKWELL_FMHA _cuw_n_bw_fmha)
+    math(EXPR _cuw_n_bw "${_cuw_n_bw_fna} + ${_cuw_n_bw_fmha}")
+    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources restricted to sm_100/103 (${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA):")
+    foreach(_cuw_f ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
+        get_filename_component(_cuw_bn ${_cuw_f} NAME)
+        get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
+        get_filename_component(_cuw_pd ${_cuw_pd} NAME)
+        message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
+    endforeach()
 endif()
 # --- end cuda-wheels blackwell arch restrict ---
 '''
@@ -145,7 +154,16 @@ if(${NATTEN_WITH_HOPPER_FNA})
         ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA}
         PROPERTIES CUDA_ARCHITECTURES "90"
     )
-    message(STATUS "cuda-wheels: Hopper sources restricted to sm_90")
+    list(LENGTH AUTOGEN_HOPPER_FNA  _cuw_n_hp_fna)
+    list(LENGTH AUTOGEN_HOPPER_FMHA _cuw_n_hp_fmha)
+    math(EXPR _cuw_n_hp "${_cuw_n_hp_fna} + ${_cuw_n_hp_fmha}")
+    message(STATUS "cuda-wheels: ${_cuw_n_hp} Hopper sources restricted to sm_90 (${_cuw_n_hp_fna} FNA + ${_cuw_n_hp_fmha} FMHA):")
+    foreach(_cuw_f ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA})
+        get_filename_component(_cuw_bn ${_cuw_f} NAME)
+        get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
+        get_filename_component(_cuw_pd ${_cuw_pd} NAME)
+        message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
+    endforeach()
 endif()
 # --- end cuda-wheels hopper arch restrict ---
 '''
@@ -154,6 +172,51 @@ if 'cuda-wheels hopper arch restrict' not in cmake_text:
     print("Appended Hopper arch-restrict block to csrc/CMakeLists.txt")
 else:
     print("NOTE: Hopper arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+
+# MSVC noise suppression. Job 76637988762's Build wheel step ran to 82k log
+# lines on Windows; histogram of warnings:
+#   27483 C4514 unreferenced inline function removed
+#    4842 C4100 unreferenced parameter
+#    1107 C4623 default constructor implicitly defined as deleted
+#     486 C4577 likely mismatch, popping warning state pushed in different file
+#     ...
+# All from CUTLASS template instantiations under third_party/cutlass; none
+# are actionable in NATTEN. Suppressing them on Windows via target_compile_options
+# cuts the log to a fraction of its prior size without losing real diagnostics
+# (NATTEN's own warnings stay at /W3 default).
+cmake_text = cmake_file.read_text()
+msvc_noise_block = '''
+
+# --- cuda-wheels MSVC noise suppression (injected) ---
+# Suppress high-volume MSVC warnings from CUTLASS template instantiations.
+# Applied via target_compile_options so order vs add_library() doesn't matter.
+if(${NATTEN_IS_WINDOWS})
+    set(_cuw_msvc_wd_codes
+        4514  # unreferenced inline function has been removed (top noise: 27k+ lines)
+        4100  # unreferenced parameter
+        4623  # default constructor implicitly defined as deleted
+        4624  # destructor implicitly defined as deleted
+        4577  # likely mismatch, popping warning state pushed in different file
+        4067  # unexpected tokens following preprocessor directive
+        4068  # unknown pragma
+        4505  # unreferenced local function has been removed
+        4127  # conditional expression is constant
+    )
+    foreach(_cuw_c ${_cuw_msvc_wd_codes})
+        target_compile_options(natten PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+        )
+    endforeach()
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten target")
+endif()
+# --- end cuda-wheels MSVC noise suppression ---
+'''
+if 'cuda-wheels MSVC noise suppression' not in cmake_text:
+    cmake_file.write_text(cmake_text + msvc_noise_block)
+    print("Appended MSVC noise-suppression block to csrc/CMakeLists.txt")
+else:
+    print("NOTE: MSVC noise-suppression block already present in csrc/CMakeLists.txt -- skipping")
 
 # csrc/include/natten/helpers.h: CHECK_CONTIGUOUS uses the C++ alternative
 # token `not` (`TORCH_CHECK(not x.is_sparse(), ...)`). GCC/Clang accept this
