@@ -278,6 +278,14 @@ if(${NATTEN_IS_WINDOWS})
         4201  # nonstandard extension used: nameless struct/union
         4189  # local variable initialized but not referenced
         4191  # unsafe function pointer conversion
+        # Fourth batch (from 6fd6738 follow-up)
+        5219  # implicit conversion, possible loss of data (torch TypeSafeSignMath, MASSIVE)
+        5045  # Compiler will insert Spectre mitigation
+        4702  # unreachable code
+        4868  # compiler may not enforce left-to-right evaluation order
+        4388  # signed/unsigned mismatch in comparison
+        4296  # expression is always true
+        4464  # relative include path contains '..'
     )
     foreach(_cuw_c ${_cuw_msvc_wd_codes})
         target_compile_options(natten PRIVATE
