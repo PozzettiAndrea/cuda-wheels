@@ -50,24 +50,26 @@ for line in (
 if patched_cmake != cmake_text:
     cmake_file.write_text(patched_cmake)
 
-# Restrict Blackwell autogen .cu files to sm_100/103 only. NATTEN gates these
-# files with NATTEN_WITH_BLACKWELL_FNA (a single global flag), not per-arch
-# #if __CUDA_ARCH__ guards, so when the flag is on cmake still compiles each
-# Blackwell .cu against the target's full CUDA_ARCHITECTURES list. Mirrors
-# the block in patches/natten.py.
+# Split Blackwell + Hopper autogen .cu files into per-arch OBJECT libraries.
+# See patches/natten.py for the full rationale; in summary: cmake's per-source
+# CUDA_ARCHITECTURES write is a no-op (target-only property), so the
+# idiomatic approach is OBJECT libraries with their own CUDA_ARCHITECTURES
+# target property. Use suffix "100a-real;103a-real" / "90a-real" for the
+# accelerated features CUTLASS Blackwell/Hopper kernels require.
 cmake_text = cmake_file.read_text()
-blackwell_restrict_block = '''
-
-# --- cuda-wheels blackwell arch restrict (injected) ---
+old_add_lib = "add_library(natten SHARED ${ALL_SOURCES})"
+new_add_lib = '''# --- cuda-wheels arch-specific OBJECT libraries (injected) ---
 if(${NATTEN_WITH_BLACKWELL_FNA})
-    set_source_files_properties(
-        ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA}
-        PROPERTIES CUDA_ARCHITECTURES "100;103"
-    )
+    list(REMOVE_ITEM ALL_SOURCES ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
+    add_library(natten_blackwell OBJECT
+        ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
+    set_target_properties(natten_blackwell PROPERTIES
+        CUDA_ARCHITECTURES "100a-real;103a-real"
+        POSITION_INDEPENDENT_CODE ON)
     list(LENGTH AUTOGEN_BLACKWELL_FNA  _cuw_n_bw_fna)
     list(LENGTH AUTOGEN_BLACKWELL_FMHA _cuw_n_bw_fmha)
     math(EXPR _cuw_n_bw "${_cuw_n_bw_fna} + ${_cuw_n_bw_fmha}")
-    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources restricted to sm_100/103 (${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA):")
+    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources -> natten_blackwell OBJECT (CUDA_ARCHITECTURES=100a-real;103a-real, ${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA)")
     foreach(_cuw_f ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
         get_filename_component(_cuw_bn ${_cuw_f} NAME)
         get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
@@ -75,28 +77,17 @@ if(${NATTEN_WITH_BLACKWELL_FNA})
         message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
     endforeach()
 endif()
-# --- end cuda-wheels blackwell arch restrict ---
-'''
-if 'cuda-wheels blackwell arch restrict' not in cmake_text:
-    cmake_file.write_text(cmake_text + blackwell_restrict_block)
-    print("Appended Blackwell arch-restrict block to csrc/CMakeLists.txt")
-else:
-    print("NOTE: Blackwell arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
-
-# Restrict Hopper autogen .cu files to sm_90 only. Mirrors patches/natten.py.
-cmake_text = cmake_file.read_text()
-hopper_restrict_block = '''
-
-# --- cuda-wheels hopper arch restrict (injected) ---
 if(${NATTEN_WITH_HOPPER_FNA})
-    set_source_files_properties(
-        ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA}
-        PROPERTIES CUDA_ARCHITECTURES "90"
-    )
+    list(REMOVE_ITEM ALL_SOURCES ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA})
+    add_library(natten_hopper OBJECT
+        ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA})
+    set_target_properties(natten_hopper PROPERTIES
+        CUDA_ARCHITECTURES "90a-real"
+        POSITION_INDEPENDENT_CODE ON)
     list(LENGTH AUTOGEN_HOPPER_FNA  _cuw_n_hp_fna)
     list(LENGTH AUTOGEN_HOPPER_FMHA _cuw_n_hp_fmha)
     math(EXPR _cuw_n_hp "${_cuw_n_hp_fna} + ${_cuw_n_hp_fmha}")
-    message(STATUS "cuda-wheels: ${_cuw_n_hp} Hopper sources restricted to sm_90 (${_cuw_n_hp_fna} FNA + ${_cuw_n_hp_fmha} FMHA):")
+    message(STATUS "cuda-wheels: ${_cuw_n_hp} Hopper sources -> natten_hopper OBJECT (CUDA_ARCHITECTURES=90a-real, ${_cuw_n_hp_fna} FNA + ${_cuw_n_hp_fmha} FMHA)")
     foreach(_cuw_f ${AUTOGEN_HOPPER_FNA} ${AUTOGEN_HOPPER_FMHA})
         get_filename_component(_cuw_bn ${_cuw_f} NAME)
         get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
@@ -104,13 +95,27 @@ if(${NATTEN_WITH_HOPPER_FNA})
         message(STATUS "  ${_cuw_pd}/${_cuw_bn}")
     endforeach()
 endif()
-# --- end cuda-wheels hopper arch restrict ---
-'''
-if 'cuda-wheels hopper arch restrict' not in cmake_text:
-    cmake_file.write_text(cmake_text + hopper_restrict_block)
-    print("Appended Hopper arch-restrict block to csrc/CMakeLists.txt")
+# --- end cuda-wheels arch-specific OBJECT libraries ---
+
+add_library(natten SHARED ${ALL_SOURCES})
+
+if(${NATTEN_WITH_BLACKWELL_FNA})
+    target_link_libraries(natten PRIVATE $<TARGET_OBJECTS:natten_blackwell>)
+endif()
+if(${NATTEN_WITH_HOPPER_FNA})
+    target_link_libraries(natten PRIVATE $<TARGET_OBJECTS:natten_hopper>)
+endif()'''
+if 'cuda-wheels arch-specific OBJECT libraries' in cmake_text:
+    print("NOTE: arch-specific OBJECT libraries block already present in csrc/CMakeLists.txt -- skipping")
+elif old_add_lib in cmake_text:
+    cmake_text = cmake_text.replace(old_add_lib, new_add_lib, 1)
+    cmake_file.write_text(cmake_text)
+    print("Patched csrc/CMakeLists.txt: split Blackwell/Hopper into OBJECT libs around add_library(natten SHARED ...)")
 else:
-    print("NOTE: Hopper arch-restrict block already present in csrc/CMakeLists.txt -- skipping")
+    raise SystemExit(
+        "FATAL: anchor 'add_library(natten SHARED ${ALL_SOURCES})' not found in "
+        "csrc/CMakeLists.txt -- upstream may have changed."
+    )
 
 # MSVC noise suppression. Mirrors patches/natten.py.
 cmake_text = cmake_file.read_text()
