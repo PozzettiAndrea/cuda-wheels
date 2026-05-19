@@ -230,8 +230,25 @@ if(${NATTEN_IS_WINDOWS})
             $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
             $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
         )
+        # Apply to the per-arch OBJECT libs too -- they're separate targets,
+        # so target_compile_options on `natten` doesn't reach them. Without
+        # this, Hopper sources on Windows emit the full CUTLASS C4514 torrent
+        # (millions of lines, 100+ MB logs, hours of I/O cost -- enough to
+        # blow the 6h GH cap on Windows runners).
+        if(TARGET natten_blackwell)
+            target_compile_options(natten_blackwell PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+                $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+            )
+        endif()
+        if(TARGET natten_hopper)
+            target_compile_options(natten_hopper PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+                $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+            )
+        endif()
     endforeach()
-    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten target")
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten + per-arch OBJECT libs")
 endif()
 # --- end cuda-wheels MSVC noise suppression ---
 '''

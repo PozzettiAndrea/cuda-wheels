@@ -141,8 +141,20 @@ if(${NATTEN_IS_WINDOWS})
             $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
             $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
         )
+        if(TARGET natten_blackwell)
+            target_compile_options(natten_blackwell PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+                $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+            )
+        endif()
+        if(TARGET natten_hopper)
+            target_compile_options(natten_hopper PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
+                $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd${_cuw_c}>
+            )
+        endif()
     endforeach()
-    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten target")
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten + per-arch OBJECT libs")
 endif()
 # --- end cuda-wheels MSVC noise suppression ---
 '''
