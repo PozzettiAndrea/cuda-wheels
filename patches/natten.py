@@ -29,16 +29,35 @@ the build even starts. Linux's convert_path is permissive and ignores it.
 """
 from pathlib import Path
 
-# pyproject.toml: strip trailing slash from packages.find.where (Windows fix).
+# pyproject.toml fixes:
+#   1. strip trailing slash from packages.find.where (Windows fix).
+#   2. lowercase the [project] name "NATTEN" -> "natten" so the wheel
+#      distribution field is deterministic across setuptools/wheel
+#      versions. Upstream has `name = "NATTEN"` in pyproject.toml but
+#      `name="natten"` in setup.py -- modern setuptools prefers
+#      pyproject.toml -> uppercase wheels; older falls back to setup.py
+#      -> lowercase. Result: same matrix dispatch produces some
+#      `natten-*.whl` and some `NATTEN-*.whl`, which our release-upload
+#      step then assigns to two SEPARATE GitHub releases. PEP 503 says
+#      project names should be normalized lowercase anyway. Fix both
+#      sources to lowercase.
 pyproject_file = Path("pyproject.toml")
 pyproject_text = pyproject_file.read_text()
 old_where = 'where = ["src/"]'
 new_where = 'where = ["src"]'
 if old_where in pyproject_text:
-    pyproject_file.write_text(pyproject_text.replace(old_where, new_where, 1))
+    pyproject_text = pyproject_text.replace(old_where, new_where, 1)
     print("Patched pyproject.toml: packages.find.where 'src/' -> 'src' (Windows fix)")
 else:
     print("NOTE: pyproject.toml didn't contain 'where = [\"src/\"]' -- skipping (may already be fixed upstream)")
+old_name = 'name = "NATTEN"'
+new_name = 'name = "natten"'
+if old_name in pyproject_text:
+    pyproject_text = pyproject_text.replace(old_name, new_name, 1)
+    print("Patched pyproject.toml: [project] name 'NATTEN' -> 'natten' (PEP 503 normalization)")
+else:
+    print("NOTE: pyproject.toml didn't contain 'name = \"NATTEN\"' -- skipping (may already be lowercase upstream)")
+pyproject_file.write_text(pyproject_text)
 
 # csrc/CMakeLists.txt: strip GCC-only flags forwarded to host compiler that
 # MSVC chokes on. `-Wconversion` triggers cl error D8021 ("invalid numeric
