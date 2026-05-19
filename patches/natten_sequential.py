@@ -64,12 +64,18 @@ if(${NATTEN_WITH_BLACKWELL_FNA})
     add_library(natten_blackwell OBJECT
         ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
     set_target_properties(natten_blackwell PROPERTIES
-        CUDA_ARCHITECTURES "100a-real;103a-real"
+        CUDA_ARCHITECTURES "100a-real"
         POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(natten_blackwell SYSTEM PRIVATE ${TORCH_INCLUDE_DIRS})
+    target_include_directories(natten_blackwell PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/cutlass/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/autogen/include
+    )
     list(LENGTH AUTOGEN_BLACKWELL_FNA  _cuw_n_bw_fna)
     list(LENGTH AUTOGEN_BLACKWELL_FMHA _cuw_n_bw_fmha)
     math(EXPR _cuw_n_bw "${_cuw_n_bw_fna} + ${_cuw_n_bw_fmha}")
-    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources -> natten_blackwell OBJECT (CUDA_ARCHITECTURES=100a-real;103a-real, ${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA)")
+    message(STATUS "cuda-wheels: ${_cuw_n_bw} Blackwell sources -> natten_blackwell OBJECT (CUDA_ARCHITECTURES=100a-real, ${_cuw_n_bw_fna} FNA + ${_cuw_n_bw_fmha} FMHA)")
     foreach(_cuw_f ${AUTOGEN_BLACKWELL_FNA} ${AUTOGEN_BLACKWELL_FMHA})
         get_filename_component(_cuw_bn ${_cuw_f} NAME)
         get_filename_component(_cuw_pd ${_cuw_f} DIRECTORY)
@@ -84,6 +90,12 @@ if(${NATTEN_WITH_HOPPER_FNA})
     set_target_properties(natten_hopper PROPERTIES
         CUDA_ARCHITECTURES "90a-real"
         POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(natten_hopper SYSTEM PRIVATE ${TORCH_INCLUDE_DIRS})
+    target_include_directories(natten_hopper PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/cutlass/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/autogen/include
+    )
     list(LENGTH AUTOGEN_HOPPER_FNA  _cuw_n_hp_fna)
     list(LENGTH AUTOGEN_HOPPER_FMHA _cuw_n_hp_fmha)
     math(EXPR _cuw_n_hp "${_cuw_n_hp_fna} + ${_cuw_n_hp_fmha}")
