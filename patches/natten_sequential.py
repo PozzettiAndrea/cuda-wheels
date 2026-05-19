@@ -135,7 +135,10 @@ msvc_noise_block = '''
 
 # --- cuda-wheels MSVC noise suppression (injected) ---
 if(${NATTEN_IS_WINDOWS})
-    set(_cuw_msvc_wd_codes 4514 4100 4623 4624 4577 4067 4068 4505 4127)
+    set(_cuw_msvc_wd_codes
+        4514 4100 4623 4624 4577 4067 4068 4505 4127
+        4711 4820 4061 4251 4710 4365 4626 5027 4996 4244 4668 4625 5039 4619 4324 4267
+    )
     foreach(_cuw_c ${_cuw_msvc_wd_codes})
         target_compile_options(natten PRIVATE
             $<$<COMPILE_LANGUAGE:CXX>:/wd${_cuw_c}>
@@ -154,7 +157,8 @@ if(${NATTEN_IS_WINDOWS})
             )
         endif()
     endforeach()
-    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten + per-arch OBJECT libs")
+    list(JOIN _cuw_msvc_wd_codes "," _cuw_msvc_wd_label)
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C${_cuw_msvc_wd_label} on natten + per-arch OBJECT libs")
 endif()
 # --- end cuda-wheels MSVC noise suppression ---
 '''

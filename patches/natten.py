@@ -234,7 +234,8 @@ msvc_noise_block = '''
 # Applied via target_compile_options so order vs add_library() doesn't matter.
 if(${NATTEN_IS_WINDOWS})
     set(_cuw_msvc_wd_codes
-        4514  # unreferenced inline function has been removed (top noise: 27k+ lines)
+        # First batch (from initial 82k-line log)
+        4514  # unreferenced inline function has been removed
         4100  # unreferenced parameter
         4623  # default constructor implicitly defined as deleted
         4624  # destructor implicitly defined as deleted
@@ -243,6 +244,23 @@ if(${NATTEN_IS_WINDOWS})
         4068  # unknown pragma
         4505  # unreferenced local function has been removed
         4127  # conditional expression is constant
+        # Second batch (from b535f14 follow-up Windows log job 76682941969)
+        4711  # 9.5k: function selected for automatic inline expansion
+        4820  # 9.2k: N bytes padding added after data member
+        4061  # 7k:   enumerator not explicitly handled in switch
+        4251  # 5k:   needs to have dll-interface (STL members)
+        4710  # 5k:   function not inlined
+        4365  # 3k:   sign-conversion (CUTLASS templates)
+        4626  # 2.8k: assignment operator implicitly defined as deleted
+        5027  # 2.5k: move assignment operator implicitly defined as deleted
+        4996  # 1.9k: deprecated function (torch internals)
+        4244  # 1k:   data-loss conversion
+        4668  # 711:  not defined as preprocessor macro
+        4625  # 576:  copy constructor implicitly defined as deleted
+        5039  # 402:  extern-C function pointer
+        4619  # 315:  no warning number 'XXXX'
+        4324  # 297:  structure padded due to alignment specifier
+        4267  # size_t -> 32-bit conversion
     )
     foreach(_cuw_c ${_cuw_msvc_wd_codes})
         target_compile_options(natten PRIVATE
@@ -267,7 +285,8 @@ if(${NATTEN_IS_WINDOWS})
             )
         endif()
     endforeach()
-    message(STATUS "cuda-wheels: suppressed MSVC warnings C4514,C4100,C4623,C4624,C4577,C4067,C4068,C4505,C4127 on natten + per-arch OBJECT libs")
+    list(JOIN _cuw_msvc_wd_codes "," _cuw_msvc_wd_label)
+    message(STATUS "cuda-wheels: suppressed MSVC warnings C${_cuw_msvc_wd_label} on natten + per-arch OBJECT libs")
 endif()
 # --- end cuda-wheels MSVC noise suppression ---
 '''
