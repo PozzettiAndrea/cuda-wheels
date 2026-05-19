@@ -261,6 +261,23 @@ if(${NATTEN_IS_WINDOWS})
         4619  # 315:  no warning number 'XXXX'
         4324  # 297:  structure padded due to alignment specifier
         4267  # size_t -> 32-bit conversion
+        # Third batch (from job 76714... on f4f0b66 - torch headers + CUTLASS leftovers)
+        4275  # non dll-interface class used as base for dll-interface class
+        4686  # possible change in behavior, change in UDT return calling convention
+        4355  # 'this': used in base member initializer list
+        4800  # implicit conversion to bool, possible information loss
+        5031  # pragma warning(pop): likely mismatch, popping in different file
+        5246  # initialization of subobject should be wrapped in braces
+        5026  # move constructor implicitly defined as deleted
+        4582  # constructor is not implicitly called
+        4583  # destructor is not implicitly called
+        4018  # signed/unsigned mismatch
+        4242  # conversion, possible loss of data
+        4310  # cast truncates constant value
+        4459  # declaration of X hides global declaration
+        4201  # nonstandard extension used: nameless struct/union
+        4189  # local variable initialized but not referenced
+        4191  # unsafe function pointer conversion
     )
     foreach(_cuw_c ${_cuw_msvc_wd_codes})
         target_compile_options(natten PRIVATE
@@ -310,6 +327,12 @@ set(_cuw_nvcc_diag_codes
            # sentinel; the double->float cast overflows. Pure noise.)
     20011  # calling a __host__ function from __host__ __device__ context
            # (CUTLASS template noise; harmless when only host path is taken)
+    # Third batch (from job 76714... follow-up Windows log)
+    1394   # field of class type without a DLL interface used in a class
+           # with a DLL interface (torch headers; massive volume on Windows)
+    1388   # base class dllexport/dllimport spec differs from derived class
+    1390   # dllexport/dllimport conflict (torch's TypeMeta::_typeMetaData)
+    550    # variable was set but never used (CUTLASS cute::nullspace etc.)
 )
 foreach(_cuw_d ${_cuw_nvcc_diag_codes})
     target_compile_options(natten PRIVATE

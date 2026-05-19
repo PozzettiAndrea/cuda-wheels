@@ -138,6 +138,7 @@ if(${NATTEN_IS_WINDOWS})
     set(_cuw_msvc_wd_codes
         4514 4100 4623 4624 4577 4067 4068 4505 4127
         4711 4820 4061 4251 4710 4365 4626 5027 4996 4244 4668 4625 5039 4619 4324 4267
+        4275 4686 4355 4800 5031 5246 5026 4582 4583 4018 4242 4310 4459 4201 4189 4191
     )
     foreach(_cuw_c ${_cuw_msvc_wd_codes})
         target_compile_options(natten PRIVATE
@@ -174,8 +175,8 @@ nvcc_diag_block = '''
 
 # --- cuda-wheels nvcc diagnostic suppression (injected) ---
 set(_cuw_nvcc_diag_codes
-    221    # floating-point value does not fit in required floating-point type
-    20011  # calling a __host__ function from __host__ __device__ context
+    221 20011
+    1394 1388 1390 550
 )
 foreach(_cuw_d ${_cuw_nvcc_diag_codes})
     target_compile_options(natten PRIVATE
