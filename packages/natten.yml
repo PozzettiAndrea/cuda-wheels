@@ -4,6 +4,11 @@ source_tag: v0.21.6
 patch_script: patches/natten.py
 # NATTEN vendors CUTLASS as a submodule under third_party/.
 clone_recursive: true
+# NATTEN v0.21.6's setup.py line 53 hard-asserts `torch_ver >= [2, 5]`;
+# any cu12.4/torch2.4.x dispatch fails immediately at metadata-generation
+# with "AssertionError: NATTEN only supports PyTorch >= 2.5". Floor was
+# bumped from 2.0 -> 2.5 around NATTEN v0.20.0. Skip those combos.
+min_pytorch: "2.5"
 # Blackwell autogen .cu files are now restricted to sm_100/103 (see
 # patches/natten.py's set_source_files_properties block); this cuts the
 # heaviest part of the compile to ~1/5 of its prior cost. Combined with

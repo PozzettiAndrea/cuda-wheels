@@ -292,6 +292,13 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         build = dict(build)
         build["platforms"] = platforms
 
+        # Optional per-package floor: skip any combo with pytorch < min_pytorch.
+        # Used when upstream source has a hard-coded torch version assert
+        # (e.g. NATTEN v0.21.6 setup.py: `assert torch_ver >= [2, 5]`).
+        min_pytorch_parts = None
+        if pkg.get("min_pytorch"):
+            min_pytorch_parts = [int(x) for x in str(pkg["min_pytorch"]).split(".")[:2]]
+
         for cuda, pytorch, python_versions, combo_arch_list, combo_source_tag, default_arch_list in combos:
             if cuda_filter != "all" and cuda != cuda_filter:
                 continue
@@ -299,6 +306,11 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
             if pytorch_filter != "all":
                 torch_mm = ".".join(pytorch.split(".")[:2])
                 if pytorch != pytorch_filter and torch_mm != pytorch_filter:
+                    continue
+            # Enforce per-package torch floor
+            if min_pytorch_parts is not None:
+                pt_parts = [int(x) for x in pytorch.split(".")[:2]]
+                if pt_parts < min_pytorch_parts:
                     continue
 
             cuda_short = cuda.replace(".", "")
