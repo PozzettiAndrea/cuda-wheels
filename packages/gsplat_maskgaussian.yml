@@ -26,4 +26,4 @@ max_jobs: 2
 arch_list_by_cuda:
   "12.4": "7.0;7.5;8.0;8.6;9.0+PTX"
   "12.6": "7.0;7.5;8.0;8.6;9.0+PTX"
-platforms: ["linux"]
+platforms: ["linux", "windows"]
