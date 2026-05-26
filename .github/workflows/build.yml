@@ -46,7 +46,7 @@ on:
           - pytorch3d_sequential
           - natten_sequential
           - fused_ssim
-          - gsplat_0526
+          - gsplat_maskgaussian
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

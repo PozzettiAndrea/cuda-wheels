@@ -1,0 +1,21 @@
+name: gsplat_maskgaussian
+# HY-World 2.0's vendored gsplat fork with MaskGaussian densification +
+# distloss. Lives at hyworld2/worldgen/third_party/gsplat_maskgaussian
+# inside the Tencent-Hunyuan/HY-World-2.0 repo. README:
+#   "Recommended: install the custom gsplat variant once for both
+#    worldrecon and worldgen ... pip install -e . --no-build-isolation"
+# Required by world_gs_trainer.py — it passes `distloss=`, `masks=`,
+# `mask_gate=`, `gauss_masks=` kwargs to rasterization() that vanilla
+# nerfstudio/gsplat HEAD doesn't yet have.
+source_repo: Tencent-Hunyuan/HY-World-2.0
+source_tag: ee5d5bc02c92671486ab6dd81f0cba577d0478c8
+build_subdir: hyworld2/worldgen/third_party/gsplat_maskgaussian
+max_jobs: 2
+# Narrow matrix to just what the user actually needs (hywm2-nodes env).
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.13"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux"]
