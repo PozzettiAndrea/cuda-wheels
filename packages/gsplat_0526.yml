@@ -1,0 +1,5 @@
+name: gsplat_0526
+source_repo: nerfstudio-project/gsplat
+source_tag: b5392febf6097655c18db17693636cd21bbe58c0
+patch_script: patches/gsplat.py
+clone_recursive: true
