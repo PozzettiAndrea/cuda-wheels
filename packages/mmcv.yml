@@ -4,6 +4,10 @@ name: mmcv
 # pins to 1.7.2; mmcv 2.x dropped the ops it uses.
 source_repo: open-mmlab/mmcv
 source_tag: v1.7.2
+# mmcv 1.7.2's setup.py defaults MMCV_WITH_OPS=0 -> pure-Python wheel
+# with no CUDA ops. Patch forces ops on + keeps the wheel name 'mmcv'
+# (matching PyPI 1.x convention).
+patch_script: patches/mmcv.py
 max_jobs: 2
 # Narrow matrix: just the combo SANA-WM's env_setup.sh needs
 # (torch 2.9.1+cu128, python 3.11). Extend later if other consumers
