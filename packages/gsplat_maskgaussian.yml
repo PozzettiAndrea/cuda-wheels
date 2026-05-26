@@ -11,14 +11,19 @@ source_repo: Tencent-Hunyuan/HY-World-2.0
 source_tag: ee5d5bc02c92671486ab6dd81f0cba577d0478c8
 build_subdir: hyworld2/worldgen/third_party/gsplat_maskgaussian
 # HY-World stripped GLM out of the maskgaussian fork; patch clones it
-# back in at the path setup.py expects. See patches/gsplat_maskgaussian.py.
+# back in. Patch also renames setup.py's `name="gsplat"` ->
+# `name="gsplat_maskgaussian"` so the wheel filename gets its own
+# release tag and doesn't clobber the vanilla gsplat v1.5.3 publication.
 patch_script: patches/gsplat_maskgaussian.py
 max_jobs: 2
-# Narrow matrix to just what the user actually needs (hywm2-nodes env).
-build_matrix:
-  combinations:
-    - cuda: "12.8"
-      pytorch: "2.8.0"
-      python_versions: ["3.13"]
-      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
-  platforms: ["linux"]
+# Inherit the full combinations matrix from _defaults.yml; restrict to
+# Linux only. Override arch_list_by_cuda for cu12.4/12.6 to drop sm_5.0
+# and sm_6.0 (Maxwell/Pascal) — gsplat HEAD uses cg::labeled_partition
+# which requires sm_70+. Without this override, cu12.4/12.6 builds fail
+# with "namespace 'cooperative_groups' has no member 'labeled_partition'".
+# cu12.8+ default arch_lists already start at 7.0 / 7.5 so no override
+# is needed there.
+arch_list_by_cuda:
+  "12.4": "7.0;7.5;8.0;8.6;9.0+PTX"
+  "12.6": "7.0;7.5;8.0;8.6;9.0+PTX"
+platforms: ["linux"]
