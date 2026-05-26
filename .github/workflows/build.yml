@@ -47,6 +47,7 @@ on:
           - natten_sequential
           - fused_ssim
           - gsplat_maskgaussian
+          - mmcv
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

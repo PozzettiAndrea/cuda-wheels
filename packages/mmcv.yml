@@ -1,0 +1,17 @@
+name: mmcv
+# OpenMMLab CV foundation library, 1.x branch. ~30 CUDA op kernels
+# (NMS, ROI Align/Pool, deformable conv, etc.). Apache 2.0. SANA-WM
+# pins to 1.7.2; mmcv 2.x dropped the ops it uses.
+source_repo: open-mmlab/mmcv
+source_tag: v1.7.2
+max_jobs: 2
+# Narrow matrix: just the combo SANA-WM's env_setup.sh needs
+# (torch 2.9.1+cu128, python 3.11). Extend later if other consumers
+# need different combos.
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.9.1"
+      python_versions: ["3.11"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux"]
