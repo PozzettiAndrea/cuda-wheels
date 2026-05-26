@@ -67,12 +67,23 @@ MARKER = "pytorch/pytorch#173112"
 PROLOGUE = f"""// Workaround for {MARKER}: rpcndr.h on Windows defines `#define small char`
 // which collides with PyTorch 2.10+'s use of `bool small` as a parameter
 // name in c10/cuda/CUDACachingAllocator.h:212. Force-include windows.h
-// (triggers the macro definition) then immediately #undef it, BEFORE any
-// torch header is parsed.
+// (triggers the macro definition) then immediately #undef the offending
+// MIDL helpers BEFORE any torch header is parsed.
+//
+// WIN32_LEAN_AND_MEAN alone is NOT enough — windows.h still defines the
+// `min`/`max` function-like macros, which then collide with torch's
+// `std::min`/`std::max` usage across BFloat16.h, Float8_*.h, etc. and
+// cause `std::std::` namespace nesting + "not enough arguments for
+// function-like macro" errors. NOMINMAX is the canonical Microsoft
+// opt-out.
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
-#undef small
+#undef small       // rpcndr.h:  #define small char    (MIDL char type)
+#undef hyper       // rpcndr.h:  #define hyper __int64 (MIDL i64 type)
+#undef boolean     // rpcndr.h:  #define boolean unsigned char (MIDL bool)
+#undef byte        // rpcndr.h:  #define byte unsigned char (MIDL byte)
 #endif
 
 """
