@@ -9,13 +9,8 @@ source_tag: v1.7.2
 # (matching PyPI 1.x convention).
 patch_script: patches/mmcv.py
 max_jobs: 2
-# Narrow matrix: just the combo SANA-WM's env_setup.sh needs
-# (torch 2.9.1+cu128, python 3.11). Extend later if other consumers
-# need different combos.
-build_matrix:
-  combinations:
-    - cuda: "12.8"
-      pytorch: "2.9.1"
-      python_versions: ["3.11"]
-      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
-  platforms: ["linux"]
+# Full matrix: inherit cu/torch/python/platform grid from _defaults.yml.
+# mmcv 1.7.2 was released mid-2023 (torch ~2.0 era) so newer combos
+# (torch >= 2.7, cu >= 12.6) are likely to need source patches for
+# torch API drift / cu13 / MSVC. Expect failures on bleeding-edge
+# combos; first run is a survey.
