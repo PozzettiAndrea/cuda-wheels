@@ -28,6 +28,28 @@ GLM_TAG = "1.0.1"
 BUILD_SUBDIR = Path("hyworld2/worldgen/third_party/gsplat_maskgaussian")
 TARGET = BUILD_SUBDIR / "gsplat/cuda/csrc/third_party/glm"
 
+## --- Rename the wheel distribution to `gsplat_maskgaussian` so it doesn't
+## clobber the published vanilla `gsplat` v1.5.3 wheels (same version
+## string, would land on the same `gsplat-latest` release slot if not
+## renamed). The python import name stays `gsplat` because the source
+## directory is gsplat/ — that's fine; only one variant should be
+## installed per env at a time.
+setup_py = BUILD_SUBDIR / "setup.py"
+setup_text = setup_py.read_text()
+old_name = 'name="gsplat"'
+new_name = 'name="gsplat_maskgaussian"'
+if old_name in setup_text:
+    setup_py.write_text(setup_text.replace(old_name, new_name, 1))
+    print(f"gsplat_maskgaussian: patched setup.py name -> {new_name}")
+else:
+    if new_name in setup_text:
+        print(f"gsplat_maskgaussian: setup.py name already renamed")
+    else:
+        raise RuntimeError(
+            f"setup.py at {setup_py} doesn't contain {old_name!r}; "
+            f"upstream may have changed — review and re-pin source_tag."
+        )
+
 if (TARGET / "glm" / "glm.hpp").exists() or (TARGET / "include" / "glm" / "glm.hpp").exists():
     print(f"gsplat_maskgaussian: GLM already present at {TARGET}; skipping")
 else:
