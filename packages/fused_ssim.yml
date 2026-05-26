@@ -1,3 +1,4 @@
 name: fused_ssim
 source_repo: rahul-goel/fused-ssim
 source_tag: 328dc9836f513d00c4b5bc38fe30478b4435cbb5
+patch_script: patches/fused_ssim.py
