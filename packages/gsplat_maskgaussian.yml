@@ -10,6 +10,9 @@ name: gsplat_maskgaussian
 source_repo: Tencent-Hunyuan/HY-World-2.0
 source_tag: ee5d5bc02c92671486ab6dd81f0cba577d0478c8
 build_subdir: hyworld2/worldgen/third_party/gsplat_maskgaussian
+# HY-World stripped GLM out of the maskgaussian fork; patch clones it
+# back in at the path setup.py expects. See patches/gsplat_maskgaussian.py.
+patch_script: patches/gsplat_maskgaussian.py
 max_jobs: 2
 # Narrow matrix to just what the user actually needs (hywm2-nodes env).
 build_matrix:
