@@ -46,6 +46,10 @@ No packages have an upper CUDA version limit that would block cu129.
 - **Source:** princeton-vl/DPVO
 - **Quirks:** Downloads Eigen 3.4.0 headers. Patch fixes PyTorch 2.0+ API (`.type()` -> `.scalar_type()`), MSVC compound literals, DLL exports.
 
+### faithc_aot
+- **Source:** PozzettiAndrea/faithc-aot (tag `v1.5.0-aot`) — packaging fork bundling FaithContour (Luo-Yihao/FaithC, Apache-2.0) + Atom3d (Luo-Yihao/Atom3d, MIT) into one wheel.
+- **Quirks:** No patch (AOT committed in the fork). Builds **4** CUDAExtensions: `faithcontour._C` + `atom3d.kernels.{cumtv,bvh,floodfill}_cuda`. Upstream Atom3d JIT-compiles at runtime; the fork converts all kernels to AOT and the loaders import the prebuilt `.so` first (JIT fallback only for source installs). No extra CUDA components (torch + standard CUDA runtime only). `torch_scatter` left external (faithcontour has a pure-torch fallback; install the prebuilt `torch_scatter` wheel alongside). **Currently linux-only + trimmed to cu128/torch2.8/py3.12-3.13** for first validation — see the `build_matrix` block in `packages/faithc_aot.yml` to expand to the full grid.
+
 ### flash_attn
 - **Source:** Dao-AILab/flash-attention (v2.8.3)
 - **Quirks:** SM >= 8.0 (Ampere+). `max_jobs: 1`. `free_disk_space: true`. Patch inits only csrc/cutlass submodule (skips composable_kernel — ROCm only, breaks Windows paths). Bridges TORCH_CUDA_ARCH_LIST -> FLASH_ATTN_CUDA_ARCHS.
