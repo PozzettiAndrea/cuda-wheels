@@ -48,6 +48,7 @@ on:
           - fused_ssim
           - gsplat_maskgaussian
           - mmcv
+          - faithc_aot
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
