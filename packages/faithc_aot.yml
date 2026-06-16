@@ -1,0 +1,15 @@
+name: faithc_aot
+source_repo: PozzettiAndrea/faithc-aot
+source_tag: v1.5.0-aot          # pinned tag on the fork (master @ 8e3c862)
+clone_recursive: false
+# No patch_script: the JIT->AOT conversion is committed in the fork.
+# No extra_cuda_components: the 4 CUDA extensions (faithcontour._C +
+# atom3d.kernels.{cumtv,bvh,floodfill}_cuda) use only torch + the standard CUDA
+# runtime (no cub/thrust/curand/cufft). setup.py is at repo root (no build_subdir).
+
+# Linux only: the atom3d kernels pass -O3 cxx flags (no MSVC massaging yet);
+# add "windows" here once /O2 + flag handling is in place (cf. cumesh patches).
+# Combinations are inherited from _defaults.yml (cu124-cu130 x torch 2.4-2.11 x
+# py3.10-3.14), with their correct per-combo arch_lists.
+build_matrix:
+  platforms: ["linux"]
