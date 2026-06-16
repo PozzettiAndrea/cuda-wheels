@@ -1,6 +1,6 @@
 name: faithc_aot
 source_repo: PozzettiAndrea/faithc-aot
-source_tag: v1.5.0-aot          # pinned tag on the fork (master @ 3f22e5a)
+source_tag: v1.5.0-aot          # pinned tag on the fork (master @ 193bb9f)
 clone_recursive: false
 # No patch_script: the JIT->AOT conversion is committed in the fork.
 # No extra_cuda_components: the 3 CUDA extensions
