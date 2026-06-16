@@ -7,14 +7,9 @@ clone_recursive: false
 # atom3d.kernels.{cumtv,bvh,floodfill}_cuda) use only torch + the standard CUDA
 # runtime (no cub/thrust/curand/cufft). setup.py is at repo root (no build_subdir).
 
-# FIRST-BUILD TRIM: validate compilation on one combo before spending the full
-# grid. Linux only (the kernels carry -O3 cxx flags / no MSVC massaging yet).
-# To build the full matrix, delete this whole build_matrix block — it then
-# inherits _defaults.yml (cu124-cu130 x torch 2.4-2.11 x py3.10-3.14).
+# Linux only: the atom3d kernels pass -O3 cxx flags (no MSVC massaging yet);
+# add "windows" here once /O2 + flag handling is in place (cf. cumesh patches).
+# Combinations are inherited from _defaults.yml (cu124-cu130 x torch 2.4-2.11 x
+# py3.10-3.14), with their correct per-combo arch_lists.
 build_matrix:
   platforms: ["linux"]
-  combinations:
-    - cuda: "12.8"
-      pytorch: "2.8.0"
-      python_versions: ["3.12", "3.13"]
-      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
