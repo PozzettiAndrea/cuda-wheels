@@ -9,6 +9,20 @@ Usage:
     python scripts/audit_wheel_archs.py
     python scripts/audit_wheel_archs.py --package flash_attn
     python scripts/audit_wheel_archs.py --package flash_attn --cuda 12.8
+
+KNOWN FALSE POSITIVE -- compressed fatbins. Packages whose setup.py passes
+`-Xfatbin -compress-all` (pointnet2_ops does) store their cubins compressed,
+and this scanner cannot see the sm_XX markers inside them. Such wheels are
+reported as MISMATCH with `actual_sass: []`, usually showing only the PTX
+entry for the highest arch.
+
+Before believing a MISMATCH, check the wheel for real:
+
+    cuobjdump --list-elf <extracted .so or .pyd> | grep -o 'sm_[0-9]*' | sort -u
+
+and cross-check the build log for the gencode flags nvcc actually received.
+pointnet2_ops was verified this way: reported as missing 6 of 7 archs, but
+cuobjdump shows all 7 present.
 """
 import argparse
 import json
@@ -53,6 +67,9 @@ def load_package_configs() -> dict:
     """Load all package YAMLs into a dict keyed by normalized name."""
     configs = {}
     for f in PACKAGES_DIR.glob("*.yml"):
+        # _defaults.yml holds shared build matrix, not a package.
+        if f.name.startswith("_"):
+            continue
         pkg = yaml.safe_load(f.read_text())
         name = pkg["name"].replace("-", "_")
         configs[name] = pkg
@@ -80,9 +97,18 @@ def get_expected_archs(pkg: dict, cuda: str, pytorch: str) -> set:
 
 
 def arch_list_to_sm(arch_list: str) -> set:
-    """Convert '8.0 9.0 10.0 12.0' -> {'sm_80', 'sm_90', 'sm_100', 'sm_120'}."""
+    """Convert '8.0 9.0 10.0 12.0' -> {'sm_80', 'sm_90', 'sm_100', 'sm_120'}.
+
+    Accepts both separators in use: space-separated (as in the older package
+    YAMLs) and semicolon-separated TORCH_CUDA_ARCH_LIST form (as in
+    _defaults.yml, e.g. '7.0;7.5;9.0+PTX'). A trailing '+PTX' marks an extra
+    PTX blob for that same arch, not a different one, so it is stripped.
+    """
     result = set()
-    for a in arch_list.split():
+    for a in arch_list.replace(";", " ").split():
+        a = a.split("+")[0].strip()
+        if not a:
+            continue
         major, minor = a.split(".")
         result.add(f"sm_{major}{minor}")
     return result
