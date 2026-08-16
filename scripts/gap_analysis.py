@@ -14,6 +14,12 @@ from pathlib import Path
 import yaml
 
 REPO = "PozzettiAndrea/cuda-wheels"
+
+# Torch minor versions to leave out of the expected grid, e.g.
+#   python scripts/gap_analysis.py --exclude-torch 2.11
+# Useful when a torch release is still rolling out across the farm and its
+# absence would otherwise swamp the real gaps.
+EXCLUDE_TORCH = set()
 PACKAGES_DIR = Path(__file__).parent.parent / "packages"
 PATCH_VERSIONS = {"2.4.1", "2.5.1", "2.7.1", "2.9.1"}
 
@@ -64,6 +70,22 @@ def py_short(py_str):
     return py_str.replace(".", "")
 
 
+def _ver_tuple(v):
+    """'2.10' -> (2, 10), so 2.10 sorts above 2.9 rather than below it."""
+    return tuple(int(x) for x in v.split("."))
+
+
+_DEFAULTS_CACHE = {}
+
+
+def load_defaults():
+    """Shared build matrix from packages/_defaults.yml."""
+    if not _DEFAULTS_CACHE:
+        with open(PACKAGES_DIR / "_defaults.yml") as f:
+            _DEFAULTS_CACHE.update(yaml.safe_load(f) or {})
+    return _DEFAULTS_CACHE
+
+
 def load_expected(yml_path):
     """Load a package YAML and return set of expected (cuda, torch, py, os) tuples,
     excluding patch releases."""
@@ -72,13 +94,25 @@ def load_expected(yml_path):
 
     name = cfg["name"]
     matrix = cfg.get("build_matrix", {})
-    combos = matrix.get("combinations", [])
-    platforms = matrix.get("platforms", ["linux"])
+    # _defaults.yml supplies combinations/platforms for any package that does
+    # not define its own -- which is most of them. Without this fallback every
+    # such package reported "expected 0" and looked complete no matter what
+    # was actually published.
+    defaults = load_defaults()
+    combos = matrix.get("combinations") or defaults.get("combinations", [])
+    platforms = matrix.get("platforms") or defaults.get("platforms", ["linux"])
+
+    # Some packages only support torch >= N (natten).
+    min_pt = cfg.get("min_pytorch")
 
     expected = set()
     for combo in combos:
         pt = combo["pytorch"]
         if pt in PATCH_VERSIONS:
+            continue
+        if min_pt and _ver_tuple(torch_short(pt)) < _ver_tuple(str(min_pt)):
+            continue
+        if EXCLUDE_TORCH and torch_short(pt) in EXCLUDE_TORCH:
             continue
         cu = cuda_short(combo["cuda"])
         tv = torch_short(pt)
@@ -109,8 +143,13 @@ def get_actual_wheels(tag):
 
 def main():
     verbose = "--verbose" in sys.argv or "-v" in sys.argv
+    if "--exclude-torch" in sys.argv:
+        EXCLUDE_TORCH.update(
+            sys.argv[sys.argv.index("--exclude-torch") + 1].split(",")
+        )
 
-    ymls = sorted(PACKAGES_DIR.glob("*.yml"))
+    # _defaults.yml holds the shared build matrix, not a package.
+    ymls = [p for p in sorted(PACKAGES_DIR.glob("*.yml")) if not p.name.startswith("_")]
     if not ymls:
         print(f"No YAML files found in {PACKAGES_DIR}")
         return
