@@ -1,0 +1,25 @@
+name: pointnet2_ops
+source_repo: erikwijmans/Pointnet2_PyTorch
+source_tag: b5ceb6d9ca0467ea34beb81023f96ee82228f626   # master @ 2021-07-30 (repo is dormant)
+version: "3.0.0"
+build_subdir: pointnet2_ops_lib
+patch_script: patches/pointnet2_ops.py
+# Point-cloud ops (furthest-point sampling, ball query, grouping, three-NN)
+# used by TriplaneGaussian in ComfyUI-3D-Pack-enved.
+#
+# The patch exists for ONE line. Upstream setup.py does:
+#     os.environ["TORCH_CUDA_ARCH_LIST"] = "3.7+PTX;5.0;6.0;6.1;6.2;7.0;7.5"
+# which (a) silently overrides the arch_list this farm sets, and (b) names
+# sm_37, dropped in CUDA 12.0 -- so on cu128 nvcc hard-errors before compiling
+# anything. Removing the line lets our TORCH_CUDA_ARCH_LIST through.
+#
+# The 2021 C++ is otherwise clean for torch 2.x: it uses AT_ASSERT and
+# x.is_cuda(), not the removed AT_CHECK/THC.h, so no source surgery is needed.
+
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux", "windows"]

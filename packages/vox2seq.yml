@@ -1,0 +1,30 @@
+name: vox2seq
+source_repo: microsoft/TRELLIS
+source_tag: f17fdf12d8f17a6a09225f01756d141285dc848f
+build_subdir: extensions/vox2seq
+# Voxel -> sequence encoders (Z-order / Hilbert curve) backing TRELLIS'
+# "serialized" sparse-attention backend, imported as a bare top-level
+# `vox2seq` by both TRELLIS and Stable3DGen in ComfyUI-3D-Pack-enved.
+#
+# PIN NOTE -- this is why the commit is not `main`: upstream DELETED the whole
+# extensions/ tree in e74d605 ("remove unused extensions", 2025-08-05). The pin
+# above is that commit's parent, the last state where extensions/vox2seq
+# exists. Do not float this to a branch; it will 404.
+#
+# That deletion is also a fair signal about priority: TRELLIS itself treats the
+# serialized backend as optional, and the pack falls back to the flash-attn /
+# xformers paths when `import vox2seq` fails. This wheel removes a warning and
+# an attention-backend option, not a hard blocker.
+#
+# No patch_script: setup.py builds one extension `vox2seq._C` from four
+# src/*.{cu,cpp} files with no arch-list meddling. It declares no version, so
+# setuptools stamps 0.0.0 -- same as diff_gaussian_rasterization already in
+# this farm.
+
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux", "windows"]

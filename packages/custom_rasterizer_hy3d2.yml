@@ -1,0 +1,45 @@
+name: custom_rasterizer_hy3d2
+source_repo: Tencent-Hunyuan/Hunyuan3D-2.1
+source_tag: 82920d643c0dc2f7bfd7255f45f62d386edfe60c   # main @ 2025-10-17
+version: "0.1"
+build_subdir: hy3dpaint/custom_rasterizer
+patch_script: patches/custom_rasterizer_hy3d2.py
+# Tencent's mesh rasterizer for Hunyuan3D texture generation (the
+# `custom_rasterizer_kernel` CUDA extension).
+#
+# WHY THE NAME IS NOT `custom_rasterizer`
+# "custom_rasterizer" is about as generic as a distribution name can get, and
+# Hunyuan3D ships TWO copies of this code (2.0 under hy3dgen/texgen/, 2.1 under
+# hy3dpaint/) that both declare that exact name and both build an extension
+# module called `custom_rasterizer_kernel`. The `_hy3d2` suffix says which
+# family this is -- Hunyuan3D 2.x -- and keeps the index unambiguous.
+#
+# ONE WHEEL COVERS 2.0 AND 2.1. Their kernel sources were diffed: the ONLY
+# differences are the Windows int64 portability edits described below, i.e.
+# 2.0's copy is 2.1's copy with the fix already applied. Same algorithm, same
+# entry points. So a single build serves both, and the "two packages fight over
+# custom_rasterizer_kernel" problem noted in the pack's comfy-env.toml stops
+# being a problem: there is only one of them now.
+#
+# WHY A PATCH IS MANDATORY FOR WINDOWS
+# Upstream 2.1 was written for Linux, where `long` is 64-bit. It calls
+# `.data_ptr<long>()` on int64 tensors (14 sites) and brace-initialises
+# torch::zeros({...size()...}) from size_t. On MSVC `long` is 32-bit, so
+# data_ptr<long>() has no matching instantiation and the braced size_t
+# conversions are narrowing errors. This is the exact reason prebuilt
+# Hunyuan3D 2.1 rasterizer wheels do not exist for Windows. The patch ports
+# both to int64_t/static_cast<int64_t>, matching what Tencent themselves
+# already shipped in the 2.0 tree.
+#
+# The patch also drops the pure-Python `custom_rasterizer` package from the
+# wheel, so the only thing installed is the `custom_rasterizer_kernel`
+# extension. Consumers vendor their own Python wrapper (ComfyUI-3D-Pack-enved
+# does), and this keeps a name that generic out of site-packages.
+
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux", "windows"]

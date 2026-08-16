@@ -49,6 +49,10 @@ on:
           - gsplat_maskgaussian
           - mmcv
           - faithc_aot
+          - diso
+          - pointnet2_ops
+          - vox2seq
+          - custom_rasterizer_hy3d2
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false

@@ -1,0 +1,26 @@
+name: diso
+source_repo: SarahWeiii/diso
+source_tag: 9792ad928ccb09bdec938779651ee03e395758a6   # main @ 2025-05-01 (no tags upstream)
+version: "0.1.4"
+# Differentiable Iso-Surface Extraction (DiffMC / DiffDMC). Surface extraction
+# for Hunyuan3D 2.1 + V2 and TripoSG; the highest-value missing wheel for
+# ComfyUI-3D-Pack-enved. Upstream has no tags, so the pin is a commit.
+#
+# No patch_script needed:
+#   * setup.py builds a single extension `diso._C` from src/*.cu -- no
+#     hardcoded TORCH_CUDA_ARCH_LIST, so ours is respected.
+#   * it falls back to CppExtension (CUDA-less!) when torch.cuda.is_available()
+#     is false, which it is on a runner with no GPU -- but the build action
+#     already exports FORCE_CUDA=1 on both platforms, which is exactly the
+#     escape hatch its get_extensions() checks.
+#   * nvcc flags come from $NVCC_FLAGS, defaulting to -O3.
+# The `cxx: ["-O3"]` flag is gcc syntax; MSVC emits warning D9002 and ignores
+# it rather than failing, so Windows is left unpatched on purpose.
+
+build_matrix:
+  combinations:
+    - cuda: "12.8"
+      pytorch: "2.8.0"
+      python_versions: ["3.10", "3.11", "3.12", "3.13"]
+      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  platforms: ["linux", "windows"]
