@@ -17,8 +17,22 @@ version: "0.1.4"
 # The `cxx: ["-O3"]` flag is gcc syntax; MSVC emits warning D9002 and ignores
 # it rather than failing, so Windows is left unpatched on purpose.
 
+# SM 6.0 FLOOR. diso explicitly instantiates CUDualMC<double, int>
+# (src/cudualmc.cu:1144) and its backward pass calls atomicAdd on double
+# accumulators (cudualmc.cu:738-750, cumc.cu:440-444). CUDA provides
+# atomicAdd(double*, double) only from sm_60 (Pascal) onward, so compiling for
+# sm_50 fails with "no instance of overloaded function atomicAdd".
+#
+# Only the cu124 and cu126 default arch lists start at 5.0; cu128 and later
+# already start at 7.0 and are left to inherit. Dropping 5.0 costs Maxwell
+# support, which was never real here -- those wheels could not compile at all.
+arch_list_by_cuda:
+  '12.4': "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+  '12.6': "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+
 build_matrix:
   # Combinations inherited from _defaults.yml: cu124-cu130 x torch 2.4-2.11 x
-  # py3.10-3.14, each with its own per-combo arch_list. Proven on
-  # cu128/torch2.8; the rest of the grid is what this build establishes.
+  # py3.10-3.14. Arch lists inherit too, except the two overridden above --
+  # arch_list_by_cuda outranks _defaults' per-combo list (generate_matrix.py
+  # resolve_arch_list, step 2 beats step 4).
   platforms: ["linux", "windows"]
