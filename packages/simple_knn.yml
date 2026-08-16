@@ -1,3 +1,5 @@
 name: simple_knn
 source_repo: camenduru/simple-knn
-source_tag: main
+source_tag: 60f461f4a56b7967e5d8045bf92f8c33f36976d0
+# Pinned off main before the full-grid build: an unpinned HEAD means the
+# ~184 wheels could each come from a different commit.

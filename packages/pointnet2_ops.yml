@@ -17,9 +17,7 @@ patch_script: patches/pointnet2_ops.py
 # x.is_cuda(), not the removed AT_CHECK/THC.h, so no source surgery is needed.
 
 build_matrix:
-  combinations:
-    - cuda: "12.8"
-      pytorch: "2.8.0"
-      python_versions: ["3.10", "3.11", "3.12", "3.13"]
-      arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+  # Combinations inherited from _defaults.yml: cu124-cu130 x torch 2.4-2.11 x
+  # py3.10-3.14, each with its own per-combo arch_list. Proven on
+  # cu128/torch2.8; the rest of the grid is what this build establishes.
   platforms: ["linux", "windows"]

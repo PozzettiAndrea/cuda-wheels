@@ -1,4 +1,6 @@
 name: diff_gaussian_rasterization
 source_repo: ashawkey/diff-gaussian-rasterization
-source_tag: main
+source_tag: 8829d14f814fccdaf840b7b0f3021a616583c0a1
+# Pinned off main before the full-grid build: an unpinned HEAD means the
+# ~184 wheels could each come from a different commit.
 clone_recursive: true
