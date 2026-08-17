@@ -1,0 +1,114 @@
+name: Torch Watch
+
+# Daily check for PyTorch combinations the grid does not declare yet.
+#
+# Notification is a GitHub issue rather than SMTP: GitHub already emails the
+# repo owner when an issue is opened, so this needs no mail server and no
+# secrets. The issue title carries a fingerprint of the findings, so a fresh
+# email arrives when the news CHANGES and the same news does not re-notify
+# every morning.
+#
+# This job only ever reports. It does not edit the grid and does not dispatch
+# builds: adding a row needs an arch list and a look at the phantom cells, and
+# a new CUDA index needs workflow and installer edits no script can make.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # 06:17 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml
+
+      - name: Survey upstream
+        id: survey
+        run: python scripts/torch_watch.py --json watch.json | tee report.txt
+
+      - name: Decide whether to notify
+        id: news
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import hashlib, json
+          d = json.load(open("watch.json"))
+          news = bool(d["has_news"])
+          # Fingerprint the findings so unchanged news does not re-notify.
+          payload = json.dumps(
+              {"cuda": d["new_cuda"], "cells": d["new_cells"]}, sort_keys=True
+          )
+          print(f"has_news={'true' if news else 'false'}")
+          print(f"fingerprint={hashlib.sha256(payload.encode()).hexdigest()[:10]}")
+          print(f"cells={len(d['new_cells'])}")
+          print(f"new_cuda={len(d['new_cuda'])}")
+          if d["errors"]:
+              print(f"errors={len(d['errors'])}")
+          PY
+
+      - name: Open an issue if this is new
+        if: steps.news.outputs.has_news == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FP: ${{ steps.news.outputs.fingerprint }}
+          CELLS: ${{ steps.news.outputs.cells }}
+          NEW_CUDA: ${{ steps.news.outputs.new_cuda }}
+        run: |
+          TITLE="NEW STUFF! upstream torch has $CELLS combination(s) the grid lacks [$FP]"
+
+          # Same fingerprint already reported and still open -> stay quiet.
+          if gh issue list --state open --label torch-watch --search "$FP" \
+               --json title --jq '.[].title' | grep -q "$FP"; then
+            echo "Already reported as [$FP]; not notifying again."
+            exit 0
+          fi
+
+          {
+            echo "The daily survey of download.pytorch.org found combinations that"
+            echo "\`packages/_defaults.yml\` does not declare."
+            echo
+            if [ "$NEW_CUDA" != "0" ]; then
+              echo "> [!WARNING]"
+              echo "> A **new CUDA index** appeared. That is the human-gated case:"
+              echo "> it needs the \`build.yml\` package/cuda choice lists, a Windows"
+              echo "> CUDA installer URL in \`setup-cuda\`, and a per-package"
+              echo "> \`arch_list_by_cuda\` review before anything is built."
+              echo
+            fi
+            echo '```'
+            cat report.txt
+            echo '```'
+            echo
+            echo "### Next steps"
+            echo
+            echo "\`\`\`bash"
+            echo "python scripts/torch_watch.py            # re-check locally"
+            echo "python scripts/torch_watch.py --apply    # append rows, then REVIEW"
+            echo "\`\`\`"
+            echo
+            echo "\`--apply\` only adds rows, and only with an arch list resolved from"
+            echo "PyTorch's own \`build_cuda.sh\`. It never removes anything, and it does"
+            echo "not dispatch builds -- run \`build.yml\` yourself once the grid looks right."
+          } > body.md
+
+          gh issue create --title "$TITLE" --body-file body.md \
+            --label torch-watch --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload survey
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: torch-watch
+          path: |
+            watch.json
+            report.txt
