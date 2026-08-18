@@ -1,4 +1,7 @@
 name: llama_cpp_python
+# Torch-independent -- see CW-ADR-0011.
+# scikit-build-core over GGML's CMake. No torch in the build or the link.
+links_torch: false
 # Python bindings to llama.cpp (GGUF inference).
 # IMPORTANT: this is a GGML/cuBLAS build, NOT a PyTorch extension -- it does
 # not link libtorch, so it has no torch axis. The build_matrix below pins ONE

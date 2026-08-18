@@ -1,4 +1,10 @@
 name: flashinfer
+# Torch-independent -- see CW-ADR-0011.
+# flashinfer/jit/cpp_ext.py forks torch's cpp_extension but its ldflags
+# are `-lcudart -lcuda` and nothing else. Caveat: it does read
+# torch._C._GLIBCXX_USE_CXX11_ABI into its *compile* flags, so wheels built
+# either side of PyTorch's manylinux_2_28 ABI flip are not interchangeable.
+links_torch: false
 # LLM-serving attention kernels.
 # IMPORTANT: flashinfer does NOT link libtorch -- its modules link only
 # -lcudart -lcuda and cross the boundary via apache-tvm-ffi/DLPack. There is

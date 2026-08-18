@@ -1,4 +1,8 @@
 name: spconv
+# Torch-independent -- see CW-ADR-0011.
+# pccm/PCCMExtension build; setup.py deps are [cumm]. Torch is imported
+# by spconv's Python layer only -- core_cc*.so carries no DT_NEEDED on libtorch.
+links_torch: false
 source_repo: traveller59/spconv
 source_tag: v2.3.8
 patch_script: patches/spconv.py

@@ -6,6 +6,8 @@ import re
 import urllib.request
 from pathlib import Path
 
+import yaml
+
 # Matches v2 torch naming: +cu128torch2.9-cp (dot between major.minor)
 _V2_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)\.(\d+)(-cp)')
 
@@ -22,6 +24,109 @@ def _next_link(link_header):
         if len(section) >= 2 and 'rel="next"' in section[1].strip():
             return section[0].strip().strip("<>")
     return None
+
+
+# Pulls the Python tag out of a wheel filename: -cp313-cp313t- -> "cp313"
+_PYTAG_RE = re.compile(r"-(cp\d+)-cp\d+t?-")
+
+
+def load_torch_free_packages(pkg_dir=Path("packages")) -> set:
+    """Index-normalised names of packages declaring `links_torch: false`.
+
+    These do not link libtorch, so one built wheel is valid for every torch in
+    its CUDA line. See CW-ADR-0011.
+    """
+    names = set()
+    if not pkg_dir.is_dir():
+        return names
+    for path in sorted(pkg_dir.glob("*.yml")):
+        if path.stem.startswith("_"):
+            continue
+        try:
+            cfg = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError as e:
+            raise RuntimeError(f"{path}: unparseable package config: {e}") from None
+        if cfg.get("links_torch") is False:
+            name = (cfg.get("name") or path.stem).lower().replace("_", "-")
+            names.add(name)
+    return names
+
+
+def load_grid(defaults_path=Path("packages/_defaults.yml")) -> dict:
+    """{"cu128": {"torch2.9": {"cp310", ...}, ...}, ...} from the shared grid.
+
+    The alias set is derived from the grid rather than hardcoded so that adding
+    a CUDA or torch line to _defaults.yml automatically widens the aliases.
+    """
+    grid = {}
+    if not defaults_path.is_file():
+        return grid
+    cfg = yaml.safe_load(defaults_path.read_text()) or {}
+    for combo in cfg.get("combinations", []):
+        cuda = "cu" + str(combo["cuda"]).replace(".", "")
+        torch = "torch" + ".".join(str(combo["pytorch"]).split(".")[:2])
+        pys = {"cp" + str(v).replace(".", "") for v in combo.get("python_versions", [])}
+        grid.setdefault(cuda, {}).setdefault(torch, set()).update(pys)
+    return grid
+
+
+def expand_torch_free_aliases(packages: dict, torch_free: set, grid: dict) -> int:
+    """List one torch-free asset under every torch in its CUDA line.
+
+    The wheel is built once and uploaded once. comfy-env's index resolver
+    filters on the anchor *text* and downloads from the *href*
+    (`packages/cuda_wheels.py`), and the two are independent -- so emitting the
+    same href under several display names makes a single asset resolvable for
+    every torch, at the cost of nothing but anchor tags.
+
+    Known limits, recorded here because they are invisible at the call site:
+
+    - comfy-env's tier-2 fallback walks the Releases API and matches on the
+      real asset name, which carries exactly one torch tag. An aliased wheel is
+      therefore findable under every torch via the index but only under its
+      built torch via the fallback -- a gap that opens only when GH Pages is
+      unreachable.
+    - pip takes the filename from the URL, not the anchor text, so a user
+      resolving for torch 2.11 installs a distribution whose version reads
+      `+cu128torch2.8`. `pip freeze` will disagree with the environment.
+
+    Both are accepted for the transition. The durable fix is a torch-less local
+    tag understood by both resolvers (CW-ADR-0011).
+    """
+    aliased = 0
+    for pkg in sorted(torch_free & set(packages)):
+        wheels = packages[pkg]
+        seen = {w["filename"] for w in wheels}
+        for wheel in list(wheels):
+            m = _COMBO_RE.search(wheel["filename"])
+            pm = _PYTAG_RE.search(wheel["filename"])
+            if not m or not pm:
+                continue
+            cuda, built_torch, py_tag = m.group(1), m.group(2), pm.group(1)
+            for torch, pys in sorted(grid.get(cuda, {}).items()):
+                if torch == built_torch:
+                    continue
+                # Don't advertise a (torch, python) pairing upstream never
+                # shipped -- nothing would ever ask for it, and it is noise.
+                if py_tag not in pys:
+                    continue
+                alias = wheel["filename"].replace(
+                    f"+{cuda}{built_torch}", f"+{cuda}{torch}", 1
+                )
+                if alias in seen:
+                    continue
+                seen.add(alias)
+                wheels.append({
+                    "filename": alias,
+                    "v1_filename": _V2_TORCH_RE.sub(
+                        lambda x: f"{x.group(1)}{x.group(2)}{x.group(3)}{x.group(4)}",
+                        alias,
+                    ),
+                    "url": wheel["url"],          # same asset, no second upload
+                    "alias_of": wheel["filename"],
+                })
+                aliased += 1
+    return aliased
 
 
 def get_releases(repo: str, token: str = None) -> list:
@@ -84,6 +189,14 @@ def main():
                 "v1_filename": v1_name, # v1 (display name for root index)
                 "url": url,
             })
+
+    # One built wheel, many display names, for packages that never link
+    # libtorch. Must run before the guard so aliases are counted in the index.
+    torch_free = load_torch_free_packages()
+    n_aliases = expand_torch_free_aliases(packages, torch_free, load_grid())
+    if torch_free:
+        print(f"torch-independent packages: {', '.join(sorted(torch_free))}")
+        print(f"  emitted {n_aliases} alias listing(s) (0 extra wheels built or stored)")
 
     # Guard: never publish an index shorter than the last one. A truncated
     # fetch, an auth failure, or an API hiccup must fail the run rather than

@@ -1,4 +1,8 @@
 name: cumm
+# Torch-independent -- see CW-ADR-0011.
+# pccm/PCCMExtension build; setup.py deps are [pccm]. No torch at
+# build, compile or link time.
+links_torch: false
 source_repo: FindDefinition/cumm
 source_tag: v0.8.2
 clone_recursive: true
