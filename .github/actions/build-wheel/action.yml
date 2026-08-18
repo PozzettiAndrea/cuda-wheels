@@ -703,24 +703,60 @@ runs:
           if [[ "$whl" == *"-py3-none-any.whl" ]]; then
             continue
           fi
-          # Bundle external shared libs into the wheel
-          # Exclude: driver libs (must come from host), PyTorch libs (installed separately),
-          # CUDA runtime (provided by PyTorch or the CUDA toolkit)
+          # Bundle external shared libs into the wheel. See CW-ADR-0009.
+          #
+          # auditwheel fnmatches these against the SONAME, not the filename.
+          # NVIDIA versions its libraries (libcudart.so.12); PyTorch does not
+          # (libtorch.so) -- which is why the torch patterns below work bare and
+          # the CUDA one needs a glob.
+          #
+          # An excluded library gets NO rpath, so it must already be resident
+          # when the extension is dlopen'd. Only exclude libraries torch loads
+          # eagerly at `import torch`. Do NOT add excludes "for safety": a
+          # missing exclude costs megabytes, a wrong one costs a broken import.
+          # The assertion below catches anything unexpected instead.
           if auditwheel repair "$whl" \
             --plat manylinux_2_35_x86_64 \
             -w repaired/ \
             --exclude libcuda.so \
             --exclude libcuda.so.1 \
-            --exclude libcudart.so \
+            --exclude 'libcudart.so*' \
             --exclude libtorch.so \
             --exclude libtorch_cpu.so \
             --exclude libtorch_cuda.so \
+            --exclude libtorch_cuda_linalg.so \
             --exclude libtorch_python.so \
+            --exclude libcaffe2_nvrtc.so \
             --exclude libc10.so \
             --exclude libc10_cuda.so; then
             rm "$whl"
           else
-            echo "::warning::auditwheel repair failed for $whl, using original"
+            echo "::error::auditwheel repair failed for $whl"
+            exit 1
+          fi
+        done
+
+        # Assert nothing unexpected was vendored (CW-ADR-0009).
+        # libnvrtc/libnvrtc-builtins are deliberate: cumm DT_NEEDEDs them for
+        # runtime JIT, and torch only preloads NVRTC when torch itself came from
+        # the pip nvidia-* wheels. Everything else is a leak -- most likely a
+        # package that started linking a CUDA math library, where the transitive
+        # closure runs to hundreds of MB.
+        for whl in repaired/*.whl; do
+          [ -e "$whl" ] || continue
+          bundled=$(unzip -Z1 "$whl" 2>/dev/null \
+            | grep -oE '[^/]+\.libs/lib[^/]+\.so[^/]*$' \
+            | sed -E 's#.*/##; s/-[0-9a-f]{8}\.so.*//; s/\.so.*//' \
+            | sort -u || true)
+          unexpected=$(echo "$bundled" \
+            | grep -vE '^(libnvrtc|libnvrtc-builtins)$' | grep -v '^$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::$whl vendored unexpected libraries:"
+            echo "$unexpected" | sed 's/^/  /'
+            echo "See CW-ADR-0009. If this library is genuinely required at"
+            echo "runtime, record it there; if torch loads it eagerly, add an"
+            echo "exclude. Do not silence this."
+            exit 1
           fi
         done
         if [ -d repaired ] && ls repaired/*.whl 1>/dev/null 2>&1; then

@@ -197,7 +197,8 @@ def extract_archs_from_wheel(wheel_path: str):
                 if basename.startswith(("libtorch", "libc10", "libcudart", "libcuda.",
                                         "libcublas", "libcusparse", "libcufft",
                                         "libcurand", "libcusolver", "libnvrtc",
-                                        "libnvJitLink", "libcudnn")):
+                                        "libnvJitLink", "libcudnn",
+                                        "libcaffe2_nvrtc")):
                     continue
                 try:
                     data = zf.read(entry)
