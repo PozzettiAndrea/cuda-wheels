@@ -10,16 +10,43 @@ from pathlib import Path
 _V2_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)\.(\d+)(-cp)')
 
 
+def _next_link(link_header):
+    """Return the rel="next" URL from a GitHub Link header, or None."""
+    if not link_header:
+        return None
+    for part in link_header.split(","):
+        section = part.split(";")
+        if len(section) >= 2 and 'rel="next"' in section[1].strip():
+            return section[0].strip().strip("<>")
+    return None
+
+
 def get_releases(repo: str, token: str = None) -> list:
-    """Fetch all releases from a GitHub repository."""
-    url = f"https://api.github.com/repos/{repo}/releases"
+    """Fetch ALL releases from a GitHub repository.
+
+    This endpoint is paginated -- 30 per page by default. A single unpaginated
+    fetch silently truncates once the repo passes that many releases, and the
+    resulting short index looks exactly like a healthy one: the packages that
+    fall off simply stop existing as far as consumers are concerned. Ask for the
+    maximum page size and follow the Link: rel="next" chain to the end.
+    """
     headers = {"Accept": "application/vnd.github.v3+json"}
     if token:
         headers["Authorization"] = f"token {token}"
 
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req) as response:
-        return json.loads(response.read().decode())
+    url = f"https://api.github.com/repos/{repo}/releases?per_page=100"
+    releases = []
+    pages = 0
+    while url:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            releases.extend(json.loads(response.read().decode()))
+            url = _next_link(response.headers.get("Link"))
+        pages += 1
+        if pages > 50:  # 5000 releases; a runaway Link chain is a bug, not a repo
+            raise RuntimeError("release pagination did not terminate")
+    print(f"Fetched {len(releases)} releases across {pages} page(s)")
+    return releases
 
 
 def main():
@@ -54,6 +81,22 @@ def main():
                 "v1_filename": v1_name, # v1 (display name for root index)
                 "url": url,
             })
+
+    # Guard: never publish an index shorter than the last one. A truncated
+    # fetch, an auth failure, or an API hiccup must fail the run rather than
+    # quietly dropping packages -- losing them produces no error anywhere
+    # downstream, and the per-package pages keep serving stale wheel lists.
+    v2_dir = Path("docs/v2")
+    previous = {d.name for d in v2_dir.iterdir() if d.is_dir()} if v2_dir.is_dir() else set()
+    lost = previous - set(packages)
+    if lost:
+        print(f"ERROR: {len(lost)} package(s) in the previous index are absent now:")
+        for name in sorted(lost):
+            print(f"  - {name}")
+        print("Refusing to publish a shorter index. If a package was removed")
+        print("deliberately, delete its docs/v2/<name>/ directory in the same commit.")
+        raise SystemExit(1)
+    print(f"{len(packages)} packages, {sum(len(v) for v in packages.values())} wheels")
 
     # Create docs directory
     docs = Path("docs")
