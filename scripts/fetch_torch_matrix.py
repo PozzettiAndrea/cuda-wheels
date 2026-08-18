@@ -89,9 +89,11 @@ def fetch_torch_wheels(cuda: str) -> list[dict]:
         if not m.group("local") and torch_v not in tagged_versions:
             continue
         pytag = m.group("pytag")
-        # NOTE: free-threaded builds (cp313t) are captured in group "ft" but are
-        # deliberately NOT filtered here -- see the page prose. They dedup away
-        # against their standard sibling, and no ft-only target exists upstream.
+        # Free-threaded (cp3XXt) wheels are captured in group "ft" and NOT
+        # filtered: they dedup away against their standard sibling, and upstream
+        # ships no ft-only target. If that ever changes this must become a real
+        # filter, because a check mark would then stand for a wheel no standard
+        # interpreter can install. See CW-ADR-0010.
         # Parse python version
         py_major = int(pytag[2])
         py_minor = int(pytag[3:])
@@ -280,8 +282,10 @@ time this page is generated (on push to <code>main</code>).</p>
     <a href="https://download.pytorch.org/whl/cpu/torch/">CPU</a>, ROCm and XPU
     indexes, <a href="https://download.pytorch.org/whl/nightly/">nightlies</a>,
     and Python below {MIN_PYTHON[0]}.{MIN_PYTHON[1]}.
-    Free-threaded builds (<code>cp3XXt</code>) are shown under their standard
-    Python version; upstream ships no free-threaded-only target.
+    Free-threaded builds (<code>cp3XXt</code>) are a separate ABI and are shown
+    under their standard Python version. This farm does not build against them
+    &mdash; see
+    <a href="https://pozzettiandrea.github.io/comfy-forge-docs/cuda-wheels/adr/0010-no-free-threaded-builds/">CW-ADR-0010</a>.
     Machine-readable: <a href="matrix.json">matrix.json</a>.
   </div>
 </div>

@@ -47,8 +47,10 @@ time this page is generated (on push to <code>main</code>).</p>
     <a href="https://download.pytorch.org/whl/cpu/torch/">CPU</a>, ROCm and XPU
     indexes, <a href="https://download.pytorch.org/whl/nightly/">nightlies</a>,
     and Python below 3.10.
-    Free-threaded builds (<code>cp3XXt</code>) are shown under their standard
-    Python version; upstream ships no free-threaded-only target.
+    Free-threaded builds (<code>cp3XXt</code>) are a separate ABI and are shown
+    under their standard Python version. This farm does not build against them
+    &mdash; see
+    <a href="https://pozzettiandrea.github.io/comfy-forge-docs/cuda-wheels/adr/0010-no-free-threaded-builds/">CW-ADR-0010</a>.
     Machine-readable: <a href="matrix.json">matrix.json</a>.
   </div>
 </div>
