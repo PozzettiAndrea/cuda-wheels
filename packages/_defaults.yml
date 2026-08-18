@@ -110,6 +110,6 @@ platforms: ["linux", "windows"]
 
 # Default per-package settings inherited unless overridden.
 defaults:
-  max_jobs: 0           # 0 = ninja unlimited parallelism (homelab runners have RAM)
+  max_jobs: 0           # 0 = unset; torch sizes the job count from cpu_count()
   clone_recursive: false
   free_disk_space: true

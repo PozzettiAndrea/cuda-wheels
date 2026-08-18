@@ -582,7 +582,14 @@ runs:
         # only adds -G Ninja inside `if IS_WINDOWS:`; this env var fills
         # the gap on Linux. cmake honors CMAKE_GENERATOR globally.
         export CMAKE_GENERATOR=Ninja
-        if [ -n "${{ inputs.max-jobs }}" ]; then
+        # `0` means "unset" here, not "unlimited". [ -n "0" ] is TRUE, so the
+        # old guard exported MAX_JOBS=0, which torch passes to ninja as `-j 0`
+        # -- and ninja reads that as INT_MAX. On a 16GB hosted runner that OOMs
+        # under CUDA template instantiation, which is why several packages carry
+        # a hand-set `max_jobs: 2`. Leaving it unset lets torch size the job
+        # count from cpu_count(). build.yml already treats '0' as unset for the
+        # dispatch input; this makes the action agree.
+        if [ -n "${{ inputs.max-jobs }}" ] && [ "${{ inputs.max-jobs }}" != "0" ]; then
           export MAX_JOBS=${{ inputs.max-jobs }}
         fi
         # Force CUDA build even without a GPU (torch.cuda.is_available() is False on CI)

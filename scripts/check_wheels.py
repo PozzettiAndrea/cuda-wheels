@@ -91,13 +91,26 @@ def get_source_version(source_repo: str, source_tag: str, build_subdir: str = ""
     return None
 
 
-def get_expected_counts(pkg_config: dict) -> tuple[int, int]:
-    """Calculate expected Linux and Windows wheel counts from config."""
-    build = pkg_config["build_matrix"]
-    platforms = build["platforms"]
+def load_defaults() -> dict:
+    """The shared grid from packages/_defaults.yml, which most packages inherit."""
+    path = Path(__file__).parent.parent / "packages" / "_defaults.yml"
+    return yaml.safe_load(path.read_text()) if path.exists() else {}
+
+
+def get_expected_counts(pkg_config: dict, defaults: dict = None) -> tuple[int, int]:
+    """Calculate expected Linux and Windows wheel counts from config.
+
+    Resolution is per-key, matching generate_matrix.py: a package may override
+    `combinations`, `platforms`, both, or neither. Most declare no build_matrix
+    at all and inherit the whole grid, so indexing it directly is wrong.
+    """
+    defaults = defaults if defaults is not None else load_defaults()
+    build = pkg_config.get("build_matrix") or {}
+    platforms = build.get("platforms") or defaults.get("platforms", ["linux"])
+    combinations = build.get("combinations") or defaults.get("combinations", [])
     linux_count = win_count = 0
 
-    for combo in build.get("combinations", []):
+    for combo in combinations:
         py_count = len(combo.get("python_versions", []))
         if "linux" in platforms:
             linux_count += py_count
@@ -145,6 +158,10 @@ def main():
     print("-" * 80)
 
     for yml in sorted(packages_dir.glob("*.yml")):
+        # _defaults.yml is inherited config, not a package -- it has no `name`.
+        # Same skip as generate_matrix.py and gap_analysis.py.
+        if yml.name.startswith("_"):
+            continue
         pkg = yaml.safe_load(yml.read_text())
         name = pkg["name"]
         source_repo = pkg["source_repo"]

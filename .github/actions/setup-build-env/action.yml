@@ -44,10 +44,18 @@ runs:
     - name: Install dependencies (Linux)
       if: inputs.platform == 'linux'
       shell: bash
+      # extra-deps goes through env, NOT ${{ }} interpolation: an expression is
+      # spliced into the script as TEXT before bash parses it, so a version
+      # specifier like `pccm>=0.4.16` is read as a redirection -- the constraint
+      # is silently dropped and a file named `=0.4.16` appears. Parameter
+      # expansion happens after redirection parsing, so $EXTRA_DEPS is safe.
+      # Deliberately unquoted: the value is a space-separated list and must split.
+      env:
+        EXTRA_DEPS: ${{ inputs.extra-deps }}
       run: |
         python -m pip install uv
         uv pip install --system --reinstall torch==${{ inputs.pytorch-version }}+cu${{ inputs.cuda-short }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
-        uv pip install --system wheel setuptools ninja numpy triton packaging ${{ inputs.extra-deps }}
+        uv pip install --system wheel setuptools ninja numpy triton packaging $EXTRA_DEPS
 
     - name: Save uv cache (Linux)
       if: |
@@ -71,10 +79,14 @@ runs:
     - name: Install dependencies (Windows)
       if: inputs.platform == 'windows'
       shell: bash
+      # Same as the Linux step above -- this one is also `shell: bash` (Git Bash
+      # on windows runners), so it has identical metacharacter semantics.
+      env:
+        EXTRA_DEPS: ${{ inputs.extra-deps }}
       run: |
         python -m pip install uv
         uv pip install --system --reinstall torch==${{ inputs.pytorch-version }}+cu${{ inputs.cuda-short }} --index-url https://download.pytorch.org/whl/cu${{ inputs.cuda-short }}
-        uv pip install --system wheel setuptools ninja numpy packaging ${{ inputs.extra-deps }}
+        uv pip install --system wheel setuptools ninja numpy packaging $EXTRA_DEPS
 
     - name: Patch PyTorch header for Windows MSVC bug
       if: inputs.platform == 'windows'
