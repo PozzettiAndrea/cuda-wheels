@@ -258,7 +258,13 @@ jobs:
         # Mid-chain sequential-checkpoint jobs also produce no wheel (the chain
         # link upload's its checkpoint tarball + triggers a successor instead);
         # `if-no-files-found: ignore` lets the step succeed when dist/ is empty.
-        if: matrix.shard_count == 0
+        # Also require that this job actually produced a wheel. Without the
+        # `exists` check a job that found its wheel already published downloads
+        # it into dist/ and re-uploads it here, and the release job then puts it
+        # back with `--clobber` -- a delete-then-upload of a live asset, for no
+        # gain. Combined with a transient `gh` failure in the skip check that is
+        # a whole package's assets deleted and recreated.
+        if: matrix.shard_count == 0 && steps.check.outputs.exists != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.package }}-linux-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
@@ -531,7 +537,13 @@ jobs:
       - name: Upload artifact
         # Compile-shard jobs upload their .o tarball via the build-wheel action's
         # own upload step; this wheel-upload only runs in full-build mode.
-        if: matrix.shard_count == 0
+        # Also require that this job actually produced a wheel. Without the
+        # `exists` check a job that found its wheel already published downloads
+        # it into dist/ and re-uploads it here, and the release job then puts it
+        # back with `--clobber` -- a delete-then-upload of a live asset, for no
+        # gain. Combined with a transient `gh` failure in the skip check that is
+        # a whole package's assets deleted and recreated.
+        if: matrix.shard_count == 0 && steps.check.outputs.exists != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.package }}-windows-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}

@@ -176,18 +176,41 @@ def resolve_arch_list(pkg: dict, cuda_version: str,
 
 
 def get_existing_wheels(package_name: str) -> set:
-    """Fetch existing wheel filenames from GitHub release."""
+    """Fetch existing wheel filenames from a package's rolling release.
+
+    An empty set means "this release has no wheels yet, build everything", so it
+    must NEVER be the answer to "the API call failed". Returning set() on a
+    timeout or an auth error makes one blip look like a virgin release and plans
+    a full rebuild of wheels that already exist -- which then round-trips them
+    back through `gh release upload --clobber`. Only a genuine 'release not
+    found' is allowed to produce an empty set; anything else aborts the run.
+    """
     try:
         result = subprocess.run(
             ["gh", "release", "view", f"{package_name}-latest",
              "--json", "assets", "-q", ".assets[].name"],
             capture_output=True, text=True, timeout=30
         )
-        if result.returncode == 0 and result.stdout.strip():
-            return set(result.stdout.strip().split("\n"))
-    except Exception:
-        pass
-    return set()
+    except Exception as e:
+        raise SystemExit(
+            f"ERROR: could not query the {package_name}-latest release: "
+            f"{type(e).__name__}: {e}\n"
+            "Refusing to continue -- treating this as 'no wheels exist' would "
+            "plan a full rebuild and re-upload the existing assets."
+        )
+
+    if result.returncode == 0:
+        return set(result.stdout.strip().split("\n")) if result.stdout.strip() else set()
+
+    stderr = (result.stderr or "").lower()
+    if "release not found" in stderr or "not found" in stderr:
+        return set()  # legitimately new package
+
+    raise SystemExit(
+        f"ERROR: `gh release view {package_name}-latest` failed "
+        f"(exit {result.returncode}): {result.stderr.strip()}\n"
+        "Refusing to continue -- see above."
+    )
 
 
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
@@ -207,6 +230,52 @@ def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
                    for p in patterns for w in existing_wheels)
 
 
+def _validate_filters(packages_dir, package_filter, platform_filter,
+                      cuda_filter, pytorch_filter, python_filter) -> None:
+    """Reject filters that match nothing, before an empty matrix goes green.
+
+    A filter matching zero rows yields an empty matrix; every build job is then
+    skipped by its `include[0] != null` guard, `release` still runs because a
+    skipped job is not a cancelled one, finds no artifacts and exits 0. The run
+    is green and built nothing, and says so nowhere. `pytorch` and `python` are
+    free-text dispatch inputs and the grid trails upstream by a release or two,
+    so `-f pytorch=2.12` is a plausible input, not a contrived typo.
+    """
+    def fail(what, value, known):
+        raise SystemExit(
+            f"ERROR: unknown {what} {value!r}.\n"
+            f"  known {what}s: {', '.join(sorted(known))}\n"
+            "Refusing to continue -- an unmatched filter builds nothing and "
+            "reports success."
+        )
+
+    names = set()
+    for f in packages_dir.glob("*.yml"):
+        if f.name.startswith("_"):
+            continue
+        cfg = yaml.safe_load(f.read_text())
+        if isinstance(cfg, dict) and cfg.get("name"):
+            names.add(cfg["name"])
+    if package_filter != "all" and package_filter not in names:
+        fail("package", package_filter, names)
+
+    if platform_filter != "all" and platform_filter not in {"linux", "windows"}:
+        fail("platform", platform_filter, {"linux", "windows"})
+
+    combos = DEFAULTS.get("combinations", [])
+    cudas = {str(c["cuda"]) for c in combos if "cuda" in c}
+    torches = {str(c["pytorch"]) for c in combos if "pytorch" in c}
+    torches |= {".".join(str(c["pytorch"]).split(".")[:2]) for c in combos if "pytorch" in c}
+    pythons = {str(v) for c in combos for v in c.get("python_versions", [])}
+
+    if cuda_filter != "all" and cuda_filter not in cudas:
+        fail("cuda version", cuda_filter, cudas)
+    if pytorch_filter not in ("all", "") and pytorch_filter not in torches:
+        fail("pytorch version", pytorch_filter, torches)
+    if python_filter not in ("all", "") and python_filter not in pythons:
+        fail("python version", python_filter, pythons)
+
+
 def generate_matrix(package_filter: str, overwrite: bool = False,
                     platform_filter: str = "all", cuda_filter: str = "all",
                     pytorch_filter: str = "all", python_filter: str = "all") -> list:
@@ -214,6 +283,9 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
     packages_dir = Path(__file__).parent.parent / "packages"
     matrix = []
     skipped = 0
+
+    _validate_filters(packages_dir, package_filter, platform_filter,
+                      cuda_filter, pytorch_filter, python_filter)
 
     for pkg_file in packages_dir.glob("*.yml"):
         # Skip files starting with underscore (e.g. _defaults.yml — inherited config, not a package)
