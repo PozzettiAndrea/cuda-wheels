@@ -10,5 +10,10 @@ build/
 *.whl
 venv/
 .venv/
-*.json
-!packages/*.yml
+# Ignore generated/cache artifacts by PATH, not by extension. A blanket
+# *.json rule swallowed docs/matrix/matrix.json (which the matrix page links)
+# and would silently swallow docs/packages.json (the sha256 manifest) and
+# scripts/phantom_combos.json (CW-ADR-0007's direction) the day they land --
+# `git add` succeeds and the file simply is not there.
+scripts/.wheel_contents_cache.json
+scripts/.*_cache.json

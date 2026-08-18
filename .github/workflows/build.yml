@@ -53,6 +53,13 @@ on:
           - pointnet2_ops
           - vox2seq
           - custom_rasterizer_hy3d2
+          - nunchaku
+          - torchao
+          - torchsparse
+          - kaolin
+          - vllm
+          - flashinfer
+          - llama_cpp_python
       overwrite:
         description: 'Rebuild and overwrite existing wheels'
         required: false
@@ -102,6 +109,13 @@ on:
         required: false
         type: string
         default: '0'
+
+# build.yml and update-index.yml both deploy ./docs to gh-pages with
+# force_orphan, which replaces the branch wholesale -- so two runs
+# overlapping would silently overwrite each other. Serialise them.
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
 
 jobs:
   generate-matrix:
@@ -718,9 +732,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/generate_index.py
-
-      - name: Generate full build matrix page
-        run: python scripts/fetch_torch_matrix.py --output docs/matrix/matrix.json --html docs/matrix
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
