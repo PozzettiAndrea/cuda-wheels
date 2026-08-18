@@ -1,9 +1,15 @@
 name: Update Index
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:          # manual
   push:
     branches: [main]
+  schedule:
+    # Daily, so the published build matrix tracks upstream without a push.
+    # Deliberately this workflow rather than a new one: gh-pages is deployed
+    # here with force_orphan, so a second deployer would silently overwrite
+    # whatever the first one published.
+    - cron: "23 5 * * *"      # 05:23 UTC
 
 jobs:
   update-index:
