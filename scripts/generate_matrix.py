@@ -214,14 +214,32 @@ def get_existing_wheels(package_name: str) -> set:
 
 
 def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
-                 torch_short: str, python_short: str, platform: str) -> bool:
-    """Check if a wheel matching this combo exists in our releases."""
+                 torch_short: str, python_short: str, platform: str,
+                 version: str = "") -> bool:
+    """Check if a wheel matching this combo AND version exists in our releases.
+
+    The version is part of the match on purpose. Without it, bumping a package's
+    `source_tag` to a new upstream release leaves every cell matching the *old*
+    version's wheel, the matrix comes back empty, and the run goes green having
+    rebuilt nothing -- the release still holds the previous version. The
+    per-job check at build.yml already includes the version, but never runs,
+    because the cell was dropped here first.
+
+    `version` is optional so a caller that genuinely cannot resolve one still
+    gets the old combo-only behaviour rather than rebuilding the world.
+    """
     # Check both v2 naming (torch2.9) and v1 naming (torch29)
     torch_short_v1 = torch_short.replace(".", "")
-    patterns = [
+    combos = [
         f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-",
         f"+cu{cuda_short}torch{torch_short_v1}-cp{python_short}-cp{python_short}-",
     ]
+    if version:
+        # Wheel names are <dist>-<version>+<combo>-... so anchor the version to
+        # the '+' that begins the local segment.
+        patterns = [f"-{version}{c}" for c in combos]
+    else:
+        patterns = combos
     if platform == "linux":
         return any(p in w and ("manylinux" in w or "linux_x86_64" in w)
                    for p in patterns for w in existing_wheels)
@@ -401,7 +419,8 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         continue
                     # Skip if wheel already exists
                     if wheel_exists(existing_wheels, pkg["name"], cuda_short,
-                                    torch_short, python_short, platform):
+                                    torch_short, python_short, platform,
+                                    pkg_version):
                         skipped += 1
                         continue
 

@@ -38,29 +38,22 @@ from typing import Optional
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).parent))
+import generate_matrix as _GM  # noqa: E402  -- single source of truth for arch resolution
+
 REPO = "PozzettiAndrea/cuda-wheels"
 PACKAGES_DIR = Path(__file__).parent.parent / "packages"
 
 # ── arch_list resolution (mirrors generate_matrix.py exactly) ──
 
 
-def get_default_arch_list(cuda_version: str, pytorch_version: str) -> str:
-    cuda_major, cuda_minor = map(int, cuda_version.split(".")[:2])
-    pytorch_major, pytorch_minor = map(int, pytorch_version.split(".")[:2])
-
-    if cuda_major >= 13:
-        archs = ["8.0", "9.0"]
-    elif (cuda_major, cuda_minor) == (12, 4):
-        archs = ["5.0", "6.0", "7.0", "8.0", "9.0"]
-    else:
-        archs = ["7.0", "8.0", "9.0"]
-
-    if (pytorch_major, pytorch_minor) >= (2, 6):
-        if (cuda_major, cuda_minor) >= (12, 8):
-            archs.append("10.0")
-            archs.append("12.0")
-
-    return " ".join(archs)
+# NOTE: there is deliberately no hand-written arch table here any more.
+# There used to be one, with a docstring claiming it "mirrors generate_matrix.py
+# exactly". It did not: for cu124 it returned 5.0 6.0 7.0 8.0 9.0 while the grid
+# specifies 5.0;6.0;7.0;7.5;8.0;8.6;9.0 -- omitting Turing and Ampere consumer,
+# the two most common cards in this audience. A verifier that computes its own
+# idea of the truth verifies nothing. Expectations now come from the same
+# resolver the builds use.
 
 
 def load_package_configs() -> dict:
@@ -77,23 +70,35 @@ def load_package_configs() -> dict:
 
 
 def get_expected_archs(pkg: dict, cuda: str, pytorch: str) -> set:
-    """Compute expected arch_list for a specific combo, same logic as generate_matrix.py line 248."""
-    build = pkg["build_matrix"]
+    """Expected arch set for one combo, resolved exactly as the build resolves it.
 
-    # Check per-combination override first
-    if "combinations" in build:
-        for c in build["combinations"]:
-            if c["cuda"] == cuda and c["pytorch"] == pytorch:
-                if c.get("arch_list"):
-                    return arch_list_to_sm(c["arch_list"])
-                break
+    Delegates to generate_matrix.resolve_arch_list so the planner and the auditor
+    cannot disagree -- the same reason gap_analysis.py imports PHANTOM_COMBOS
+    rather than keeping its own copy. That resolver also honours
+    `arch_list_by_cuda`, which six packages use and which the previous
+    implementation ignored entirely.
+    """
+    build = pkg.get("build_matrix") or {}
 
-    # Package-level override
-    if pkg.get("arch_list"):
-        return arch_list_to_sm(pkg["arch_list"])
+    combo_arch_list = None
+    for c in build.get("combinations") or []:
+        if str(c.get("cuda")) == str(cuda) and str(c.get("pytorch")) == str(pytorch):
+            combo_arch_list = c.get("arch_list")
+            break
 
-    # Auto-compute
-    return arch_list_to_sm(get_default_arch_list(cuda, pytorch))
+    default_arch_list = None
+    for c in (_GM.DEFAULTS.get("combinations") or []):
+        if str(c.get("cuda")) == str(cuda) and str(c.get("pytorch")) == str(pytorch):
+            default_arch_list = c.get("arch_list")
+            break
+
+    resolved = _GM.resolve_arch_list(
+        pkg, str(cuda),
+        combo_arch_list=combo_arch_list,
+        pytorch_version=str(pytorch),
+        default_arch_list=default_arch_list,
+    )
+    return arch_list_to_sm(resolved)
 
 
 def arch_list_to_sm(arch_list: str) -> set:
@@ -356,6 +361,7 @@ def main():
     results = []
     mismatches = []
 
+    unverified = []
     with tempfile.TemporaryDirectory(prefix="wheel-audit-") as tmpdir:
         for i, wheel in enumerate(wheels, 1):
             pkg_name = wheel["package"]
@@ -368,9 +374,10 @@ def main():
             # Find matching pytorch version from config
             # torch_short is "2.4" but config has "2.4.0"
             pytorch_full = None
-            build = pkg_config["build_matrix"]
-            if "combinations" in build:
-                for c in build["combinations"]:
+            build = pkg_config.get("build_matrix") or {}
+            combos = build.get("combinations") or _GM.DEFAULTS.get("combinations") or []
+            if combos:
+                for c in combos:
                     c_torch_short = ".".join(c["pytorch"].split(".")[:2])
                     if c["cuda"] == wheel["cuda"] and c_torch_short == wheel["torch_short"]:
                         pytorch_full = c["pytorch"]
@@ -425,6 +432,23 @@ def main():
 
             match = len(missing_majors) == 0
 
+            # A scan that found NOTHING has not detected a defect -- it has
+            # failed to look. nvcc compresses device code by default from CUDA
+            # 12.8 (LZ4), so the SASS markers this scanner greps for are inside
+            # a compressed payload and simply invisible. Reporting MISMATCH there
+            # is a false alarm, and a verifier that cries wolf on most of the
+            # grid trains you to ignore it. Say UNVERIFIED and mean it.
+            if not actual:
+                print(f"UNVERIFIED — expected {expected_sorted}, scan found no SASS "
+                      f"(device code is compressed by default on CUDA 12.8+); "
+                      f"confirm with: cuobjdump --list-elf <extracted .so>")
+                unverified.append({
+                    "wheel": wheel["filename"],
+                    "expected": expected_sorted,
+                    "reason": "no SASS visible to the byte scanner",
+                })
+                continue
+
             if match and not missing_exact:
                 print(f"OK {actual_sorted}")
             elif match:
@@ -474,6 +498,7 @@ def main():
     print(f"AUDIT COMPLETE: {total} wheels checked")
     print(f"  OK:              {ok}")
     print(f"  MISMATCH:        {bad}")
+    print(f"  UNVERIFIED:      {len(unverified)}  (scan blind -- compressed fatbins)")
     print(f"  DOWNLOAD FAILED: {failed_dl}")
 
     if mismatches:
