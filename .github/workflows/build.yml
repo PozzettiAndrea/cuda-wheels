@@ -671,17 +671,18 @@ jobs:
             pkg=$(basename "$pkg_dir")
             echo "Creating release for: $pkg"
 
-            # Get version from first wheel filename
-            version=$(ls "$pkg_dir"/*.whl | head -1 | sed "s/.*${pkg}-//" | sed 's/+.*//')
+            # Example pin for the notes: the first wheel's full version INCLUDING
+            # the combo tag, e.g. 1.5.3+cu128torch2.8. A complete local version
+            # selects exactly one wheel, which is the only unambiguous install.
+            example_pin=$(ls "$pkg_dir"/*.whl | head -1 | sed "s/.*${pkg}-//" | sed 's/-cp[0-9].*//')
 
-            NOTES="Pre-built ${pkg} wheels with CUDA support."$'\n\n'"**Install:**"$'\n'"\`\`\`bash"$'\n'"pip install ${pkg} --extra-index-url https://pozzettiandrea.github.io/cuda-wheels"$'\n'"\`\`\`"
+            NOTES="Pre-built ${pkg} wheels with CUDA support."$'\n\n'"**Install** -- pick the build matching your installed torch and CUDA:"$'\n'"\`\`\`bash"$'\n'"pip install \"${pkg}==${example_pin}\" --extra-index-url https://pozzettiandrea.github.io/cuda-wheels/v2/"$'\n'"\`\`\`"$'\n\n'"This index is *selected from*, not resolved. A wheel's CUDA and torch versions live in its local version tag (\`+cu128torch2.8\`), and pip cannot match those against your environment -- an unpinned \`pip install ${pkg}\` resolves to the highest combo in this release, not the one your machine can load. Pin the exact build as above, or let the helper choose it:"$'\n'"https://pozzettiandrea.github.io/cuda-wheels/dashboard/install.html"
             gh release create "${pkg}-latest" \
               --title "${pkg} CUDA Wheels" \
               --notes "$NOTES" \
               --latest=false \
               "$pkg_dir"/*.whl \
-              2>/dev/null || \
-            gh release upload "${pkg}-latest" "$pkg_dir"/*.whl --clobber
+            || gh release upload "${pkg}-latest" "$pkg_dir"/*.whl --clobber
           done
 
   update-index:

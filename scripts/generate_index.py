@@ -9,6 +9,9 @@ from pathlib import Path
 # Matches v2 torch naming: +cu128torch2.9-cp (dot between major.minor)
 _V2_TORCH_RE = re.compile(r'(\+cu\d+torch)(\d)\.(\d+)(-cp)')
 
+# Pulls the combo out of a wheel filename: +cu128torch2.8 -> ("cu128", "torch2.8")
+_COMBO_RE = re.compile(r'\+(cu\d+)(torch[\d.]+)')
+
 
 def _next_link(link_header):
     """Return the rel="next" URL from a GitHub Link header, or None."""
@@ -161,6 +164,51 @@ def main():
             f.write("</body>\n</html>\n")
 
     print(f"Generated v2 index for {len(v2_packages)} packages")
+
+    # Per-combo indexes: docs/<cuda>/<torch>/<pkg>/
+    #
+    # The flat index cannot be resolved. A wheel's CUDA and torch versions live
+    # only in its local version tag, and pip matches neither -- so an unpinned
+    # install against /v2/ picks the highest combo present, not the one the
+    # machine can load. GPU architecture is not expressible at all. Putting the
+    # combo in the URL is the only way to make selection unambiguous, and it is
+    # what download.pytorch.org does (/whl/cu128/).
+    #
+    # Additive: /v2/ is untouched, so existing consumers are unaffected.
+    combos = {}
+    for pkg, wheels in packages.items():
+        for wheel in wheels:
+            m = _COMBO_RE.search(wheel["filename"])
+            if not m:
+                continue
+            combos.setdefault((m.group(1), m.group(2)), {}).setdefault(pkg, []).append(wheel)
+
+    for (cuda, torch), pkgs in sorted(combos.items()):
+        combo_dir = docs / cuda / torch
+        combo_dir.mkdir(parents=True, exist_ok=True)
+        with open(combo_dir / "index.html", "w") as f:
+            f.write("<!DOCTYPE html>\n")
+            f.write(f"<html>\n<head><title>CUDA Wheels {cuda}/{torch}</title></head>\n")
+            f.write("<body>\n")
+            f.write(f"<h1>CUDA Wheels -- {cuda} / {torch}</h1>\n")
+            for pkg in sorted(pkgs):
+                f.write(f'<a href="{pkg}/">{pkg}</a><br>\n')
+            f.write("</body>\n</html>\n")
+
+        for pkg, wheels in pkgs.items():
+            pkg_dir = combo_dir / pkg
+            pkg_dir.mkdir(exist_ok=True)
+            with open(pkg_dir / "index.html", "w") as f:
+                f.write("<!DOCTYPE html>\n")
+                f.write(f"<html>\n<head><title>{pkg} {cuda}/{torch}</title></head>\n")
+                f.write("<body>\n")
+                f.write(f"<h1>{pkg} -- {cuda} / {torch}</h1>\n")
+                for wheel in sorted(wheels, key=lambda w: w["filename"]):
+                    f.write(f'<a href="{wheel["url"]}">{wheel["filename"]}</a><br>\n')
+                f.write("</body>\n</html>\n")
+
+    print(f"Generated {len(combos)} per-combo indexes "
+          f"({sum(len(p) for p in combos.values())} package entries)")
 
     # Generate dashboard (separate from PEP 503 index)
     try:
