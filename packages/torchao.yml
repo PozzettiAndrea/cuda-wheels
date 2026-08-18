@@ -1,0 +1,17 @@
+name: torchao
+# PyTorch-native quantization/sparsity kernels.
+# Gap this fills: upstream ships NO win_amd64 wheel on ANY channel (PyPI or
+# download.pytorch.org/whl/cu*), so all Windows cells are uncovered; cu124 is
+# additionally frozen at 0.9.0 upstream.
+source_repo: pytorch/ao
+source_tag: v0.18.0
+version: 0.18.0
+clone_recursive: true          # third_party/cutlass
+min_pytorch: "2.5.0"
+# setup.py inspects _get_cuda_arch_flags() for sm90a/sm100a cutlass paths.
+arch_list_by_cuda:
+  '12.4': 8.0 8.6 8.9 9.0+PTX
+  '12.6': 8.0 8.6 8.9 9.0+PTX
+  '12.8': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '12.9': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '13.0': 8.0 8.6 8.9 9.0 10.0 12.0+PTX

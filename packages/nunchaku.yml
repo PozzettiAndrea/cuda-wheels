@@ -1,0 +1,20 @@
+name: nunchaku
+# SVDQuant 4-bit inference engine for diffusion models.
+# NOTE: repo moved -- mit-han-lab/nunchaku and nunchaku-tech/nunchaku both 301
+# to nunchaku-ai. PyPI `nunchaku` is an UNRELATED project (a changepoint
+# library); never resolve this from PyPI.
+# Upstream publishes GH-release wheels for cu12.8/13.0 x torch2.8-2.11 x
+# cp310-313 only, so the farm's job here is cu12.4/12.6/12.9 and cp314.
+source_repo: nunchaku-ai/nunchaku
+source_tag: v1.2.1
+version: 1.2.1
+clone_recursive: true          # cutlass + Block-Sparse-Attention submodules
+min_pytorch: "2.5.0"
+# INT4/FP4 SVDQuant kernels need Ampere or newer; FP4 paths need Blackwell.
+arch_list_by_cuda:
+  '12.4': 8.0 8.6 8.9 9.0+PTX
+  '12.6': 8.0 8.6 8.9 9.0+PTX
+  '12.8': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '12.9': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+  '13.0': 8.0 8.6 8.9 9.0 10.0 12.0+PTX
+sequential_checkpoint: 18000   # cutlass W4A4 GEMMs are a multi-hour compile

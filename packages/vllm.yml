@@ -1,0 +1,20 @@
+name: vllm
+# High-throughput LLM serving; PagedAttention + CUTLASS kernels.
+# Gap this fills: PyPI ships one wheel per release, cu129 only, and NEVER
+# win_amd64.
+# NOTE: vLLM hard-pins exactly ONE torch per release (0.27.1 -> torch 2.13),
+# so a wide torch fan-out is meaningless here -- upstream metadata would refuse
+# to co-install the result. The matrix below is deliberately narrow and tracks
+# the torch this tag actually supports.
+source_repo: vllm-project/vllm
+source_tag: v0.27.1
+version: 0.27.1
+extra_deps: cmake ninja packaging setuptools-scm
+sequential_checkpoint: 18000   # 98 .cu + CUTLASS, hours
+build_matrix:
+  combinations:
+    - {cuda: "12.8", pytorch: "2.11.0", python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.9", pytorch: "2.11.0", python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "13.0", pytorch: "2.11.0", python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+  # vLLM has no Windows support upstream -- no win32 branch anywhere in setup.py.
+  platforms: ["linux"]

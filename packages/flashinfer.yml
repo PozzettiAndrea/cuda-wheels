@@ -1,0 +1,23 @@
+name: flashinfer
+# LLM-serving attention kernels.
+# IMPORTANT: flashinfer does NOT link libtorch -- its modules link only
+# -lcudart -lcuda and cross the boundary via apache-tvm-ffi/DLPack. There is
+# therefore no torch axis; the meaningful matrix is (cuda x python x platform).
+# The narrow build_matrix below picks ONE torch per CUDA purely to satisfy the
+# farm's job generator, not because the wheel depends on it.
+# Gap this fills: no Windows on any channel, and no modern jit-cache for
+# cu124/cu126 (flashinfer.ai/whl only serves cu128/cu129/cu130).
+source_repo: flashinfer-ai/flashinfer
+source_tag: v0.6.17
+version: 0.6.17
+clone_recursive: true
+build_subdir: flashinfer-jit-cache     # the AOT-compiled kernel cache wheel
+sequential_checkpoint: 18000           # 245 .cu, full AOT build is hours
+build_matrix:
+  combinations:
+    - {cuda: "12.4", pytorch: "2.6.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.6", pytorch: "2.6.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.8", pytorch: "2.8.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.9", pytorch: "2.9.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "13.0", pytorch: "2.10.0", python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+  platforms: ["linux", "windows"]

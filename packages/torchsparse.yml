@@ -1,0 +1,12 @@
+name: torchsparse
+# Sparse convolution for point clouds (MIT HAN Lab).
+# Gap this fills: EVERY upstream channel is dead -- pypi.org/simple/torchsparse
+# 404s, the README index pypi.hanlab.ai 404s, the install.py fallback index
+# 404s, and the v2.0.0/v1.4.0 GH releases carry zero assets. Source build only.
+source_repo: mit-han-lab/torchsparse
+source_tag: v2.0.0
+version: 2.0.0
+min_pytorch: "2.4.0"
+# Plain CUDAExtension with no gencode of its own -- it inherits
+# TORCH_CUDA_ARCH_LIST, so the shared grid arch lists apply unchanged.
+sequential_checkpoint: 10800   # 5 implicit-GEMM .cu files are 100-120 KB each

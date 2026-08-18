@@ -1,0 +1,27 @@
+name: llama_cpp_python
+# Python bindings to llama.cpp (GGUF inference).
+# IMPORTANT: this is a GGML/cuBLAS build, NOT a PyTorch extension -- it does
+# not link libtorch, so it has no torch axis. The build_matrix below pins ONE
+# torch per CUDA solely to satisfy the farm's job generator; the produced
+# binary is identical across torch versions. Do not fan this out over the
+# shared 21-combo grid or you will build the same wheel ~4x per CUDA.
+# Gap this fills: PyPI has ZERO wheels across all 208 releases, and abetlen's
+# own CUDA index 404s on cu126/cu128/cu129.
+source_repo: abetlen/llama-cpp-python
+source_tag: v0.3.35
+version: 0.3.35
+clone_recursive: true          # vendors ggml-org/llama.cpp
+# CUDA is OFF by default in llama.cpp's CMake. There is no `env:` field in this
+# schema, and pre_build_script runs in its own shell step, so the variable is
+# exported to later steps via $GITHUB_ENV rather than a plain export.
+pre_build_script: echo "CMAKE_ARGS=-DGGML_CUDA=on" >> $GITHUB_ENV
+extra_deps: scikit-build-core cmake ninja
+sequential_checkpoint: 18000   # 187 .cu + 86 .cuh (~55k LOC), hours
+build_matrix:
+  combinations:
+    - {cuda: "12.4", pytorch: "2.6.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.6", pytorch: "2.6.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.8", pytorch: "2.8.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "12.9", pytorch: "2.9.0",  python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+    - {cuda: "13.0", pytorch: "2.10.0", python_versions: ["3.10","3.11","3.12","3.13","3.14"]}
+  platforms: ["linux", "windows"]
