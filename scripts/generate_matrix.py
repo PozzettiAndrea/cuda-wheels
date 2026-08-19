@@ -14,23 +14,12 @@ try:
 except ImportError:
     import tomli as tomllib  # Python < 3.11 fallback
 
-# Combos where upstream PyTorch has no Windows wheel — skip these in matrix generation.
-# Format: (cuda_short, torch_major_minor, python_short, platform)
-PHANTOM_COMBOS = {
-    ("124", "2.5", "313", "windows"),   # no torch 2.5+cu124 cp313 win
-    # cu129 torch 2.10 is linux-only upstream
-    ("129", "2.10", "310", "windows"),
-    ("129", "2.10", "311", "windows"),
-    ("129", "2.10", "312", "windows"),
-    ("129", "2.10", "313", "windows"),
-    ("129", "2.10", "314", "windows"),
-    # cu129 torch 2.11 is linux-only upstream
-    ("129", "2.11", "310", "windows"),
-    ("129", "2.11", "311", "windows"),
-    ("129", "2.11", "312", "windows"),
-    ("129", "2.11", "313", "windows"),
-    ("129", "2.11", "314", "windows"),
-}
+# Combos where upstream PyTorch ships no wheel — skipped in matrix generation
+# (CW-ADR-0007). Generated from PCWM by scripts/derive_defaults.py; the file
+# is committed, so builds stay a function of the git SHA. Missing file is a
+# hard error: silently building phantom cells fails at torch-install time.
+_PHANTOMS_FILE = Path(__file__).parent / "phantom_combos.json"
+PHANTOM_COMBOS = {tuple(c) for c in json.loads(_PHANTOMS_FILE.read_text())["combos"]}
 
 
 def fetch_package_info(repo: str, tag: str, subdir: str = "") -> tuple[Optional[str], Optional[str]]:
@@ -75,11 +64,34 @@ def fetch_package_info(repo: str, tag: str, subdir: str = "") -> tuple[Optional[
 _DEFAULTS_FILE = Path(__file__).parent.parent / "packages" / "_defaults.yml"
 DEFAULTS = yaml.safe_load(_DEFAULTS_FILE.read_text())
 
-# Fetcher: pulls TORCH_CUDA_ARCH_LIST from PyTorch's actual build_cuda.sh per
-# release tag. Disk-cached so no repeated GitHub hits across matrix runs.
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).parent))
-from fetch_pytorch_arch_lists import fetch as _fetch_pytorch_archs  # noqa: E402
+# The owned arch policy (CW-ADR-0012): per-CUDA rows plus hand-maintained
+# per-(cuda, torch-minor) exceptions. Read at BUILD time -- _defaults.yml
+# carries cells only, never arch data, so there is exactly one arch source.
+_ARCH_POLICY_FILE = Path(__file__).parent.parent / "packages" / "_arch_policy.yml"
+_ARCH_POLICY = yaml.safe_load(_ARCH_POLICY_FILE.read_text())
+
+
+def policy_arch_list(cuda_version: str, pytorch_version: str) -> str:
+    """The farm's arch list for a (cuda, torch) pairing, from _arch_policy.yml.
+
+    Exceptions win over the per-CUDA row (they encode combos whose torch
+    ships no SASS for an arch the row includes -- e.g. no sm_70 on
+    cu128/torch2.7). A missing CUDA key is a hard error: the policy file is
+    the single arch source, and silence here would rebuild history's
+    mirror-PyTorch guesswork.
+    """
+    minor = ".".join(str(pytorch_version).split(".")[:2])
+    exc = (_ARCH_POLICY.get("arch_exceptions") or {}).get(f"{cuda_version}/{minor}")
+    if exc:
+        return exc
+    try:
+        return _ARCH_POLICY["arch_policy"][cuda_version]
+    except KeyError:
+        raise KeyError(
+            f"No arch policy for cuda={cuda_version} "
+            f"(pytorch={pytorch_version}); add a row to "
+            f"packages/_arch_policy.yml's arch_policy."
+        ) from None
 
 
 def _ensure_ptx_on_highest_base(arch_list_str: str) -> str:
@@ -113,26 +125,6 @@ def _ensure_ptx_on_highest_base(arch_list_str: str) -> str:
     return sep.join(tokens)
 
 
-def _info_to_torch_list(info: dict) -> str:
-    """Convert {'sass':[sm_X,...], 'ptx':[sm_X,...]} -> 'X.Y;X.Y;X.Y+PTX'.
-
-    Per build_cuda.sh convention, every entry in `ptx` is also in `sass`
-    (nvcc emits both arch=compute_X,code=sm_X and arch=compute_X,code=compute_X
-    for +PTX-suffixed list entries). So we walk sass and tag with +PTX where
-    the same sm appears in ptx.
-    """
-    ptx_set = set(info.get("ptx", []))
-    tokens = []
-    for sm in info.get("sass", []):
-        n = int(sm.removeprefix("sm_").rstrip("a"))
-        suffix = "a" if sm.endswith("a") else ""
-        token = f"{n // 10}.{n % 10}{suffix}"
-        if sm in ptx_set:
-            token += "+PTX"
-        tokens.append(token)
-    return ";".join(tokens)
-
-
 def resolve_arch_list(pkg: dict, cuda_version: str,
                       combo_arch_list: Optional[str] = None,
                       pytorch_version: Optional[str] = None,
@@ -144,8 +136,8 @@ def resolve_arch_list(pkg: dict, cuda_version: str,
       1. per-combo arch_list from the package's OWN build_matrix.combinations
       2. pkg.arch_list_by_cuda[cuda] (per-CUDA package override)
       3. pkg.arch_list (static package-wide override)
-      4. default_arch_list — the matching combo's arch_list in _defaults.yml
-      5. fetch PyTorch's build_cuda.sh on the fly (network fallback)
+      4. default_arch_list — the policy row from packages/_arch_policy.yml
+         (passed in by the caller via policy_arch_list)
 
     Final post-processing: every result is normalized to ensure the highest
     non-`a` token has a `+PTX` suffix (forward-compat tail for future GPUs).
@@ -159,19 +151,14 @@ def resolve_arch_list(pkg: dict, cuda_version: str,
         raw = pkg["arch_list"]
     elif default_arch_list:
         raw = default_arch_list
-    elif pytorch_version:
-        # Network fallback: only reached if _defaults.yml lacks a matching combo.
-        info = _fetch_pytorch_archs(f"v{pytorch_version}", cuda_version)
-        if info:
-            raw = _info_to_torch_list(info)
 
     if raw is not None:
         return _ensure_ptx_on_highest_base(raw)
 
     raise KeyError(
         f"No arch_list resolved for cuda={cuda_version} pytorch={pytorch_version} "
-        f"pkg={pkg.get('name')}; add an entry to packages/_defaults.yml's "
-        f"combinations or to the package YAML."
+        f"pkg={pkg.get('name')}; add an entry to packages/_arch_policy.yml "
+        f"or to the package YAML."
     )
 
 
@@ -350,24 +337,19 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
         if "combinations" in build:
             combos_src = build["combinations"]
             default_python_vers = build.get("python_versions", [])
-            # Build a (cuda, pytorch) -> default arch_list lookup for fallback
-            default_arch_by_combo = {(c["cuda"], c["pytorch"]): c.get("arch_list")
-                                     for c in DEFAULTS["combinations"]}
             combos = []
             for c in combos_src:
                 python_vers = c.get("python_versions", default_python_vers)
                 combo_arch_list = c.get("arch_list")  # explicit per-combo override in this YAML
-                default_arch_list = default_arch_by_combo.get((c["cuda"], c["pytorch"]))
+                default_arch_list = policy_arch_list(c["cuda"], c["pytorch"])
                 combo_source_tag = c.get("source_tag")
                 combos.append((c["cuda"], c["pytorch"], python_vers,
                                combo_arch_list, combo_source_tag, default_arch_list))
         elif "cuda_versions" in build and "pytorch_versions" in build:
             # Legacy cartesian-product form
             python_vers = build["python_versions"]
-            default_arch_by_combo = {(c["cuda"], c["pytorch"]): c.get("arch_list")
-                                     for c in DEFAULTS["combinations"]}
             combos = [(cuda, pytorch, python_vers, None, None,
-                       default_arch_by_combo.get((cuda, pytorch)))
+                       policy_arch_list(cuda, pytorch))
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
         else:
@@ -375,7 +357,8 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
             combos = []
             for c in DEFAULTS["combinations"]:
                 combos.append((c["cuda"], c["pytorch"], c["python_versions"],
-                               None, c.get("source_tag"), c.get("arch_list")))
+                               None, c.get("source_tag"),
+                               policy_arch_list(c["cuda"], c["pytorch"])))
 
         platforms = build.get("platforms") or DEFAULTS.get("platforms", ["linux"])
         # Inject platforms back into build dict so existing code below reads it uniformly

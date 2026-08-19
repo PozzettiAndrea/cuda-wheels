@@ -86,11 +86,12 @@ def get_expected_archs(pkg: dict, cuda: str, pytorch: str) -> set:
             combo_arch_list = c.get("arch_list")
             break
 
-    default_arch_list = None
-    for c in (_GM.DEFAULTS.get("combinations") or []):
-        if str(c.get("cuda")) == str(cuda) and str(c.get("pytorch")) == str(pytorch):
-            default_arch_list = c.get("arch_list")
-            break
+    # _defaults.yml rows carry cells only; the arch source is the policy
+    # file, resolved exactly as the build resolves it (CW-ADR-0012).
+    try:
+        default_arch_list = _GM.policy_arch_list(str(cuda), str(pytorch))
+    except KeyError:
+        default_arch_list = None
 
     resolved = _GM.resolve_arch_list(
         pkg, str(cuda),

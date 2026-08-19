@@ -214,17 +214,12 @@ def apply_rows(result: dict, upstream: dict, cfg: dict) -> int:
     for (key, minor), pys in sorted(wanted.items()):
         cuda_dotted = f"{key[2:-1]}.{key[-1]}"
         patch = newest_patch(upstream, key, minor)
-        archs = fetch_archs(f"v{patch}", cuda_dotted)
-        if not archs:
-            print(f"  SKIP {key} torch {patch}: no arch list from build_cuda.sh "
-                  f"-- upstream may not really support this pairing")
-            continue
-        sass = archs["sass"] + [f"{a}+PTX" for a in archs["ptx"]]
+        # Rows are cells only; arch lists live in packages/_arch_policy.yml
+        # and are resolved at build time (CW-ADR-0012).
         cfg["combinations"].append({
             "cuda": cuda_dotted,
             "pytorch": f"{minor}.0" if patch.endswith(".0") else patch,
             "python_versions": sorted(pys, key=vkey),
-            "arch_list": ";".join(sass),
         })
         print(f"  + cu{cuda_dotted} torch {patch} py{','.join(sorted(pys, key=vkey))}")
         added += 1
