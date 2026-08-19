@@ -116,13 +116,6 @@ on:
         type: string
         default: '0'
 
-# build.yml and update-index.yml both deploy ./docs to gh-pages with
-# force_orphan, which replaces the branch wholesale -- so two runs
-# overlapping would silently overwrite each other. Serialise them.
-concurrency:
-  group: gh-pages-deploy
-  cancel-in-progress: false
-
 jobs:
   generate-matrix:
     runs-on: ubuntu-latest
@@ -819,6 +812,15 @@ jobs:
 
   update-index:
     needs: release
+    # build.yml and update-index.yml both deploy ./docs to gh-pages with
+    # force_orphan, which replaces the branch wholesale -- so two DEPLOYS
+    # overlapping would silently overwrite each other. Serialise the deploy
+    # JOB only: workflow-level concurrency put every build run into this
+    # queue, where each new dispatch cancelled the pending index update (and
+    # queued builds cancelled each other -- fatal for multi-package rollouts).
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: false
     # Off by default: a build run should not be able to break the live index.
     # Freshly published wheels appear in the index on the next Update Index
     # run (push to main, manual dispatch, or a build dispatched with
