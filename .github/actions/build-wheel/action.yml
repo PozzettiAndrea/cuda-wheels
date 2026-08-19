@@ -786,6 +786,17 @@ runs:
         $scriptsPath = "$pythonPath\Scripts"
         $env:PATH = "$scriptsPath;$env:PATH"
 
+        # CUDA 13.2's bundled CCCL headers hard-#error under MSVC's traditional
+        # preprocessor; they require the standards-conforming one. cl.exe reads
+        # extra flags from the CL env var -- including when nvcc invokes it --
+        # and torch's cpp_extension does not pass the flag itself. Scoped to
+        # 13.2+ so working 12.x/13.0 builds are untouched.
+        $cudaParts = "${{ inputs.cuda-version }}".Split('.')
+        if ([int]$cudaParts[0] -gt 13 -or ([int]$cudaParts[0] -eq 13 -and [int]$cudaParts[1] -ge 2)) {
+          $env:CL = "/Zc:preprocessor $env:CL".Trim()
+          Write-Host "CUDA >= 13.2: CL=$env:CL (conforming preprocessor for CCCL)"
+        }
+
         # Verify ninja is available
         Write-Host "Checking ninja..."
         ninja --version
