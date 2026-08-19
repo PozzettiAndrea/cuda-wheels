@@ -4,6 +4,11 @@ run-name: "Build ${{ inputs.package }} wheels${{ inputs.platform != 'all' && for
 on:
   workflow_dispatch:
     inputs:
+      update_index:
+        description: 'Regenerate + deploy the index after the build (default: no — dispatch Update Index separately)'
+        required: false
+        type: boolean
+        default: false
       package:
         description: 'Package to build (or "all")'
         required: true
@@ -814,7 +819,11 @@ jobs:
 
   update-index:
     needs: release
-    if: always() && needs.release.result == 'success'
+    # Off by default: a build run should not be able to break the live index.
+    # Freshly published wheels appear in the index on the next Update Index
+    # run (push to main, manual dispatch, or a build dispatched with
+    # update_index=true).
+    if: always() && needs.release.result == 'success' && inputs.update_index == true
     runs-on: ubuntu-latest
     environment: deploy-index
     permissions:
