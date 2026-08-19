@@ -691,6 +691,14 @@ runs:
       shell: bash
       run: |
         python -m pip install auditwheel patchelf
+        # Hosted x86 runners are ubuntu-22.04 (glibc 2.35); ARM runners are
+        # ubuntu-24.04 (glibc 2.39). The plat is the runner's honest floor --
+        # auditwheel verifies the binary against it either way.
+        if [ "$(uname -m)" = "aarch64" ]; then
+          AUDITWHEEL_PLAT="manylinux_2_39_aarch64"
+        else
+          AUDITWHEEL_PLAT="manylinux_2_35_x86_64"
+        fi
         BUILD_DIR="source"
         if [ -n "${{ inputs.build-subdir }}" ]; then
           BUILD_DIR="source/${{ inputs.build-subdir }}"
@@ -716,7 +724,7 @@ runs:
           # missing exclude costs megabytes, a wrong one costs a broken import.
           # The assertion below catches anything unexpected instead.
           if auditwheel repair "$whl" \
-            --plat manylinux_2_35_x86_64 \
+            --plat "$AUDITWHEEL_PLAT" \
             -w repaired/ \
             --exclude libcuda.so \
             --exclude libcuda.so.1 \

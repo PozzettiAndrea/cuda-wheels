@@ -286,6 +286,105 @@ jobs:
           path: dist/*.whl
           if-no-files-found: ignore
 
+
+  build-linux-aarch64:
+    name: ARM ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
+    needs: generate-matrix
+    if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_aarch64.include[0] != null }}
+    # GitHub's hosted ARM runners (free for public repos). No self-hosted
+    # ARM machines exist in the homelab, so no runner switch here.
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_aarch64 }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute wheel filename
+        id: meta
+        run: |
+          PKG_NAME="${{ matrix.package }}"
+          PKG_VERSION="${{ matrix.version }}"
+          CUDA_SHORT="${{ matrix.cuda_short }}"
+          TORCH_SHORT=$(echo "${{ matrix.pytorch }}" | cut -d. -f1,2)
+          PY_SHORT=$(echo "${{ matrix.python }}" | tr -d '.')
+          WHEEL_PREFIX="${PKG_NAME}-${PKG_VERSION}+cu${CUDA_SHORT}torch${TORCH_SHORT}-cp${PY_SHORT}-cp${PY_SHORT}-"
+          echo "wheel_prefix=$WHEEL_PREFIX" >> $GITHUB_OUTPUT
+
+      - name: Check if wheel exists in release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WHEEL_PREFIX="${{ steps.meta.outputs.wheel_prefix }}"
+          RELEASE="${{ matrix.package }}-latest"
+          echo "Checking release $RELEASE for: ${WHEEL_PREFIX}*aarch64*.whl"
+          mkdir -p dist
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::Overwrite enabled, will rebuild"
+          else
+            MATCHING=$({ gh release view "$RELEASE" --json assets -q ".assets[].name" 2>/dev/null || true; } | grep "^${WHEEL_PREFIX}" | grep "aarch64" | head -1 || true)
+            if [ -n "$MATCHING" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "::notice::Wheel exists in release: $MATCHING"
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Setup CUDA
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-cuda
+        with:
+          cuda-version: ${{ matrix.cuda }}
+          platform: linux
+          installer-type: ${{ matrix.cuda_installer }}
+          extra-components: ${{ matrix.extra_cuda_components }}
+
+      - name: Setup build environment
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/setup-build-env
+        with:
+          python-version: ${{ matrix.python }}
+          pytorch-version: ${{ matrix.pytorch }}
+          cuda-short: ${{ matrix.cuda_short }}
+          platform: linux
+          extra-deps: ${{ matrix.extra_deps }}
+
+      - name: Build wheel
+        if: steps.check.outputs.exists != 'true'
+        uses: ./.github/actions/build-wheel
+        with:
+          source-repo: ${{ matrix.source_repo }}
+          source-tag: ${{ matrix.source_tag }}
+          pre-build-script: ${{ matrix.pre_build_script }}
+          arch-list: ${{ matrix.arch_list }}
+          cuda-version: ${{ matrix.cuda }}
+          cuda-short: ${{ matrix.cuda_short }}
+          pytorch-version: ${{ matrix.pytorch }}
+          platform: linux
+          max-jobs: ${{ inputs.max_jobs != '0' && inputs.max_jobs || matrix.max_jobs }}
+          clone-recursive: ${{ matrix.clone_recursive }}
+          patch-script: ${{ matrix.patch_script }}
+          build-subdir: ${{ matrix.build_subdir }}
+          nvcc-flags: ${{ matrix.nvcc_flags }}
+          shard-index: 0
+          shard-count: 0
+          package: ${{ matrix.package }}
+          python-version: ${{ matrix.python }}
+
+      - name: Upload artifact
+        if: steps.check.outputs.exists != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-linux_aarch64-py${{ matrix.python }}-cu${{ matrix.cuda_short }}-torch${{ matrix.pytorch }}
+          path: dist/*.whl
+          if-no-files-found: ignore
+
   link-linux:
     name: Link ${{ matrix.package }} py${{ matrix.python }} cu${{ matrix.cuda_short }} torch${{ matrix.pytorch }}
     # Runs after compile-shard jobs finish. Only fans out for sharded packages
@@ -637,6 +736,7 @@ jobs:
   release:
     needs:
       - build-linux
+      - build-linux-aarch64
       - link-linux
       - build-windows
       - link-windows
@@ -647,7 +747,7 @@ jobs:
     # Release runs whenever ANY build/link/chain-link path produced a result
     # (not cancelled). Skipped chain links are normal (cascade-skip after a
     # link completes the build); we still want release to run.
-    if: always() && (needs.build-linux.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled' || needs.link-windows.result != 'cancelled' || needs.build-linux-chain-link-0.result == 'success' || needs.build-linux-chain-link-1.result == 'success' || needs.build-windows-chain-link-0.result == 'success' || needs.build-windows-chain-link-1.result == 'success')
+    if: always() && (needs.build-linux.result != 'cancelled' || needs.build-linux-aarch64.result != 'cancelled' || needs.link-linux.result != 'cancelled' || needs.build-windows.result != 'cancelled' || needs.link-windows.result != 'cancelled' || needs.build-linux-chain-link-0.result == 'success' || needs.build-linux-chain-link-1.result == 'success' || needs.build-windows-chain-link-0.result == 'success' || needs.build-windows-chain-link-1.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write

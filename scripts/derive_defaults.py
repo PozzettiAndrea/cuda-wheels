@@ -50,13 +50,19 @@ def main() -> None:
     supported = [str(c) for c in policy["supported_cudas"]]
     platforms = policy["platforms"]
 
-    # Collect PCWM cells (x86_64 only -- aarch64 is out of scope for now)
+    # Collect PCWM cells. Rows (torch patches, python sets) derive from the
+    # x86 cells; aarch64 cells are tracked separately so packages that opt
+    # into the linux_aarch64 platform get phantoms for upstream's ragged ARM
+    # coverage (e.g. cu126 skipped torch 2.7/2.8 on aarch64 entirely).
     pairs: dict[tuple, dict] = {}
     for c in pcwm:
-        if "aarch64" in c["platform"]:
-            continue
         cuda_dotted = f"{c['cuda'][2:-1]}.{c['cuda'][-1]}"
         minor = ".".join(c["torch"].split(".")[:2])
+        if "aarch64" in c["platform"]:
+            pairs.setdefault((cuda_dotted, minor),
+                             {"patches": set(), "cells": set()})["cells"].add(
+                (c["python"], "linux_aarch64"))
+            continue
         p = pairs.setdefault((cuda_dotted, minor),
                              {"patches": set(), "cells": set()})
         p["patches"].add(c["torch"])
@@ -76,8 +82,10 @@ def main() -> None:
         if cuda not in supported:
             continue
         info = pairs[(cuda, minor)]
-        pys = sorted({py for py, _ in info["cells"] if pmin <= vkey(py) <= pmax},
-                     key=vkey)
+        if not info["patches"]:
+            continue  # aarch64-only pairing; no x86 torch to pin a row on
+        pys = sorted({py for py, plat in info["cells"] if plat != "linux_aarch64"
+                      and pmin <= vkey(py) <= pmax}, key=vkey)
         if not pys:
             continue
         rows.append({
@@ -86,8 +94,9 @@ def main() -> None:
             "python_versions": pys,
         })
         for py in pys:
-            for plat in platforms:
-                if (py, "windows" if plat == "windows" else "linux") not in info["cells"]:
+            for plat in platforms + ["linux_aarch64"]:
+                key = plat if plat in ("windows", "linux_aarch64") else "linux"
+                if (py, key) not in info["cells"]:
                     phantoms.append([cuda.replace(".", ""), minor,
                                      py.replace(".", ""), plat])
 

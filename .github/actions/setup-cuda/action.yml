@@ -32,14 +32,21 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: .cuda-cache/cuda-${{ inputs.cuda-version }}
-        key: cuda-${{ inputs.cuda-version }}-linux-v3
+        key: cuda-${{ inputs.cuda-version }}-linux-${{ runner.arch }}-v3
 
     - name: Install CUDA toolkit (Linux)
       if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit != 'true'
       shell: bash
       run: |
         CUDA_APT=$(echo "${{ inputs.cuda-version }}" | tr '.' '-')
-        wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        # x86 runners are ubuntu-22.04; ARM hosted runners start at 24.04 and
+        # use NVIDIA's sbsa repo.
+        if [ "$(uname -m)" = "aarch64" ]; then
+          REPO="ubuntu2404/sbsa"
+        else
+          REPO="ubuntu2204/x86_64"
+        fi
+        wget -q https://developer.download.nvidia.com/compute/cuda/repos/${REPO}/cuda-keyring_1.1-1_all.deb
         sudo dpkg -i cuda-keyring_1.1-1_all.deb
         sudo apt-get update
         sudo apt-get install -y \
@@ -75,7 +82,7 @@ runs:
       uses: actions/cache/save@v4
       with:
         path: .cuda-cache/cuda-${{ inputs.cuda-version }}
-        key: cuda-${{ inputs.cuda-version }}-linux-v3
+        key: cuda-${{ inputs.cuda-version }}-linux-${{ runner.arch }}-v3
 
     - name: Restore CUDA from cache (Linux)
       if: inputs.platform == 'linux' && steps.cuda-cache-linux.outputs.cache-hit == 'true'

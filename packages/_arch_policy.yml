@@ -12,6 +12,18 @@ arch_policy:
   "13.0": "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   "13.2": "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
 
+# aarch64 (SBSA/Jetson) policy -- a different world from x86: no pre-Ampere
+# server ARM exists, Grace pairs with Hopper (9.0), and 13.x adds Thor (11.0)
+# as a NATIVE target. Derived from PyTorch's own aarch64 tables (CW-ADR-0012
+# derivation rule applied per platform).
+arch_policy_aarch64:
+  "12.4": "9.0+PTX"
+  "12.6": "8.0;9.0+PTX"
+  "12.8": "8.0;9.0+PTX;10.0;12.0+PTX"
+  "12.9": "8.0;9.0+PTX;10.0;12.0+PTX"
+  "13.0": "8.0;9.0+PTX;10.0;11.0;12.0+PTX"
+  "13.2": "8.0;9.0+PTX;10.0;11.0;12.0+PTX"
+
 # Per-(cuda, torch-minor) exceptions, hand-maintained (CW-ADR-0012's clamp,
 # applied by hand): torch itself ships no sm_70 on these pairings, so a
 # Volta cubin would be unreachable inside that torch process.

@@ -1,3 +1,9 @@
 name: cc_torch
 source_repo: ronghanghu/cc_torch
 source_tag: 446e9360ed10d3c8d03925ccb5f220ccb62009de
+
+# Pilot package for the linux_aarch64 platform (Grace/GB200 cloud, Jetson):
+# tiny CUDAExtension, ~6min/job, cheap to iterate on. Inherits the shared
+# grid; ARM arch lists come from arch_policy_aarch64 in _arch_policy.yml.
+build_matrix:
+  platforms: ["linux", "windows", "linux_aarch64"]

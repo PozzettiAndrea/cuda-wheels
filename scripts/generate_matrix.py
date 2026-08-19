@@ -71,7 +71,8 @@ _ARCH_POLICY_FILE = Path(__file__).parent.parent / "packages" / "_arch_policy.ym
 _ARCH_POLICY = yaml.safe_load(_ARCH_POLICY_FILE.read_text())
 
 
-def policy_arch_list(cuda_version: str, pytorch_version: str) -> str:
+def policy_arch_list(cuda_version: str, pytorch_version: str,
+                     platform: str = "linux") -> str:
     """The farm's arch list for a (cuda, torch) pairing, from _arch_policy.yml.
 
     Exceptions win over the per-CUDA row (they encode combos whose torch
@@ -81,6 +82,15 @@ def policy_arch_list(cuda_version: str, pytorch_version: str) -> str:
     mirror-PyTorch guesswork.
     """
     minor = ".".join(str(pytorch_version).split(".")[:2])
+    if platform == "linux_aarch64":
+        # Separate table: SBSA/Jetson GPUs share no history with the x86 rows.
+        try:
+            return _ARCH_POLICY["arch_policy_aarch64"][cuda_version]
+        except KeyError:
+            raise KeyError(
+                f"No aarch64 arch policy for cuda={cuda_version}; add a row to "
+                f"packages/_arch_policy.yml's arch_policy_aarch64."
+            ) from None
     exc = (_ARCH_POLICY.get("arch_exceptions") or {}).get(f"{cuda_version}/{minor}")
     if exc:
         return exc
@@ -228,7 +238,11 @@ def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
     else:
         patterns = combos
     if platform == "linux":
-        return any(p in w and ("manylinux" in w or "linux_x86_64" in w)
+        return any(p in w and "aarch64" not in w
+                   and ("manylinux" in w or "linux_x86_64" in w)
+                   for p in patterns for w in existing_wheels)
+    elif platform == "linux_aarch64":
+        return any(p in w and "aarch64" in w
                    for p in patterns for w in existing_wheels)
     else:
         return any(p in w and "win_amd64" in w
@@ -418,7 +432,14 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         "pytorch": pytorch,
                         "python": python_ver,
                         "platform": platform,
-                        "arch_list": resolve_arch_list(pkg, cuda, combo_arch_list, pytorch, default_arch_list),
+                        # aarch64 resolves straight from its own policy table:
+                        # per-package overrides in the wild are x86 arch sets
+                        # (sm_86/sm_89 floors mean nothing on SBSA). A package
+                        # needing ARM-specific arches gets a dedicated field
+                        # when one exists.
+                        "arch_list": (policy_arch_list(cuda, pytorch, platform)
+                                      if platform == "linux_aarch64"
+                                      else resolve_arch_list(pkg, cuda, combo_arch_list, pytorch, default_arch_list)),
                         "extra_deps": pkg.get("extra_deps", ""),
                         "pre_build_script": pkg.get("pre_build_script", ""),
                         "free_disk_space": pkg.get("free_disk_space", defaults.get("free_disk_space", False)),
@@ -496,7 +517,7 @@ def main():
     parser.add_argument("--package", default="all", help="Package to build (or 'all')")
     parser.add_argument("--output", default="matrix.json", help="Output file path")
     parser.add_argument("--overwrite", action="store_true", help="Ignore existing wheels and rebuild all")
-    parser.add_argument("--platform", default="all", help="Platform filter: all, linux, windows")
+    parser.add_argument("--platform", default="all", help="Platform filter: all, linux, linux_aarch64, windows")
     parser.add_argument("--cuda", default="all", help="CUDA version filter: all, 12.4, 12.6, 12.8, 13.0")
     parser.add_argument("--pytorch", default="all", help="PyTorch version filter (full like 2.11.0 or major.minor like 2.11), or 'all'")
     parser.add_argument("--python", default="all", help="Python version filter like 3.12, or 'all'")
@@ -510,6 +531,7 @@ def main():
     # link-job matrix per platform (one link job per unique pkg/cuda/torch/py).
     linux_jobs_all = [j for j in matrix if j["platform"] == "linux"]
     windows_jobs_all = [j for j in matrix if j["platform"] == "windows"]
+    aarch64_jobs = [j for j in matrix if j["platform"] == "linux_aarch64"]
 
     # Sequential-checkpoint packages go into a separate `<platform>_chain`
     # matrix per platform. The chain reusable workflow `_chain_link.yml` is
@@ -525,6 +547,7 @@ def main():
 
     output = {
         "linux": {"include": linux_jobs},
+        "linux_aarch64": {"include": aarch64_jobs},
         "windows": {"include": windows_jobs},
         "linux_link": {"include": linux_link_jobs},
         "windows_link": {"include": windows_link_jobs},
@@ -537,7 +560,8 @@ def main():
         json.dump(output, f, separators=(',', ':'))
 
     print(f"Generated {len(matrix)} build jobs "
-          f"({len(linux_jobs)} Linux, {len(windows_jobs)} Windows, "
+          f"({len(linux_jobs)} Linux, {len(aarch64_jobs)} aarch64, "
+          f"{len(windows_jobs)} Windows, "
           f"{len(linux_chain_jobs)} Linux chain, "
           f"{len(windows_chain_jobs)} Windows chain)")
     if linux_link_jobs or windows_link_jobs:
