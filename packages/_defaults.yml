@@ -1,11 +1,11 @@
 # Inherited by every package YAML unless explicitly overridden.
 # - `combinations` and `platforms` are used when a package YAML doesn't define
 #   its own `build_matrix.combinations` / `build_matrix.platforms`.
-# - Each combination carries an explicit `arch_list` based on PyTorch's
-#   official build_cuda.sh for that release tag, with one override: we ALWAYS
-#   add `+PTX` to the highest base arch (PyTorch only adds it on the current
-#   frontier toolchain and rotates it off as toolchains mature; we keep it
-#   everywhere so our wheels stay JIT-compatible with future GPUs).
+# - Each combination carries an explicit `arch_list` set by CW-ADR-0012: a
+#   per-CUDA policy derived from PyTorch's own union, minus 5.0 (Maxwell),
+#   with `+PTX` carried twice on cu128+ -- on 12.0 (real codegen for future
+#   majors) and on 9.0 (the net that catches sm_11x, which 12.0 PTX cannot
+#   JIT down to). PyTorch's lists are the input, never the policy.
 #   Format matches TORCH_CUDA_ARCH_LIST: `X.Y;X.Y;X.Y+PTX`.
 # - Resolution order at build time:
 #     per-combo arch_list (this file or package YAML)
