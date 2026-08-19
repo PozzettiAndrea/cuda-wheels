@@ -58,53 +58,53 @@ combinations:
   - cuda: "12.8"
     pytorch: "2.7.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.8"
     pytorch: "2.8.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.8"
     pytorch: "2.9.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.8"
     pytorch: "2.10.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.8"
     pytorch: "2.11.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   # ── cu129 (torch 2.8.0 – 2.11.0) ──
   - cuda: "12.9"
     pytorch: "2.8.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.9"
     pytorch: "2.9.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.9"
     pytorch: "2.10.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.0;7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.0;7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "12.9"
     pytorch: "2.11.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   # ── cu130 (torch 2.9.0 – 2.11.0) ──
   - cuda: "13.0"
     pytorch: "2.9.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "13.0"
     pytorch: "2.10.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
   - cuda: "13.0"
     pytorch: "2.11.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    arch_list: "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
 
 platforms: ["linux", "windows"]
 
