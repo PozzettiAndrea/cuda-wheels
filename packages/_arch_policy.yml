@@ -23,9 +23,10 @@ arch_exceptions:
   "12.9/2.13": "7.5;8.0;8.6;9.0+PTX;10.0;12.0+PTX"
 
 # CUDA lines the farm can actually build. A CUDA present in PCWM but absent
-# here is skipped with a loud warning (cu132: installer not wired yet in
-# .github/actions/setup-cuda).
-supported_cudas: ["12.4", "12.6", "12.8", "12.9", "13.0"]
+# here is skipped with a loud warning. Adding a line requires wiring its
+# Windows installer URL in .github/actions/setup-cuda first (Linux derives
+# apt package names from the version and needs nothing).
+supported_cudas: ["12.4", "12.6", "12.8", "12.9", "13.0", "13.2"]
 
 # Python axis policy (CW-ADR-0005): stable, released CPython only.
 python_min: "3.10"
