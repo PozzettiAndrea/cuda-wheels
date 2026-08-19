@@ -411,6 +411,12 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                 for platform in build["platforms"]:
                     if platform_filter != "all" and platform != platform_filter:
                         continue
+                    # A CUDA line absent from arch_policy_aarch64 is declared
+                    # not-built-for-ARM (e.g. 12.4: the ubuntu2404/sbsa repo
+                    # has no 12.4 toolkit). Deliberate skip, not an error.
+                    if (platform == "linux_aarch64"
+                            and cuda not in (_ARCH_POLICY.get("arch_policy_aarch64") or {})):
+                        continue
                     # Skip phantom combos (no upstream torch wheel)
                     if (cuda_short, torch_short, python_short, platform) in PHANTOM_COMBOS:
                         continue

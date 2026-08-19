@@ -16,8 +16,11 @@ arch_policy:
 # server ARM exists, Grace pairs with Hopper (9.0), and 13.x adds Thor (11.0)
 # as a NATIVE target. Derived from PyTorch's own aarch64 tables (CW-ADR-0012
 # derivation rule applied per platform).
+# A CUDA line ABSENT from this table is deliberately not built for aarch64.
+# 12.4 is absent: NVIDIA's ubuntu2404/sbsa apt repo starts at CUDA 12.5, so
+# the toolkit is uninstallable on GitHub's hosted ARM runners -- and the
+# audience (torch 2.4/2.5 on Grace) is negligible.
 arch_policy_aarch64:
-  "12.4": "9.0+PTX"
   "12.6": "8.0;9.0+PTX"
   "12.8": "8.0;9.0+PTX;10.0;12.0+PTX"
   "12.9": "8.0;9.0+PTX;10.0;12.0+PTX"
