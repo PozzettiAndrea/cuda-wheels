@@ -20,40 +20,40 @@ combinations:
   - cuda: "12.4"
     pytorch: "2.4.0"
     python_versions: ["3.10", "3.11", "3.12"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.4"
     pytorch: "2.5.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.4"
     pytorch: "2.6.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   # ── cu126 (torch 2.6.0 – 2.11.0) — Maxwell/Pascal/Volta still in scope ──
   - cuda: "12.6"
     pytorch: "2.6.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.6"
     pytorch: "2.7.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.6"
     pytorch: "2.8.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.6"
     pytorch: "2.9.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.6"
     pytorch: "2.10.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   - cuda: "12.6"
     pytorch: "2.11.0"
     python_versions: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    arch_list: "5.0;6.0;7.0;7.5;8.0;8.6;9.0+PTX"
+    arch_list: "6.0;7.0;7.5;8.0;8.6;9.0+PTX"
   # ── cu128 (torch 2.7.0 – 2.11.0) — Blackwell base ──
   - cuda: "12.8"
     pytorch: "2.7.0"
