@@ -227,6 +227,21 @@ def wheel_exists(existing_wheels: set, package: str, cuda_short: str,
     """
     # Check both v2 naming (torch2.9) and v1 naming (torch29)
     torch_short_v1 = torch_short.replace(".", "")
+    if torch_short == "*":
+        # links_torch: false (CW-ADR-0011): the binary is torch-agnostic, so a
+        # wheel under ANY torch tag satisfies this (cuda, python, platform).
+        import re as _re
+        pat = _re.compile(
+            (_re.escape(f"-{version}") if version else "") +
+            _re.escape(f"+cu{cuda_short}torch") + r"[\d.]+" +
+            _re.escape(f"-cp{python_short}-cp{python_short}-"))
+        if platform == "linux":
+            return any(pat.search(w) and "aarch64" not in w
+                       and ("manylinux" in w or "linux_x86_64" in w)
+                       for w in existing_wheels)
+        elif platform == "linux_aarch64":
+            return any(pat.search(w) and "aarch64" in w for w in existing_wheels)
+        return any(pat.search(w) and "win_amd64" in w for w in existing_wheels)
     combos = [
         f"+cu{cuda_short}torch{torch_short}-cp{python_short}-cp{python_short}-",
         f"+cu{cuda_short}torch{torch_short_v1}-cp{python_short}-cp{python_short}-",
@@ -366,6 +381,23 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                        policy_arch_list(cuda, pytorch))
                       for cuda in build["cuda_versions"]
                       for pytorch in build["pytorch_versions"]]
+        elif pkg.get("links_torch") is False:
+            # CW-ADR-0011, build half: a package that never links libtorch is
+            # built ONCE per (cuda, python, platform) -- the torch axis is not
+            # a dimension for it. Pick the newest torch row per CUDA line as
+            # the build environment (the wheel's tag records it; the index's
+            # alias expansion lists the asset under every other torch).
+            newest = {}
+            for c in DEFAULTS["combinations"]:
+                cur = newest.get(c["cuda"])
+                if cur is None or [int(x) for x in c["pytorch"].split(".")] > \
+                        [int(x) for x in cur["pytorch"].split(".")]:
+                    newest[c["cuda"]] = c
+            combos = []
+            for c in newest.values():
+                combos.append((c["cuda"], c["pytorch"], c["python_versions"],
+                               None, c.get("source_tag"),
+                               policy_arch_list(c["cuda"], c["pytorch"])))
         else:
             # Inherit standard combinations from packages/_defaults.yml
             combos = []
@@ -422,7 +454,8 @@ def generate_matrix(package_filter: str, overwrite: bool = False,
                         continue
                     # Skip if wheel already exists
                     if wheel_exists(existing_wheels, pkg["name"], cuda_short,
-                                    torch_short, python_short, platform,
+                                    "*" if pkg.get("links_torch") is False else torch_short,
+                                    python_short, platform,
                                     pkg_version):
                         skipped += 1
                         continue
