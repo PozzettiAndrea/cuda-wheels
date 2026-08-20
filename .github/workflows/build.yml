@@ -148,6 +148,10 @@ jobs:
     needs: generate-matrix
     # Skip when the linux matrix is empty (mirrors build-windows guard).
     if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux.include[0] != null }}
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
     strategy:
       fail-fast: false
@@ -290,6 +294,10 @@ jobs:
     if: ${{ fromJson(needs.generate-matrix.outputs.matrix).linux_aarch64.include[0] != null }}
     # GitHub's hosted ARM runners (free for public repos). No self-hosted
     # ARM machines exist in the homelab, so no runner switch here.
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
@@ -391,6 +399,10 @@ jobs:
     # GH Actions only exposes outputs from direct needs.
     needs: [generate-matrix, build-linux]
     if: ${{ needs.build-linux.result != 'cancelled' && fromJson(needs.generate-matrix.outputs.matrix).linux_link.include[0] != null }}
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","linux","cuda"]') || 'ubuntu-22.04' }}
     strategy:
       fail-fast: false
@@ -534,6 +546,26 @@ jobs:
     # "matrix must define at least one vector" and flags the whole
     # workflow as failure even though release succeeds.
     if: ${{ fromJson(needs.generate-matrix.outputs.matrix).windows.include[0] != null }}
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
     strategy:
       fail-fast: false
@@ -665,6 +697,10 @@ jobs:
     # Mirror of link-linux for sharded Windows packages.
     needs: [generate-matrix, build-windows]
     if: ${{ needs.build-windows.result != 'cancelled' && fromJson(needs.generate-matrix.outputs.matrix).windows_link.include[0] != null }}
+    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
+    # runners; without raising it the homelab has a phantom 6h cap. Hosted
+    # runners stay hard-capped at 6h regardless of this value.
+    timeout-minutes: 2880
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
     strategy:
       fail-fast: false
