@@ -1,0 +1,3718 @@
+{
+  "combos": [
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.10",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.11",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.12",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.13",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "linux_x86_64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.14",
+      "platform": "windows"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_aarch64"
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": "3.15",
+      "platform": "linux_x86_64"
+    }
+  ],
+  "summary": [
+    {
+      "cuda": "cu124",
+      "torch": "2.4.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.4.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.5.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu124",
+      "torch": "2.6.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.6.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.7.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.8.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.9.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.10.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.11.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.12.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu126",
+      "torch": "2.13.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.7.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.8.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.9.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.10.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu128",
+      "torch": "2.11.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.8.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.9.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.10.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.11.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.12.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64"
+      ]
+    },
+    {
+      "cuda": "cu129",
+      "torch": "2.13.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.9.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.10.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.11.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.12.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu130",
+      "torch": "2.13.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.12.1",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    },
+    {
+      "cuda": "cu132",
+      "torch": "2.13.0",
+      "python": [
+        "3.10",
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15"
+      ],
+      "platforms": [
+        "linux_aarch64",
+        "linux_x86_64",
+        "windows"
+      ]
+    }
+  ],
+  "cuda_versions": [
+    "cu124",
+    "cu126",
+    "cu128",
+    "cu129",
+    "cu130",
+    "cu132"
+  ],
+  "total": 514
+}
