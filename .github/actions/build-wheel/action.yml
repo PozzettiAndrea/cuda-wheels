@@ -151,7 +151,7 @@ runs:
       # hash-mod. Deterministic across runs and shards (every shard and the
       # link job see the same sort order from the same input list), so the
       # partition is consistent.
-      if: inputs.shard-count != '0' && inputs.link-only != 'true'
+      if: inputs.shard-count != '0' && inputs.link-only != 'true' && inputs.platform == 'windows'
       shell: bash
       run: |
         cd source
@@ -234,7 +234,7 @@ runs:
       # setuptools' regenerated build.ninja), and (b) the distutils
       # fallback honors mtime natively and the shard's touched .o files
       # are recognized as up-to-date, collapsing compile to a no-op.
-      if: inputs.link-only == 'true'
+      if: inputs.link-only == 'true' && inputs.platform == 'windows'
       shell: bash
       run: |
         cd source
@@ -340,7 +340,7 @@ runs:
       #
       #  - `touch -m` every .o so its mtime is comfortably after any .cu/
       #    .cpp source's mtime in the freshly-cloned source tree.
-      if: inputs.link-only == 'true'
+      if: inputs.link-only == 'true' && inputs.platform == 'windows'
       shell: bash
       run: |
         cd source
@@ -359,7 +359,7 @@ runs:
           # Copy every .o file at its tarball-relative path into the
           # final build/ tree. Partition design guarantees no two shards
           # produced the same output path.
-          find "$shard_dir/build" -name '*.o' | while read -r objfile; do
+          find "$shard_dir/build" \( -name '*.o' -o -name '*.obj' \) | while read -r objfile; do
             rel="${objfile#$shard_dir/}"
             mkdir -p "$(dirname "$rel")"
             cp -p "$objfile" "$rel"
@@ -381,15 +381,15 @@ runs:
         # `set -o pipefail` is on, so SIGPIPE from `head` closing early would
         # exit the script. Append `|| true` to swallow it -- listing is purely
         # informational.
-        find build -name '*.o' -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
-        OBJ_COUNT=$(find build -name '*.o' | wc -l)
-        echo "Total .o files: $OBJ_COUNT"
+        find build \( -name '*.o' -o -name '*.obj' \) -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
+        OBJ_COUNT=$(find build \( -name '*.o' -o -name '*.obj' \) | wc -l)
+        echo "Total object files: $OBJ_COUNT"
         if [ "$OBJ_COUNT" = "0" ]; then
-          echo "::error::no .o files restored from shard artifacts -- tarballs may be empty"
+          echo "::error::no object files restored from shard artifacts -- tarballs may be empty"
           exit 1
         fi
         echo "(touching every .o so mtime > checkout mtime of .cu/.cpp sources)"
-        find build -name '*.o' -exec touch -m {} +
+        find build \( -name '*.o' -o -name '*.obj' \) -exec touch -m {} +
         rm -rf "$TEMP_DIR"
 
     - name: Compute prev iter (sequential mode, resume)
@@ -545,6 +545,97 @@ runs:
           echo "ninja -n -d explain (why would it rebuild?):"
           ( cd "$NINJA_BUILD_DIR" && ninja -n -d explain 2>&1 | head -40 ) | sed 's/^/    /' || true
         fi
+
+    - name: Setup shard wrapper + compiler cache (Linux shard/link mode)
+      # Zero-shim sharding (CW hacker-panel design C): a wrapper first in the
+      # nvcc seat hash-partitions translation units across shard jobs -- no
+      # per-package code, works below setup.py and cmake alike. Handoff
+      # between shard jobs and the link job is a content-addressed compiler
+      # cache (ccache), not the build tree: the link job re-runs the full
+      # build and every compile is a cache hit, so there is no mtime dance,
+      # no ninja-state merging, and a partial restore self-heals (missing
+      # objects simply recompile, slowly but correctly).
+      if: inputs.platform == 'linux' && inputs.shard-count != '0'
+      shell: bash
+      run: |
+        sudo apt-get install -y -qq ccache >/dev/null
+        CUW=$RUNNER_TEMP/cuw
+        mkdir -p "$CUW" "$RUNNER_TEMP/ccache"
+        cc -x c -c /dev/null -o "$CUW/empty.o"
+        REAL_NVCC="$(command -v nvcc || echo /usr/local/cuda/bin/nvcc)"
+        cat > "$CUW/nvcc" <<'WRAP'
+        #!/bin/sh
+        # cuda-wheels shard wrapper: compile my partition, stub the rest.
+        src=""; out=""; dep=""; prev=""
+        for a in "$@"; do
+          case "$prev" in
+            -o) out="$a";;
+            --dependency-output) dep="$a";;
+          esac
+          case "$a" in
+            *.cu|*.cpp|*.cc|*.cxx|*.c) src="$a";;
+          esac
+          prev="$a"
+        done
+        if [ -n "$src" ] && [ -n "$out" ] && [ "${CUW_SHARD_COUNT:-0}" != "0" ]; then
+          h=$(printf %s "$src" | md5sum | cut -c1-8)
+          if [ $(( 0x$h % CUW_SHARD_COUNT )) -ne "${CUW_SHARD_INDEX0:-0}" ]; then
+            cp "$CUW_EMPTY_OBJ" "$out"
+            [ -n "$dep" ] && printf '%s:\n' "$out" > "$dep"
+            exit 0
+          fi
+        fi
+        if [ -n "$CUW_CACHE_TOOL" ]; then exec "$CUW_CACHE_TOOL" "$CUW_REAL_NVCC" "$@"; fi
+        exec "$CUW_REAL_NVCC" "$@"
+        WRAP
+        sed -i 's/^        //' "$CUW/nvcc"
+        chmod +x "$CUW/nvcc"
+        {
+          echo "CUW_REAL_NVCC=$REAL_NVCC"
+          echo "CUW_EMPTY_OBJ=$CUW/empty.o"
+          echo "CUW_CACHE_TOOL=$(command -v ccache)"
+          # torch's ninja writer honours PYTORCH_NVCC; cmake honours CUDACXX.
+          echo "PYTORCH_NVCC=$CUW/nvcc"
+          echo "CUDACXX=$CUW/nvcc"
+          # keep nvcc's dependency generation out of the cached command line
+          # (torch >= 2.12 knob; older torch ignores it and the wrapper still
+          # writes stub depfiles where asked)
+          echo "TORCH_EXTENSION_SKIP_NVCC_GEN_DEPENDENCIES=1"
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache"
+          echo "CCACHE_COMPILERCHECK=content"
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+          echo "CCACHE_NOHASHDIR=1"
+          echo "CCACHE_SLOPPINESS=include_file_ctime,include_file_mtime,time_macros,locale"
+          echo "CCACHE_MAXSIZE=0"
+        } >> $GITHUB_ENV
+        if [ "${{ inputs.link-only }}" != "true" ]; then
+          echo "CUW_SHARD_COUNT=${{ inputs.shard-count }}" >> $GITHUB_ENV
+          echo "CUW_SHARD_INDEX0=$(( ${{ inputs.shard-index }} - 1 ))" >> $GITHUB_ENV
+        fi
+        ccache -z || true
+        echo "wrapper installed at $CUW/nvcc (real: $REAL_NVCC)"
+
+    - name: Restore shard caches (Linux link-only mode)
+      # Union every shard's ccache into one dir: the layout is content-
+      # addressed, so extraction over the same tree merges trivially and any
+      # collision is byte-identical by construction.
+      if: inputs.platform == 'linux' && inputs.link-only == 'true'
+      shell: bash
+      run: |
+        found=0
+        for tarball in /tmp/shard-artifacts/*/ccache.tar.gz; do
+          [ -f "$tarball" ] || continue
+          found=$((found+1))
+          echo "merging $tarball"
+          tar -xzf "$tarball" -C "$RUNNER_TEMP/ccache"
+        done
+        if [ "$found" = "0" ]; then
+          echo "::error::no shard ccache artifacts found -- did the shard jobs succeed?"
+          ls -laR /tmp/shard-artifacts || true
+          exit 1
+        fi
+        echo "merged $found shard cache(s):"
+        du -sh "$RUNNER_TEMP/ccache"
 
     - name: Build wheel (Linux)
       id: build_linux
@@ -891,6 +982,25 @@ runs:
           python -m pip wheel . --no-build-isolation --no-deps -v -w dist
           Add-Content -Path $env:GITHUB_OUTPUT -Value "done=true"
         }
+    - name: Assert cache hit rate (Linux link-only mode)
+      # The failure mode of compiler caches is cliff-edged: one bad flag and
+      # the hit rate silently drops to 0, the link job recompiles everything
+      # and dies at the cap looking "slow" rather than "broken". Make it
+      # loud instead.
+      if: inputs.platform == 'linux' && inputs.link-only == 'true'
+      shell: bash
+      run: |
+        ccache -s || true
+        STATS=$(ccache --print-stats 2>/dev/null || true)
+        HITS=$(echo "$STATS" | awk -F'\t' '$1 ~ /^(direct_cache_hit|preprocessed_cache_hit)$/ {n+=$2} END{print n+0}')
+        MISSES=$(echo "$STATS" | awk -F'\t' '$1 == "cache_miss" {n+=$2} END{print n+0}')
+        TOTAL=$((HITS+MISSES))
+        echo "cache: $HITS hits / $MISSES misses"
+        if [ "$TOTAL" -gt 0 ] && [ $((HITS * 100 / TOTAL)) -lt 90 ]; then
+          echo "::error::link-job cache hit rate $((HITS * 100 / TOTAL))% (< 90%) -- shard caches did not transfer (flag mismatch, path mismatch, or nondeterministic codegen). The build 'worked' only by recompiling, which defeats sharding."
+          exit 1
+        fi
+
     - name: Compute build outcome (sequential mode)
       # Either build_linux or build_windows runs (mutually exclusive on
       # platform). Read whichever's `done` output exists and re-emit as a
@@ -972,11 +1082,25 @@ runs:
         # next job in the same run, then never read again.
         retention-days: 1
 
-    - name: Package shard objects (compile-shard mode)
-      # Must run AFTER both Build wheel (Linux) and Build wheel (Windows) so
-      # the build/ tree exists regardless of platform. Cross-platform via
-      # bash (Git Bash on Windows ships tar/find/cp).
-      if: inputs.shard-count != '0' && inputs.link-only != 'true'
+    - name: Package shard cache (Linux compile-shard mode)
+      # The compiler cache IS the shard's product: content-addressed, so the
+      # link job unions all shards' caches and replays the full build as
+      # cache hits. No object paths, no mtimes.
+      if: inputs.platform == 'linux' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      shell: bash
+      run: |
+        ccache -s || true
+        FILES=$(find "$RUNNER_TEMP/ccache" -type f | wc -l)
+        if [ "$FILES" = "0" ]; then
+          echo "::error::shard produced an empty compiler cache -- the wrapper was never invoked (build system bypassed PYTORCH_NVCC/CUDACXX?)"
+          exit 1
+        fi
+        mkdir -p $GITHUB_WORKSPACE/shard-out
+        tar -czf $GITHUB_WORKSPACE/shard-out/ccache.tar.gz -C "$RUNNER_TEMP/ccache" .
+        ls -lh $GITHUB_WORKSPACE/shard-out/
+
+    - name: Package shard objects (Windows compile-shard mode)
+      if: inputs.platform == 'windows' && inputs.shard-count != '0' && inputs.link-only != 'true'
       shell: bash
       run: |
         cd source
@@ -990,11 +1114,11 @@ runs:
         fi
         echo "Object tree this shard produced (first 50):"
         # `|| true` to swallow SIGPIPE under pipefail if find > head -50.
-        find build -name '*.o' -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
-        OBJ_COUNT=$(find build -name '*.o' | wc -l)
+        find build \( -name '*.o' -o -name '*.obj' \) -printf '  %P (%s bytes)\n' 2>/dev/null | head -50 || true
+        OBJ_COUNT=$(find build \( -name '*.o' -o -name '*.obj' \) | wc -l)
         echo "Total objects: $OBJ_COUNT"
         if [ "$OBJ_COUNT" = "0" ]; then
-          echo "::error::no .o files produced by this shard -- shard filter may have dropped everything, or compile failed silently"
+          echo "::error::no object files produced by this shard -- shard filter may have dropped everything, or compile failed silently"
           exit 1
         fi
         # Tar the entire build/ tree. Captures both cpp_extension layout
@@ -1014,7 +1138,7 @@ runs:
         # output (package, platform, python, cuda, torch). The link job
         # downloads with a `*-of-<shard_count>` glob to gather all shards.
         name: shard-${{ inputs.package }}-${{ inputs.platform }}-py${{ inputs.python-version }}-cu${{ inputs.cuda-short }}-torch${{ inputs.pytorch-version }}-${{ inputs.shard-index }}-of-${{ inputs.shard-count }}
-        path: shard-out/objects.tar.gz
+        path: shard-out/*.tar.gz
         retention-days: 1
 
     - name: Rename wheel with CUDA+PyTorch suffix (Linux)
