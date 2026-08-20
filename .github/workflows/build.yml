@@ -550,22 +550,6 @@ jobs:
     # runners; without raising it the homelab has a phantom 6h cap. Hosted
     # runners stay hard-capped at 6h regardless of this value.
     timeout-minutes: 2880
-    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
-    # runners; without raising it the homelab has a phantom 6h cap. Hosted
-    # runners stay hard-capped at 6h regardless of this value.
-    timeout-minutes: 2880
-    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
-    # runners; without raising it the homelab has a phantom 6h cap. Hosted
-    # runners stay hard-capped at 6h regardless of this value.
-    timeout-minutes: 2880
-    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
-    # runners; without raising it the homelab has a phantom 6h cap. Hosted
-    # runners stay hard-capped at 6h regardless of this value.
-    timeout-minutes: 2880
-    # GitHub imposes a DEFAULT job timeout of 360 min even on self-hosted
-    # runners; without raising it the homelab has a phantom 6h cap. Hosted
-    # runners stay hard-capped at 6h regardless of this value.
-    timeout-minutes: 2880
     runs-on: ${{ inputs.runner == 'self-hosted' && fromJson('["self-hosted","windows"]') || 'windows-2022' }}
     strategy:
       fail-fast: false
