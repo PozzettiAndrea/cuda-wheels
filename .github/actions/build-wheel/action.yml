@@ -863,6 +863,18 @@ runs:
           rm -rf repaired/
         fi
 
+    - name: Allow unresolved symbols at shard stage (Windows compile-shard mode)
+      # A shard's .pyd link only has this shard's objects; Linux ld -shared
+      # tolerates the missing symbols, MSVC's link.exe refuses. link.exe
+      # reads extra options from the LINK env var regardless of caller, so
+      # /FORCE:UNRESOLVED here covers every package generically -- the
+      # shard's .pyd is garbage by design and is discarded; only the .obj
+      # tarball ships. NOT set in link-only mode, where all objects are
+      # present and a real unresolved symbol must fail the build.
+      if: inputs.platform == 'windows' && inputs.shard-count != '0' && inputs.link-only != 'true'
+      shell: bash
+      run: echo "LINK=/FORCE:UNRESOLVED" >> $GITHUB_ENV
+
     - name: Setup MSVC (Windows)
       if: inputs.platform == 'windows'
       uses: ilammy/msvc-dev-cmd@v1
