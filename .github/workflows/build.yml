@@ -61,7 +61,6 @@ on:
           - nunchaku
           - torchao
           - torchsparse
-          - kaolin
           - vllm
           - flashinfer
           - llama_cpp_python

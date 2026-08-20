@@ -63,3 +63,15 @@ for cu_file in Path("src").rglob("*.cu"):
         cu_file.write_text(UNDEF_BLOCK + cu_content)
         patched_cu += 1
 print(f"Patched {patched_cu} .cu files: #undef half/bfloat16 operator macros")
+
+# --- torch 2.13 compatibility (same class as the cumesh fix) ---
+# torch 2.13 headers use C++20 features; MSVC and nvcc hard-error below it.
+# Linux pins c++17; the win32 cxx block passes NO /std at all (cl defaults
+# too old). nvcc already gets -std=c++20 upstream.
+content = setup_file.read_text()
+c2 = content.replace('"-std=c++17"', '"-std=c++20"')
+if '"/std:c++20"' not in c2:
+    c2 = c2.replace('"/EHsc"', '"/EHsc", "/std:c++20"', 1)
+if c2 != content:
+    setup_file.write_text(c2)
+    print("drtk patch: C++20 std for linux cxx + win32 cxx")
